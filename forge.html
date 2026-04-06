@@ -1,0 +1,1818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0D0D0F">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="FORGE">
+  <meta name="description" content="AI-powered personalised gym tracker">
+  <title>FORGE — AI Gym Tracker</title>
+  <link rel="manifest" href='data:application/manifest+json,%7B%22name%22%3A%22FORGE%22%2C%22short_name%22%3A%22FORGE%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%230D0D0F%22%2C%22theme_color%22%3A%22%230D0D0F%22%2C%22start_url%22%3A%22.%2F%22%7D'>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            lime: '#C8FF00',
+            carbon: '#0D0D0F',
+            surface: '#1A1A1C',
+            surfacehi: '#252527',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    *{-webkit-tap-highlight-color:transparent;box-sizing:border-box}
+    html,body{margin:0;padding:0;background:#0D0D0F;font-family:'DM Sans',sans-serif;overscroll-behavior:none;-webkit-font-smoothing:antialiased}
+    ::-webkit-scrollbar{display:none}
+    input[type=number]{-moz-appearance:textfield}
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none}
+
+    @keyframes confettiFall{
+      0%{transform:translateY(-5vh) rotate(0deg) translateX(0px);opacity:1}
+      100%{transform:translateY(110vh) rotate(720deg) translateX(var(--tx,0px));opacity:0}
+    }
+    @keyframes pulseRing{
+      0%{box-shadow:0 0 0 0 rgba(200,255,0,0.6)}
+      70%{box-shadow:0 0 0 22px rgba(200,255,0,0)}
+      100%{box-shadow:0 0 0 0 rgba(200,255,0,0)}
+    }
+    @keyframes slideUp{
+      from{transform:translateY(100%);opacity:0}
+      to{transform:translateY(0);opacity:1}
+    }
+    @keyframes fadeSlide{
+      from{opacity:0;transform:translateY(10px)}
+      to{opacity:1;transform:translateY(0)}
+    }
+    @keyframes scaleIn{
+      from{transform:scale(0.85);opacity:0}
+      to{transform:scale(1);opacity:1}
+    }
+    @keyframes toastIn{
+      from{transform:translateY(-20px) translateX(-50%);opacity:0}
+      to{transform:translateY(0) translateX(-50%);opacity:1}
+    }
+    @keyframes spin{
+      from{transform:rotate(0deg)}
+      to{transform:rotate(360deg)}
+    }
+
+    .animate-slide-up{animation:slideUp 0.45s cubic-bezier(0.16,1,0.3,1)}
+    .animate-fade-slide{animation:fadeSlide 0.3s ease-out}
+    .animate-scale-in{animation:scaleIn 0.35s cubic-bezier(0.16,1,0.3,1)}
+    .animate-pulse-ring{animation:pulseRing 1.6s ease-out infinite}
+    .animate-toast{animation:toastIn 0.35s cubic-bezier(0.16,1,0.3,1) forwards}
+    .animate-spin-slow{animation:spin 2s linear infinite}
+
+    .set-input{
+      background:#252527;border:1.5px solid #3A3A3C;border-radius:10px;
+      color:#F5F5F0;font-family:'DM Sans',sans-serif;font-weight:600;
+      font-size:17px;text-align:center;width:100%;height:48px;outline:none;
+      transition:border-color 0.15s
+    }
+    .set-input:focus{border-color:#C8FF00}
+    .set-input.done{border-color:rgba(200,255,0,0.4);background:rgba(200,255,0,0.06);color:#C8FF00}
+    .set-input:disabled{cursor:default}
+
+    .font-display{font-family:'Bebas Neue',sans-serif !important}
+  </style>
+</head>
+<body class="bg-[#0D0D0F] text-[#F5F5F0]">
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useCallback, useRef, useMemo } = React;
+
+/* ─── Inline SVG icon system (no external dependency) ─── */
+function _S({ size, color, sw, children }) {
+  return React.createElement('svg', {
+    width:size, height:size, viewBox:'0 0 24 24', fill:'none',
+    stroke:color, strokeWidth:sw, strokeLinecap:'round', strokeLinejoin:'round'
+  }, children);
+}
+const _i = (fn) => ({ size=24, color='currentColor', strokeWidth=1.5 }) =>
+  <_S size={size} color={color} sw={strokeWidth}>{fn()}</_S>;
+
+const Home          = _i(() => <><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></>);
+const ClipboardList = _i(() => <><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="2"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></>);
+const Plus          = _i(() => <><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></>);
+const BarChart2     = _i(() => <><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></>);
+const User          = _i(() => <><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></>);
+const ChevronRight  = _i(() => <polyline points="9 18 15 12 9 6"/>);
+const ChevronLeft   = _i(() => <polyline points="15 18 9 12 15 6"/>);
+const Check         = _i(() => <polyline points="20 6 9 17 4 12"/>);
+const X             = _i(() => <><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>);
+const RefreshCw     = _i(() => <><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></>);
+const Zap           = _i(() => <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>);
+const Clock         = _i(() => <><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></>);
+const Dumbbell      = _i(() => <><line x1="6.5" y1="6.5" x2="6.5" y2="17.5"/><line x1="17.5" y1="6.5" x2="17.5" y2="17.5"/><line x1="6.5" y1="12" x2="17.5" y2="12"/><rect x="4" y="8.5" width="5" height="7" rx="1"/><rect x="15" y="8.5" width="5" height="7" rx="1"/></>);
+const SkipForward   = _i(() => <><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></>);
+const TrendingUp    = _i(() => <><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></>);
+const Activity      = _i(() => <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>);
+const Award         = _i(() => <><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></>);
+
+/* ═══════════════════════════════════════════════
+   CONSTANTS
+═══════════════════════════════════════════════ */
+const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+const DAY_ABBR = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const GOALS = ['Build Muscle','Lose Fat','Get Stronger','General Fitness','Athletic Performance'];
+const LEVELS = ['Beginner','Intermediate','Advanced'];
+const LEVEL_DESC = {
+  Beginner: 'Less than 1 year of consistent training',
+  Intermediate: '1–3 years, familiar with core movements',
+  Advanced: '3+ years, strong technique and programming knowledge',
+};
+const EQUIPMENT_OPTIONS = ['No Equipment','Dumbbells','Barbell + Rack','Cables / Machine','Full Gym','Resistance Bands','Kettlebells'];
+const SESSION_LENGTHS = [30,45,60,90];
+
+const QUOTES = [
+  "THE BODY ACHIEVES WHAT THE MIND BELIEVES.",
+  "PAIN IS TEMPORARY. GLORY IS FOREVER.",
+  "YOU DON'T STOP WHEN YOU'RE TIRED. YOU STOP WHEN YOU'RE DONE.",
+  "SWEAT IS JUST FAT CRYING.",
+  "YOUR FUTURE SELF IS WATCHING. DON'T LET THEM DOWN.",
+  "EVERY REP COUNTS. EVERY SET MATTERS.",
+  "THE IRON NEVER LIES.",
+  "DISCIPLINE: CHOOSING WHAT YOU WANT MOST OVER WHAT YOU WANT NOW.",
+  "RESULTS DON'T CARE ABOUT YOUR EXCUSES.",
+  "SHOW UP. PUT IN THE WORK. REPEAT.",
+  "THE ONLY BAD WORKOUT IS THE ONE THAT DIDN'T HAPPEN.",
+  "STRONG IS NOT A SIZE. IT'S A MINDSET.",
+  "CHAMPIONS ARE MADE IN THE MOMENTS THEY WANT TO QUIT.",
+  "LIFT. EAT. SLEEP. REPEAT. DOMINATE.",
+  "NO SHORTCUTS. JUST HARD WORK.",
+  "THE GYM IS YOUR BATTLEFIELD. CONQUER IT.",
+  "SUCCESS IS EARNED, NOT GIVEN.",
+  "MAKE TODAY'S PAIN TOMORROW'S STRENGTH.",
+  "CONSISTENCY BEATS INTENSITY. EVERY TIME.",
+  "FORGE YOUR BODY. FORGE YOUR MIND.",
+];
+
+const BADGE_DEFS = [
+  { id:'first_workout', name:'FIRST REP',    emoji:'🏋️', desc:'Completed your first workout' },
+  { id:'week_streak',   name:'ON A ROLL',    emoji:'🔥', desc:'7-day training streak' },
+  { id:'ten_workouts',  name:'DEDICATED',    emoji:'💎', desc:'10 workouts completed' },
+  { id:'pr_crusher',    name:'PR CRUSHER',   emoji:'🏆', desc:'Smashed a personal record' },
+  { id:'volume_king',   name:'VOLUME KING',  emoji:'👑', desc:'10,000 kg total volume lifted' },
+  { id:'consistency',   name:'CONSISTENT',   emoji:'📅', desc:'20 total workouts logged' },
+];
+
+const MUSCLE_COLORS = {
+  Chest:'#FF6B6B', Back:'#4ECDC4', Shoulders:'#FFE66D', Arms:'#A8E6CF',
+  Biceps:'#A8E6CF', Triceps:'#A8E6CF', Legs:'#DDA0DD', Quads:'#DDA0DD',
+  Hamstrings:'#DDA0DD', Glutes:'#F0E68C', Core:'#87CEEB', Abs:'#87CEEB',
+  Cardio:'#98FB98', Calves:'#FFB347', default:'#8A8A8E',
+};
+
+/* ═══════════════════════════════════════════════
+   HOOKS
+═══════════════════════════════════════════════ */
+function useLocalStorage(key, initial) {
+  const [val, setVal] = useState(() => {
+    try { const item = localStorage.getItem(key); return item ? JSON.parse(item) : initial; }
+    catch { return initial; }
+  });
+  const setStored = useCallback((v) => {
+    setVal(prev => {
+      const next = typeof v === 'function' ? v(prev) : v;
+      try { localStorage.setItem(key, JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }, [key]);
+  return [val, setStored];
+}
+
+/* ═══════════════════════════════════════════════
+   CLAUDE API
+═══════════════════════════════════════════════ */
+async function callClaude(apiKey, messages, maxTokens = 4000) {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: maxTokens, messages }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `API error ${res.status}`);
+  }
+  const data = await res.json();
+  return data.content[0].text;
+}
+
+async function generatePlan(profile) {
+  const prompt = `You are an expert personal trainer. Generate a personalised weekly training plan.
+
+ATHLETE PROFILE:
+- Name: ${profile.name}
+- Fitness Level: ${profile.fitnessLevel}
+- Goal: ${profile.goal}
+- Equipment: ${profile.equipment.join(', ')}
+- Training Days Per Week: ${profile.trainingDaysPerWeek}
+- Preferred Training Days: ${profile.trainingDays.join(', ')}
+- Session Length: ${profile.sessionLength} minutes
+
+Create a structured plan ONLY for the preferred training days. Each session should have 4–7 exercises appropriate for the session length and equipment. Lead with compound movements.
+
+Return ONLY a valid JSON object (no markdown, no explanation) matching this EXACT schema:
+{
+  "planName": "string",
+  "weeklySchedule": [
+    {
+      "day": "Monday",
+      "focus": "Push – Chest & Shoulders",
+      "workouts": [
+        {
+          "exercise": "string",
+          "sets": 4,
+          "reps": "8-10",
+          "rest": "90s",
+          "notes": "string",
+          "muscleGroup": "string"
+        }
+      ]
+    }
+  ],
+  "motivationalMessage": "string",
+  "coachTip": "string"
+}`;
+  const text = await callClaude(profile.apiKey, [{ role:'user', content: prompt }], 4000);
+  const match = text.match(/\{[\s\S]*\}/);
+  if (!match) throw new Error('Could not parse plan — please try again.');
+  return JSON.parse(match[0]);
+}
+
+async function generateInsights(profile, logs, prs) {
+  const recent = logs.slice(-20);
+  const logSummary = recent.map(l =>
+    `${l.date}: ${l.focus}, volume: ${Math.round(l.totalVolume||0)}kg, duration: ${l.duration}min`
+  ).join('\n');
+  const prSummary = Object.entries(prs).slice(0,6).map(([ex,pr]) =>
+    `${ex}: ${pr.weight}kg × ${pr.reps}`
+  ).join(', ') || 'None yet';
+
+  const prompt = `You are a fitness coach analysing an athlete's training data.
+
+ATHLETE: ${profile.name}, Goal: ${profile.goal}, Level: ${profile.fitnessLevel}
+
+RECENT WORKOUTS (last ${recent.length}):
+${logSummary}
+
+PERSONAL RECORDS: ${prSummary}
+
+Provide exactly 3 specific, actionable, motivating coaching insights based on this data.
+Return ONLY a JSON array (no markdown): ["insight 1", "insight 2", "insight 3"]`;
+  const text = await callClaude(profile.apiKey, [{ role:'user', content: prompt }], 800);
+  const match = text.match(/\[[\s\S]*\]/);
+  if (!match) return null;
+  return JSON.parse(match[0]);
+}
+
+/* ═══════════════════════════════════════════════
+   UTILITIES
+═══════════════════════════════════════════════ */
+function getTodayName() {
+  const d = new Date().getDay(); // 0=Sun
+  return DAYS[d === 0 ? 6 : d - 1];
+}
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return 'GOOD MORNING';
+  if (h < 17) return 'GOOD AFTERNOON';
+  return 'GOOD EVENING';
+}
+function getTodayISO() { return new Date().toISOString().split('T')[0]; }
+function formatDate(iso) {
+  if (!iso) return '';
+  return new Date(iso).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'2-digit' });
+}
+function getDailyQuote() {
+  const start = new Date(new Date().getFullYear(), 0, 0);
+  const dayOfYear = Math.floor((Date.now() - start) / 86400000);
+  return QUOTES[dayOfYear % QUOTES.length];
+}
+function getWeekStart(date = new Date()) {
+  const d = new Date(date);
+  const dow = d.getDay();
+  const diff = dow === 0 ? 6 : dow - 1;
+  d.setDate(d.getDate() - diff);
+  d.setHours(0,0,0,0);
+  return d.toISOString().split('T')[0];
+}
+function calcTotalVolume(exercises) {
+  return exercises.reduce((tot, ex) =>
+    tot + ex.sets.filter(s => s.done).reduce((s2, s) =>
+      s2 + (parseFloat(s.weight)||0) * (parseFloat(s.reps)||0), 0
+    ), 0
+  );
+}
+function updateStreak(current, lastDate) {
+  const today = getTodayISO();
+  if (lastDate === today) return current;
+  const yest = new Date(); yest.setDate(yest.getDate() - 1);
+  const yesterdayISO = yest.toISOString().split('T')[0];
+  if (lastDate === yesterdayISO) {
+    const next = current.current + 1;
+    return { current: next, longest: Math.max(current.longest, next), lastWorkoutDate: today };
+  }
+  return { current: 1, longest: Math.max(current.longest, 1), lastWorkoutDate: today };
+}
+function checkNewBadges(logs, prs, streak, existing) {
+  const now = new Date().toISOString();
+  const earned = {};
+  const total = logs.reduce((s,l) => s + (l.totalVolume||0), 0);
+  if (logs.length >= 1  && !existing.first_workout) earned.first_workout = { unlockedAt: now };
+  if (streak.current >= 7 && !existing.week_streak)  earned.week_streak   = { unlockedAt: now };
+  if (logs.length >= 10 && !existing.ten_workouts)   earned.ten_workouts  = { unlockedAt: now };
+  if (Object.keys(prs).length > 0 && !existing.pr_crusher) earned.pr_crusher = { unlockedAt: now };
+  if (total >= 10000    && !existing.volume_king)    earned.volume_king   = { unlockedAt: now };
+  if (logs.length >= 20 && !existing.consistency)    earned.consistency   = { unlockedAt: now };
+  return earned;
+}
+
+/* ═══════════════════════════════════════════════
+   UI PRIMITIVES
+═══════════════════════════════════════════════ */
+function Pill({ children, active, onClick, className='' }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`px-4 py-2 rounded-full text-sm font-semibold transition-all active:scale-95 select-none
+        ${active
+          ? 'bg-[#C8FF00] text-[#0D0D0F]'
+          : 'bg-[#252527] text-[#8A8A8E] border border-[#3A3A3C]'}
+        ${className}`}
+    >{children}</button>
+  );
+}
+
+function MuscleTag({ group }) {
+  const color = MUSCLE_COLORS[group] || MUSCLE_COLORS.default;
+  return (
+    <span className="text-xs px-2 py-0.5 rounded-full font-medium"
+      style={{ background:`${color}22`, color }}>
+      {group}
+    </span>
+  );
+}
+
+function StatCard({ label, value, sub }) {
+  return (
+    <div className="bg-[#1A1A1C] rounded-2xl p-4 flex-1 min-w-0">
+      <p className="text-[#8A8A8E] text-[10px] uppercase tracking-widest mb-1 truncate">{label}</p>
+      <p className="font-display text-2xl text-[#F5F5F0] leading-none">{value}</p>
+      {sub && <p className="text-[#8A8A8E] text-xs mt-1">{sub}</p>}
+    </div>
+  );
+}
+
+function Confetti() {
+  const pieces = useMemo(() =>
+    Array.from({ length: 32 }, (_, i) => ({
+      id: i,
+      color: ['#C8FF00','#FF6B6B','#4ECDC4','#FFE66D','#F5F5F0','#FF9F0A','#DDA0DD'][i % 7],
+      left: `${(i / 32) * 100}%`,
+      delay: `${(i * 0.06).toFixed(2)}s`,
+      dur: `${(1.4 + (i % 5) * 0.3).toFixed(1)}s`,
+      tx: `${Math.round((i % 2 === 0 ? 1 : -1) * (20 + (i % 7) * 25))}px`,
+      size: `${7 + (i % 6)}px`,
+      round: i % 3 === 0,
+    }))
+  , []);
+  return (
+    <div className="fixed inset-0 pointer-events-none z-40 overflow-hidden">
+      {pieces.map(p => (
+        <div key={p.id}
+          className={p.round ? 'absolute rounded-full' : 'absolute rounded-sm'}
+          style={{
+            left: p.left, top: '-10px',
+            width: p.size, height: p.size,
+            background: p.color,
+            animation: `confettiFall ${p.dur} ${p.delay} ease-in forwards`,
+            '--tx': p.tx,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function BadgeToast({ badge, onDismiss }) {
+  useEffect(() => { const t = setTimeout(onDismiss, 4000); return () => clearTimeout(t); }, []);
+  return (
+    <div className="fixed top-5 left-1/2 z-[60] animate-toast"
+      style={{ transform:'translateX(-50%)' }}>
+      <div className="bg-[#1A1A1C] border border-[#C8FF00] rounded-2xl px-5 py-3 flex items-center gap-3 shadow-2xl">
+        <span className="text-3xl">{badge.emoji}</span>
+        <div>
+          <p className="text-[#C8FF00] font-display text-base leading-none">{badge.name} UNLOCKED</p>
+          <p className="text-[#8A8A8E] text-xs mt-0.5">{badge.desc}</p>
+        </div>
+        <button onClick={onDismiss} className="ml-2 text-[#8A8A8E]"><X size={14}/></button>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   BOTTOM NAV
+═══════════════════════════════════════════════ */
+function BottomNav({ active, onTab }) {
+  const tabs = [
+    { id:'home',     icon:Home,          label:'HOME'     },
+    { id:'plan',     icon:ClipboardList, label:'PLAN'     },
+    { id:'log',      icon:Plus,          label:'LOG',     center:true },
+    { id:'progress', icon:BarChart2,     label:'PROGRESS' },
+    { id:'profile',  icon:User,          label:'PROFILE'  },
+  ];
+  return (
+    <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] z-30"
+      style={{ background:'rgba(13,13,15,0.96)', backdropFilter:'blur(20px)',
+               borderTop:'1px solid #1A1A1C',
+               paddingBottom:'max(0.75rem, env(safe-area-inset-bottom))' }}>
+      <div className="flex items-center justify-around px-2 pt-2">
+        {tabs.map(tab => (
+          <button key={tab.id} onClick={() => onTab(tab.id)}
+            className="flex flex-col items-center gap-0.5 transition-transform active:scale-90 select-none"
+            style={{ minWidth: 48, minHeight: 48, justifyContent:'center' }}>
+            {tab.center ? (
+              <div className="w-14 h-14 rounded-2xl bg-[#C8FF00] flex items-center justify-center -mt-7 shadow-lg active:scale-90 transition-transform">
+                <Plus size={28} color="#0D0D0F" strokeWidth={2.5}/>
+              </div>
+            ) : (
+              <>
+                <tab.icon size={22}
+                  color={active === tab.id ? '#C8FF00' : '#8A8A8E'}
+                  strokeWidth={active === tab.id ? 2.5 : 1.5}/>
+                <span className="font-display text-[9px] tracking-wider"
+                  style={{ color: active === tab.id ? '#C8FF00' : '#8A8A8E' }}>
+                  {tab.label}
+                </span>
+              </>
+            )}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   LOADING PLAN SCREEN
+═══════════════════════════════════════════════ */
+function LoadingPlan({ error }) {
+  const msgs = [
+    'ANALYSING YOUR GOALS…',
+    'BUILDING YOUR PLAN…',
+    'CALCULATING YOUR GAINS…',
+    'OPTIMISING EXERCISES…',
+    'ALMOST READY…',
+  ];
+  const [idx, setIdx] = useState(0);
+  useEffect(() => {
+    if (error) return;
+    const t = setInterval(() => setIdx(i => (i + 1) % msgs.length), 1800);
+    return () => clearInterval(t);
+  }, [error]);
+
+  return (
+    <div className="fixed inset-0 bg-[#0D0D0F] z-50 flex flex-col items-center justify-center px-8">
+      {error ? (
+        <>
+          <div className="text-5xl mb-4">⚠️</div>
+          <p className="font-display text-2xl text-[#FF453A] text-center mb-3">PLAN GENERATION FAILED</p>
+          <p className="text-[#8A8A8E] text-sm text-center leading-relaxed">{error}</p>
+          <p className="text-[#8A8A8E] text-xs text-center mt-4">Check your API key in Profile and try again.</p>
+        </>
+      ) : (
+        <>
+          <div className="relative mb-10">
+            <div className="w-28 h-28 rounded-3xl bg-[#1A1A1C] flex items-center justify-center animate-pulse-ring">
+              <span className="font-display text-6xl text-[#C8FF00]" style={{ fontFamily:"'Bebas Neue',sans-serif" }}>F</span>
+            </div>
+            <div className="absolute inset-0 rounded-3xl border-2 border-[#C8FF00] opacity-20 animate-ping"/>
+          </div>
+          <p key={idx} className="font-display text-2xl text-[#C8FF00] tracking-wider animate-fade-slide"
+            style={{ fontFamily:"'Bebas Neue',sans-serif" }}>
+            {msgs[idx]}
+          </p>
+          <p className="text-[#8A8A8E] text-sm mt-3">Claude AI is crafting your programme</p>
+          <div className="mt-10 flex gap-2">
+            {[0,1,2,3,4].map(i => (
+              <div key={i} className="w-2 h-2 rounded-full bg-[#C8FF00]"
+                style={{ animation:`dotPulse 1.4s ${i*0.2}s ease-in-out infinite`,
+                         opacity:0.4 }}/>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   PROFILE / ONBOARDING SCREEN
+═══════════════════════════════════════════════ */
+function ProfileScreen({ profile, onSave, onGeneratePlan, isExisting }) {
+  const TOTAL_STEPS = 6;
+  const [step, setStep] = useState(0);
+  const [form, setForm] = useState({
+    name:                profile.name || '',
+    fitnessLevel:        profile.fitnessLevel || '',
+    goal:                profile.goal || '',
+    equipment:           profile.equipment || [],
+    trainingDaysPerWeek: profile.trainingDaysPerWeek || 3,
+    trainingDays:        profile.trainingDays || [],
+    sessionLength:       profile.sessionLength || 60,
+    apiKey:              profile.apiKey || '',
+  });
+
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const toggleArr = (k, val) =>
+    setForm(f => ({
+      ...f, [k]: f[k].includes(val) ? f[k].filter(x => x !== val) : [...f[k], val]
+    }));
+
+  const canAdvance = () => {
+    if (step === 0) return form.name.trim().length > 0;
+    if (step === 1) return !!form.fitnessLevel;
+    if (step === 2) return !!form.goal;
+    if (step === 3) return form.equipment.length > 0;
+    if (step === 4) return form.trainingDays.length > 0;
+    if (step === 5) return !!form.sessionLength;
+    return true;
+  };
+
+  const handleFinish = () => {
+    const saved = { ...form, onboardingComplete: true };
+    onSave(saved);
+    onGeneratePlan(saved);
+  };
+
+  /* ── Existing profile view ── */
+  if (isExisting) {
+    return (
+      <div className="h-full overflow-y-auto pb-28">
+        {/* Header */}
+        <div className="px-5 pt-14 pb-6">
+          <h1 className="font-display text-5xl text-[#F5F5F0]" style={{ fontFamily:"'Bebas Neue',sans-serif" }}>PROFILE</h1>
+          <p className="text-[#8A8A8E] text-sm">Your training preferences</p>
+        </div>
+
+        <div className="px-5 space-y-3">
+          {/* Name / level / goal */}
+          <div className="bg-[#1A1A1C] rounded-2xl p-5 border border-[#252527] flex items-center justify-between">
+            <div>
+              <p className="text-[#8A8A8E] text-xs uppercase tracking-widest mb-0.5">Athlete</p>
+              <p className="font-display text-2xl text-[#F5F5F0]" style={{ fontFamily:"'Bebas Neue',sans-serif" }}>{profile.name}</p>
+            </div>
+            <span className="bg-[rgba(200,255,0,0.1)] text-[#C8FF00] text-xs px-3 py-1 rounded-full font-semibold border border-[rgba(200,255,0,0.2)]">{profile.fitnessLevel}</span>
+          </div>
+
+          <div className="bg-[#1A1A1C] rounded-2xl p-5 border border-[#252527]">
+            <p className="text-[#8A8A8E] text-xs uppercase tracking-widest mb-2">Goal</p>
+            <span className="bg-[#C8FF00] text-[#0D0D0F] px-3 py-1 rounded-full text-sm font-bold">{profile.goal}</span>
+          </div>
+
+          <div className="bg-[#1A1A1C] rounded-2xl p-5 border border-[#252527]">
+            <p className="text-[#8A8A8E] text-xs uppercase tracking-widest mb-3">Equipment</p>
+            <div className="flex flex-wrap gap-2">
+              {(profile.equipment||[]).map(e => (
+                <span key={e} className="bg-[#252527] text-[#F5F5F0] px-3 py-1 rounded-full text-xs border border-[#3A3A3C]">{e}</span>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-[#1A1A1C] rounded-2xl p-5 border border-[#252527]">
+            <p className="text-[#8A8A8E] text-xs uppercase tracking-widest mb-3">Training Schedule</p>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {(profile.trainingDays||[]).map(d => (
+                <span key={d} className="bg-[#252527] text-[#F5F5F0] px-3 py-1 rounded-full text-xs border border-[#3A3A3C]">{d}</span>
+              ))}
+            </div>
+            <p className="text-[#8A8A8E] text-xs">{profile.sessionLength} min sessions</p>
+          </div>
+
+          {/* API Key */}
+          <div className="bg-[#1A1A1C] rounded-2xl p-5 border border-[#252527]">
+            <p className="text-[#8A8A8E] text-xs uppercase tracking-widest mb-1">Anthropic API Key</p>
+            <p className="text-[#8A8A8E] text-xs mb-3">Required for AI plan generation and insights</p>
+            <input type="password" value={form.apiKey}
+              onChange={e => set('apiKey', e.target.value)}
+              onBlur={() => onSave({ ...profile, apiKey: form.apiKey })}
+              placeholder="sk-ant-api03-…"
+              className="w-full bg-[#252527] text-[#F5F5F0] rounded-xl px-4 py-3 text-sm border border-[#3A3A3C] focus:border-[#C8FF00] outline-none"/>
+          </div>
+
+          <button onClick={() => { onSave({ ...profile, onboardingComplete: false }); }}
+            className="w-full py-4 rounded-2xl bg-[#252527] text-[#F5F5F0] font-display text-xl tracking-wider active:scale-95 transition-all border border-[#3A3A3C]"
+            style={{ fontFamily:"'Bebas Neue',sans-serif" }}>
+            EDIT PROFILE
+          </button>
+
+          <button onClick={() => onGeneratePlan({ ...profile, apiKey: form.apiKey })}
+            className="w-full py-4 rounded-2xl bg-[#C8FF00] text-[#0D0D0F] font-display text-xl tracking-wider active:scale-95 transition-all"
+            style={{ fontFamily:"'Bebas Neue',sans-serif" }}>
+            REGENERATE PLAN
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  /* ── Onboarding wizard ── */
+  return (
+    <div className="h-full flex flex-col bg-[#0D0D0F]">
+      {/* Progress bar */}
+      <div className="flex-shrink-0 px-5 pt-14 pb-0">
+        <div className="flex gap-1.5 mb-8">
+          {Array.from({ length: TOTAL_STEPS }).map((_,i) => (
+            <div key={i} className="h-1 flex-1 rounded-full transition-all duration-300"
+              style={{ background: i <= step ? '#C8FF00' : '#252527' }}/>
+          ))}
+        </div>
+      </div>
+
+      {/* Step content */}
+      <div className="flex-1 overflow-y-auto px-5 pb-4">
+
+        {/* Step 0: Name */}
+        {step === 0 && (
+          <div className="animate-fade-slide">
+            <p className="text-[#C8FF00] font-display text-sm tracking-widest mb-2" style={{ fontFamily:"'Bebas Neue',sans-serif" }}>STEP 1 OF 6</p>
+            <h2 className="font-display text-5xl text-[#F5F5F0] mb-2" style={{ fontFamily:"'Bebas Neue',sans-serif" }}>WHAT'S YOUR NAME?</h2>
+            <p className="text-[#8A8A8E] mb-8">We'll use this to personalise everything.</p>
+            <input type="text" value={form.name}
+              onChange={e => set('name', e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && canAdvance() && setStep(1)}
+              placeholder="Your name…" autoFocus
+              className="w-full bg-[#1A1A1C] text-[#F5F5F0] rounded-2xl px-5 py-5 text-2xl font-display border border-[#3A3A3C] focus:border-[#C8FF00] outline-none tracking-wider"
+              style={{ fontFamily:"'Bebas Neue',sans-serif" }}/>
+          </div>
+        )}
+
+        {/* Step 1: Level */}
+        {step === 1 && (
+          <div className="animate-fade-slide">
+            <p className="text-[#C8FF00] font-display text-sm tracking-widest mb-2" style={{ fontFamily:"'Bebas Neue',sans-serif" }}>STEP 2 OF 6</p>
+            <h2 className="font-display text-5xl text-[#F5F5F0] mb-2" style={{ fontFamily:"'Bebas Neue',sans-serif" }}>YOUR LEVEL?</h2>
+            <p className="text-[#8A8A8E] mb-8">Be honest — it helps us build the right plan.</p>
+            <div className="space-y-3">
+              {LEVELS.map(level => (
+                <button key={level} onClick={() => set('fitnessLevel', level)}
+                  className={`w-full text-left px-6 py-5 rounded-2xl border-2 transition-all active:scale-95
+                    ${form.fitnessLevel === level
+                      ? 'border-[#C8FF00] bg-[rgba(200,255,0,0.07)]'
+                      : 'border-[#3A3A3C] bg-[#1A1A1C]'}`}>
+                  <p className={`font-display text-2xl ${form.fitnessLevel === level ? 'text-[#C8FF00]' : 'text-[#F5F5F0]'}`}
+                    style={{ fontFamily:"'Bebas Neue',sans-serif" }}>{level.toUpperCase()}</p>
+                  <p className="text-[#8A8A8E] text-sm mt-0.5">{LEVEL_DESC[level]}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Step 2: Goal */}
+        {step === 2 && (
+          <div className="animate-fade-slide">
+            <p className="text-[#C8FF00] font-display text-sm tracking-widest mb-2" style={{ fontFamily:"'Bebas Neue',sans-serif" }}>STEP 3 OF 6</p>
+            <h2 className="font-display text-5xl text-[#F5F5F0] mb-2" style={{ fontFamily:"'Bebas Neue',sans-serif" }}>YOUR GOAL?</h2>
+            <p className="text-[#8A8A8E] mb-8">What are you training for?</p>
+            <div className="space-y-3">
+              {GOALS.map(goal => (
+                <button key={goal} onClick={() => set('goal', goal)}
+                  className={`w-full text-left px-6 py-4 rounded-2xl border-2 transition-all active:scale-95
+                    ${form.goal === goal
+                      ? 'border-[#C8FF00] bg-[rgba(200,255,0,0.07)]'
+                      : 'border-[#3A3A3C] bg-[#1A1A1C]'}`}>
+                  <p className={`font-display text-xl ${form.goal === goal ? 'text-[#C8FF00]' : 'text-[#F5F5F0]'}`}
+                    style={{ fontFamily:"'Bebas Neue',sans-serif" }}>{goal.toUpperCase()}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Step 3: Equipment */}
+        {step === 3 && (
+          <div className="animate-fade-slide">
+            <p className="text-[#C8FF00] font-display text-sm tracking-widest mb-2" style={{ fontFamily:"'Bebas Neue',sans-serif" }}>STEP 4 OF 6</p>
+            <h2 className="font-display text-5xl text-[#F5F5F0] mb-2" style={{ fontFamily:"'Bebas Neue',sans-serif" }}>EQUIPMENT?</h2>
+            <p className="text-[#8A8A8E] mb-8">Select everything you have access to.</p>
+            <div className="flex flex-wrap gap-3">
+              {EQUIPMENT_OPTIONS.map(eq => (
+                <Pill key={eq} active={form.equipment.includes(eq)} onClick={() => toggleArr('equipment', eq)}>{eq}</Pill>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Step 4: Training days */}
+        {step === 4 && (
+          <div className="animate-fade-slide">
+            <p className="text-[#C8FF00] font-display text-sm tracking-widest mb-2" style={{ fontFamily:"'Bebas Neue',sans-serif" }}>STEP 5 OF 6</p>
+            <h2 className="font-display text-5xl text-[#F5F5F0] mb-2" style={{ fontFamily:"'Bebas Neue',sans-serif" }}>TRAINING DAYS?</h2>
+            <p className="text-[#8A8A8E] mb-6">Which days will you train each week?</p>
+            <div className="flex justify-between gap-1 mb-5">
+              {DAY_ABBR.map((abbr, i) => {
+                const day = DAYS[i];
+                const on = form.trainingDays.includes(day);
+                return (
+                  <button key={day} onClick={() => toggleArr('trainingDays', day)}
+                    className={`w-10 h-10 rounded-xl text-xs font-display transition-all active:scale-90
+                      ${on ? 'bg-[#C8FF00] text-[#0D0D0F]' : 'bg-[#1A1A1C] text-[#8A8A8E] border border-[#3A3A3C]'}`}
+                    style={{ fontFamily:"'Bebas Neue',sans-serif" }}>
+                    {abbr}
+                  </button>
+                );
+              })}
+            </div>
+            {form.trainingDays.length > 0 && (
+              <div className="bg-[#1A1A1C] rounded-2xl p-4 border border-[#252527] flex flex-wrap gap-2">
+                {form.trainingDays.map(d => (
+                  <span key={d} className="text-[#C8FF00] text-xs bg-[rgba(200,255,0,0.1)] px-2 py-0.5 rounded-full">{d.slice(0,3)}</span>
+                ))}
+                <span className="text-[#8A8A8E] text-xs ml-auto self-center">{form.trainingDays.length} days</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Step 5: Session length + API key */}
+        {step === 5 && (
+          <div className="animate-fade-slide">
+            <p className="text-[#C8FF00] font-display text-sm tracking-widest mb-2" style={{ fontFamily:"'Bebas Neue',sans-serif" }}>STEP 6 OF 6</p>
+            <h2 className="font-display text-5xl text-[#F5F5F0] mb-2" style={{ fontFamily:"'Bebas Neue',sans-serif" }}>LAST DETAILS</h2>
+            <p className="text-[#8A8A8E] mb-6">Session length and your API key.</p>
+
+            <div className="grid grid-cols-4 gap-3 mb-8">
+              {SESSION_LENGTHS.map(len => (
+                <button key={len} onClick={() => set('sessionLength', len)}
+                  className={`py-4 rounded-2xl text-center border-2 transition-all active:scale-95
+                    ${form.sessionLength === len
+                      ? 'border-[#C8FF00] bg-[rgba(200,255,0,0.07)]'
+                      : 'border-[#3A3A3C] bg-[#1A1A1C]'}`}>
+                  <p className={`font-display text-2xl ${form.sessionLength === len ? 'text-[#C8FF00]' : 'text-[#F5F5F0]'}`}
+                    style={{ fontFamily:"'Bebas Neue',sans-serif" }}>{len}</p>
+                  <p className="text-[#8A8A8E] text-xs">min</p>
+                </button>
+              ))}
+            </div>
+
+            <div className="bg-[#1A1A1C] rounded-2xl p-5 border border-[#252527]">
+              <p className="text-[#F5F5F0] font-semibold mb-1">Anthropic API Key</p>
+              <p className="text-[#8A8A8E] text-xs mb-3">
+                Get yours at <span className="text-[#C8FF00]">console.anthropic.com</span> — required to generate your AI plan.
+              </p>
+              <input type="password" value={form.apiKey}
+                onChange={e => set('apiKey', e.target.value)}
+                placeholder="sk-ant-api03-…"
+                className="w-full bg-[#252527] text-[#F5F5F0] rounded-xl px-4 py-3 text-sm border border-[#3A3A3C] focus:border-[#C8FF00] outline-none"/>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* CTA row */}
+      <div className="flex-shrink-0 px-5 py-4 flex gap-3"
+        style={{ paddingBottom:'max(1.5rem, env(safe-area-inset-bottom))' }}>
+        {step > 0 && (
+          <button onClick={() => setStep(s => s - 1)}
+            className="w-14 h-14 rounded-2xl bg-[#1A1A1C] flex items-center justify-center active:scale-95 transition-all border border-[#3A3A3C]">
+            <ChevronLeft size={24} color="#F5F5F0"/>
+          </button>
+        )}
+        <button
+          onClick={() => step < TOTAL_STEPS - 1 ? setStep(s => s + 1) : handleFinish()}
+          disabled={!canAdvance()}
+          className={`flex-1 py-4 rounded-2xl font-display text-xl tracking-wider transition-all active:scale-95
+            ${canAdvance() ? 'bg-[#C8FF00] text-[#0D0D0F]' : 'bg-[#252527] text-[#8A8A8E]'}`}
+          style={{ fontFamily:"'Bebas Neue',sans-serif" }}>
+          {step === TOTAL_STEPS - 1 ? 'GENERATE MY PLAN' : 'CONTINUE'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   HOME SCREEN
+═══════════════════════════════════════════════ */
+function HomeScreen({ profile, plan, logs, streak, prs, onStartWorkout, onSetTab }) {
+  const today      = getTodayName();
+  const todayISO   = getTodayISO();
+  const weekStart  = getWeekStart();
+  const todayPlan  = plan?.weeklySchedule?.find(s => s.day === today);
+  const isTrainingDay   = profile.trainingDays?.includes(today);
+  const workedOutToday  = logs.some(l => l.date === todayISO);
+  const workoutsThisWeek = logs.filter(l => l.date >= weekStart).length;
+  const totalVolume = logs.reduce((s,l) => s + (l.totalVolume||0), 0);
+  const quote = getDailyQuote();
+  const fmtVol = v => v >= 1000 ? `${(v/1000).toFixed(1)}t` : `${Math.round(v)}kg`;
+
+  return (
+    <div className="h-full overflow-y-auto pb-28">
+      <div className="px-5 pt-14 pb-4">
+        <div className="flex items-start justify-between">
+          <div className="flex-1 min-w-0 pr-3">
+            <p className="text-[#8A8A8E] text-xs uppercase tracking-widest mb-1">
+              {new Date().toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long' })}
+            </p>
+            <h1 className="font-display leading-tight" style={{ fontFamily:"'Bebas Neue',sans-serif" }}>
+              <span className="text-3xl text-[#F5F5F0] block">{getGreeting()},</span>
+              <span className="text-4xl text-[#C8FF00] block">{(profile.name||'ATHLETE').toUpperCase()}.</span>
+            </h1>
+          </div>
+          {streak.current > 0 && (
+            <div className="bg-[#1A1A1C] rounded-2xl px-3 py-2 flex items-center gap-1.5 border border-[#252527] flex-shrink-0">
+              <span className="text-xl">🔥</span>
+              <div>
+                <p className="font-display text-2xl text-[#C8FF00] leading-none"
+                  style={{ fontFamily:"'Bebas Neue',sans-serif" }}>{streak.current}</p>
+                <p className="text-[#8A8A8E] text-[9px] uppercase tracking-wider leading-none mt-0.5">STREAK</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="px-5 mb-4">
+        {isTrainingDay && todayPlan ? (
+          <div className="rounded-3xl overflow-hidden border border-[#252527]"
+            style={{ background:'linear-gradient(140deg, #1A1A1C 0%, #252527 100%)' }}>
+            <div className="p-5">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[#C8FF00] text-xs font-display tracking-widest bg-[rgba(200,255,0,0.12)] px-3 py-1 rounded-full border border-[rgba(200,255,0,0.2)]"
+                  style={{ fontFamily:"'Bebas Neue',sans-serif" }}>TODAY'S SESSION</span>
+                {workedOutToday && (
+                  <span className="flex items-center gap-1 text-[#C8FF00] text-xs font-semibold">
+                    <Check size={12}/> DONE
+                  </span>
+                )}
+              </div>
+              <h2 className="font-display text-3xl text-[#F5F5F0] mb-1"
+                style={{ fontFamily:"'Bebas Neue',sans-serif" }}>{todayPlan.focus}</h2>
+              <div className="flex items-center gap-4 text-[#8A8A8E] text-sm mb-5">
+                <span className="flex items-center gap-1.5"><Dumbbell size={13}/>{todayPlan.workouts?.length} exercises</span>
+                <span className="flex items-center gap-1.5"><Clock size={13}/>~{profile.sessionLength} min</span>
+              </div>
+              <div className="space-y-2 mb-5">
+                {todayPlan.workouts?.slice(0,3).map((w,i) => (
+                  <div key={i} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <span className="text-[#8A8A8E] text-xs w-4 flex-shrink-0">{i+1}</span>
+                      <span className="text-[#F5F5F0] text-sm truncate">{w.exercise}</span>
+                    </div>
+                    <span className="text-[#8A8A8E] text-xs ml-2 flex-shrink-0">{w.sets}×{w.reps}</span>
+                  </div>
+                ))}
+                {(todayPlan.workouts?.length||0) > 3 && (
+                  <p className="text-[#8A8A8E] text-xs pl-6">+{todayPlan.workouts.length - 3} more exercises</p>
+                )}
+              </div>
+              <button onClick={() => onStartWorkout(todayPlan)}
+                className="w-full py-4 rounded-2xl bg-[#C8FF00] text-[#0D0D0F] font-display text-xl tracking-wider active:scale-95 transition-all"
+                style={{ fontFamily:"'Bebas Neue',sans-serif" }}>
+                {workedOutToday ? 'WORKOUT AGAIN' : 'START WORKOUT'}
+              </button>
+            </div>
+          </div>
+        ) : !isTrainingDay ? (
+          <div className="bg-[#1A1A1C] rounded-3xl p-6 border border-[#252527] text-center">
+            <div className="text-5xl mb-3">😴</div>
+            <h2 className="font-display text-2xl text-[#F5F5F0] mb-2"
+              style={{ fontFamily:"'Bebas Neue',sans-serif" }}>REST DAY</h2>
+            <p className="text-[#8A8A8E] text-sm leading-relaxed">
+              Recovery is where the gains happen. Hydrate, sleep well, and come back stronger.
+            </p>
+          </div>
+        ) : (
+          <div className="bg-[#1A1A1C] rounded-3xl p-6 border border-[rgba(200,255,0,0.15)]">
+            <div className="text-5xl mb-3">⚡</div>
+            <h2 className="font-display text-2xl text-[#F5F5F0] mb-2"
+              style={{ fontFamily:"'Bebas Neue',sans-serif" }}>NO PLAN YET</h2>
+            <p className="text-[#8A8A8E] text-sm mb-4">Generate your AI-powered training plan to get started.</p>
+            <button onClick={() => onSetTab('profile')}
+              className="px-5 py-3 rounded-xl bg-[#C8FF00] text-[#0D0D0F] font-display text-base tracking-wider active:scale-95 transition-all"
+              style={{ fontFamily:"'Bebas Neue',sans-serif" }}>
+              BUILD MY PLAN →
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div className="px-5 mb-4">
+        <div className="flex gap-3">
+          <StatCard label="THIS WEEK" value={`${workoutsThisWeek}`} sub="sessions"/>
+          <StatCard label="TOTAL VOL" value={fmtVol(totalVolume)} sub="lifted"/>
+          <StatCard label="SESSIONS"  value={`${logs.length}`} sub="all time"/>
+        </div>
+      </div>
+
+      {plan?.coachTip && (
+        <div className="px-5 mb-4">
+          <div className="bg-[#1A1A1C] rounded-2xl p-4 border border-[#252527] flex gap-3">
+            <Zap size={18} color="#C8FF00" className="flex-shrink-0 mt-0.5"/>
+            <div>
+              <p className="text-[#C8FF00] text-[10px] font-display tracking-widest mb-1"
+                style={{ fontFamily:"'Bebas Neue',sans-serif" }}>COACH TIP</p>
+              <p className="text-[#F5F5F0] text-sm leading-relaxed">{plan.coachTip}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="px-5 mb-4">
+        <div className="bg-[#1A1A1C] rounded-2xl p-5 border border-[#252527]">
+          <p className="font-display text-lg text-[#F5F5F0] leading-snug"
+            style={{ fontFamily:"'Bebas Neue',sans-serif" }}>"{quote}"</p>
+        </div>
+      </div>
+
+      {Object.keys(prs).length > 0 && (
+        <div className="px-5 mb-4">
+          <p className="text-[#8A8A8E] text-xs uppercase tracking-widest mb-2">Personal Records</p>
+          <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth:'none' }}>
+            {Object.entries(prs).slice(0,5).map(([ex, pr]) => (
+              <div key={ex} className="flex-shrink-0 bg-[#1A1A1C] rounded-xl px-4 py-3 border border-[#252527]">
+                <p className="font-display text-lg text-[#C8FF00] leading-none"
+                  style={{ fontFamily:"'Bebas Neue',sans-serif" }}>{pr.weight}kg</p>
+                <p className="text-[#F5F5F0] text-xs mt-0.5 whitespace-nowrap max-w-[100px] truncate">{ex}</p>
+                <p className="text-[#8A8A8E] text-[10px]">×{pr.reps} reps</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   PLAN SCREEN
+═══════════════════════════════════════════════ */
+function PlanScreen({ plan, profile, onRegenerate }) {
+  const [selDay, setSelDay] = useState(getTodayName());
+  const today = getTodayName();
+
+  if (!plan) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center px-5 pb-24 text-center">
+        <div className="text-6xl mb-4">📋</div>
+        <h2 className="font-display text-3xl text-[#F5F5F0] mb-2"
+          style={{ fontFamily:"'Bebas Neue',sans-serif" }}>NO PLAN YET</h2>
+        <p className="text-[#8A8A8E]">Complete your profile to generate an AI-powered training plan.</p>
+      </div>
+    );
+  }
+
+  const scheduledDays = plan.weeklySchedule.map(s => s.day);
+  const selSchedule   = plan.weeklySchedule.find(s => s.day === selDay);
+
+  return (
+    <div className="h-full overflow-y-auto pb-28">
+      <div className="px-5 pt-14 pb-4">
+        <div className="flex items-start justify-between">
+          <div className="flex-1 min-w-0 pr-2">
+            <h1 className="font-display text-4xl text-[#F5F5F0] leading-tight"
+              style={{ fontFamily:"'Bebas Neue',sans-serif" }}>{plan.planName || 'MY PLAN'}</h1>
+            <p className="text-[#8A8A8E] text-xs mt-0.5">
+              {plan.weeklySchedule.length} training days · {profile.sessionLength} min sessions
+            </p>
+          </div>
+          <button onClick={onRegenerate}
+            className="w-10 h-10 rounded-xl bg-[#1A1A1C] flex items-center justify-center active:scale-95 transition-all border border-[#252527] flex-shrink-0">
+            <RefreshCw size={17} color="#C8FF00"/>
+          </button>
+        </div>
+      </div>
+
+      <div className="px-5 mb-4">
+        <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth:'none' }}>
+          {DAYS.map(day => {
+            const has = scheduledDays.includes(day);
+            const sel = selDay === day;
+            const isToday = day === today;
+            return (
+              <button key={day} onClick={() => setSelDay(day)}
+                className={`flex-shrink-0 px-3 py-2 rounded-xl text-xs font-display tracking-wider transition-all active:scale-95 relative
+                  ${sel ? 'bg-[#C8FF00] text-[#0D0D0F]'
+                        : has ? 'bg-[#1A1A1C] text-[#F5F5F0] border border-[#3A3A3C]'
+                              : 'bg-[#0D0D0F] text-[#3A3A3C] border border-[#1A1A1C]'}`}
+                style={{ fontFamily:"'Bebas Neue',sans-serif" }}>
+                {day.slice(0,3).toUpperCase()}
+                {isToday && (
+                  <span className={`absolute -top-1 -right-1 w-2 h-2 rounded-full ${sel ? 'bg-[#0D0D0F]' : 'bg-[#C8FF00]'}`}/>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="px-5">
+        {selSchedule ? (
+          <div className="animate-fade-slide">
+            <div className="mb-4">
+              <h2 className="font-display text-3xl text-[#F5F5F0]"
+                style={{ fontFamily:"'Bebas Neue',sans-serif" }}>{selSchedule.focus}</h2>
+              <p className="text-[#8A8A8E] text-sm">{selSchedule.workouts.length} exercises · ~{profile.sessionLength} min</p>
+            </div>
+            <div className="space-y-3">
+              {selSchedule.workouts.map((w,i) => (
+                <div key={i} className="bg-[#1A1A1C] rounded-2xl p-4 border border-[#252527]">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <span className="text-[#8A8A8E] text-xs font-display w-5 flex-shrink-0"
+                          style={{ fontFamily:"'Bebas Neue',sans-serif" }}>{i+1}</span>
+                        <h3 className="font-semibold text-[#F5F5F0] truncate">{w.exercise}</h3>
+                      </div>
+                      <div className="pl-7"><MuscleTag group={w.muscleGroup}/></div>
+                    </div>
+                    <div className="text-right ml-3 flex-shrink-0">
+                      <p className="font-display text-xl text-[#C8FF00]"
+                        style={{ fontFamily:"'Bebas Neue',sans-serif" }}>{w.sets}×{w.reps}</p>
+                      <p className="text-[#8A8A8E] text-xs">{w.rest} rest</p>
+                    </div>
+                  </div>
+                  {w.notes && (
+                    <p className="text-[#8A8A8E] text-xs mt-2 pl-7 italic leading-relaxed">"{w.notes}"</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <div className="text-4xl mb-3">🛌</div>
+            <p className="font-display text-2xl text-[#F5F5F0] mb-2"
+              style={{ fontFamily:"'Bebas Neue',sans-serif" }}>REST DAY</p>
+            <p className="text-[#8A8A8E] text-sm">Recovery is part of the programme.</p>
+          </div>
+        )}
+      </div>
+
+      {plan.motivationalMessage && (
+        <div className="px-5 mt-6 mb-2">
+          <div className="bg-[rgba(200,255,0,0.05)] rounded-2xl p-5 border border-[rgba(200,255,0,0.12)]">
+            <p className="text-[#C8FF00] text-[10px] font-display tracking-widest mb-2"
+              style={{ fontFamily:"'Bebas Neue',sans-serif" }}>FROM YOUR COACH</p>
+            <p className="text-[#F5F5F0] text-sm leading-relaxed">{plan.motivationalMessage}</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   LOG SCREEN — Active Workout
+═══════════════════════════════════════════════ */
+function LogScreen({ planDay, onComplete, onClose }) {
+  const [exLogs, setExLogs] = useState(() =>
+    (planDay?.workouts || []).map(w => ({
+      ...w,
+      sets: Array.from({ length: w.sets }, () => ({ reps:'', weight:'', done:false }))
+    }))
+  );
+  const [restTimer, setRestTimer]  = useState(null); // { seconds, total }
+  const [elapsed, setElapsed]      = useState(0);
+  const startTime = useRef(Date.now());
+
+  /* elapsed ticker — update every 30s */
+  useEffect(() => {
+    const t = setInterval(() => setElapsed(Math.round((Date.now() - startTime.current) / 60000)), 30000);
+    return () => clearInterval(t);
+  }, []);
+
+  /* rest timer countdown */
+  useEffect(() => {
+    if (!restTimer || restTimer.seconds <= 0) { if (restTimer) setRestTimer(null); return; }
+    const t = setTimeout(() => setRestTimer(r => r ? { ...r, seconds: r.seconds - 1 } : null), 1000);
+    return () => clearTimeout(t);
+  }, [restTimer]);
+
+  const updateSet = (ei, si, field, value) =>
+    setExLogs(prev => prev.map((ex, eidx) =>
+      eidx !== ei ? ex : { ...ex, sets: ex.sets.map((s, sidx) =>
+        sidx !== si ? s : { ...s, [field]: value }
+      )}
+    ));
+
+  const completeSet = (ei, si) => {
+    setExLogs(prev => prev.map((ex, eidx) =>
+      eidx !== ei ? ex : { ...ex, sets: ex.sets.map((s, sidx) =>
+        sidx !== si ? s : { ...s, done: true }
+      )}
+    ));
+    /* start rest timer */
+    const restStr = exLogs[ei]?.rest || '60s';
+    const secs = parseInt(restStr) || 60;
+    setRestTimer({ seconds: secs, total: secs });
+  };
+
+  const handleFinish = () => {
+    const duration = Math.max(1, Math.round((Date.now() - startTime.current) / 60000));
+    const totalVolume = calcTotalVolume(exLogs);
+    onComplete({ day: planDay.day, focus: planDay.focus, duration, exercises: exLogs, totalVolume });
+  };
+
+  const completedSets = exLogs.reduce((n, ex) => n + ex.sets.filter(s => s.done).length, 0);
+  const totalSets     = exLogs.reduce((n, ex) => n + ex.sets.length, 0);
+  const progress      = totalSets > 0 ? completedSets / totalSets : 0;
+
+  return (
+    <div className="fixed inset-0 bg-[#0D0D0F] z-40 flex flex-col animate-slide-up"
+      style={{ maxWidth:430, left:'50%', transform:'translateX(-50%)' }}>
+
+      {/* Header */}
+      <div className="flex-shrink-0 px-5 pt-14 pb-3 border-b border-[#1A1A1C]">
+        <div className="flex items-center justify-between mb-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-[#8A8A8E] text-xs uppercase tracking-widest">{planDay.day}</p>
+            <h1 className="font-display text-2xl text-[#F5F5F0] leading-tight truncate"
+              style={{ fontFamily:"'Bebas Neue',sans-serif" }}>{planDay.focus}</h1>
+          </div>
+          <div className="flex items-center gap-3 ml-3 flex-shrink-0">
+            <div className="text-right">
+              <p className="font-display text-xl text-[#C8FF00] leading-none"
+                style={{ fontFamily:"'Bebas Neue',sans-serif" }}>{elapsed}m</p>
+              <p className="text-[#8A8A8E] text-[10px]">elapsed</p>
+            </div>
+            <button onClick={onClose}
+              className="w-9 h-9 rounded-xl bg-[#1A1A1C] flex items-center justify-center active:scale-90 border border-[#252527]">
+              <X size={16} color="#8A8A8E"/>
+            </button>
+          </div>
+        </div>
+        <div className="h-1.5 bg-[#252527] rounded-full overflow-hidden">
+          <div className="h-full bg-[#C8FF00] rounded-full transition-all duration-500"
+            style={{ width:`${progress * 100}%` }}/>
+        </div>
+        <p className="text-[#8A8A8E] text-xs mt-1">{completedSets} / {totalSets} sets</p>
+      </div>
+
+      {/* Exercise list */}
+      <div className="flex-1 overflow-y-auto px-5 py-4 pb-28">
+        {exLogs.map((ex, ei) => {
+          const allDone = ex.sets.every(s => s.done);
+          const doneSets = ex.sets.filter(s => s.done).length;
+          return (
+            <div key={ei} className={`mb-4 rounded-2xl overflow-hidden border transition-all
+              ${allDone
+                ? 'border-[rgba(200,255,0,0.25)] bg-[rgba(200,255,0,0.03)]'
+                : 'border-[#252527] bg-[#1A1A1C]'}`}>
+
+              {/* Exercise header */}
+              <div className="px-4 py-3 flex items-center justify-between">
+                <div className="min-w-0 flex-1">
+                  <h3 className={`font-semibold truncate ${allDone ? 'text-[#C8FF00]' : 'text-[#F5F5F0]'}`}>
+                    {ex.exercise}
+                  </h3>
+                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                    <MuscleTag group={ex.muscleGroup}/>
+                    <span className="text-[#8A8A8E] text-xs">{ex.sets.length} sets · {ex.reps} reps · {ex.rest}</span>
+                  </div>
+                </div>
+                <div className="ml-3 flex-shrink-0 text-right">
+                  {allDone
+                    ? <Check size={20} color="#C8FF00"/>
+                    : <span className="text-[#8A8A8E] text-xs">{doneSets}/{ex.sets.length}</span>}
+                </div>
+              </div>
+
+              {/* Set rows */}
+              <div className="px-4 pb-4">
+                {/* Column labels */}
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="w-7 text-[#8A8A8E] text-xs text-center">SET</span>
+                  <span className="flex-1 text-[#8A8A8E] text-xs text-center">KG</span>
+                  <span className="flex-1 text-[#8A8A8E] text-xs text-center">REPS</span>
+                  <span className="w-12 text-[#8A8A8E] text-xs text-center">✓</span>
+                </div>
+
+                {ex.sets.map((s, si) => (
+                  <div key={si}
+                    className={`flex items-center gap-2 mb-2 transition-opacity ${s.done ? 'opacity-60' : ''}`}>
+                    <span className={`w-7 text-center font-display text-sm flex-shrink-0
+                      ${s.done ? 'text-[#C8FF00]' : 'text-[#8A8A8E]'}`}
+                      style={{ fontFamily:"'Bebas Neue',sans-serif" }}>
+                      {si + 1}
+                    </span>
+                    <input type="number" value={s.weight}
+                      onChange={e => updateSet(ei, si, 'weight', e.target.value)}
+                      placeholder="0" disabled={s.done}
+                      className={`set-input flex-1 ${s.done ? 'done' : ''}`}/>
+                    <input type="number" value={s.reps}
+                      onChange={e => updateSet(ei, si, 'reps', e.target.value)}
+                      placeholder="0" disabled={s.done}
+                      className={`set-input flex-1 ${s.done ? 'done' : ''}`}/>
+                    <button
+                      onClick={() => !s.done && completeSet(ei, si)}
+                      disabled={s.done}
+                      className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all active:scale-90 flex-shrink-0
+                        ${s.done
+                          ? 'bg-[rgba(200,255,0,0.12)] border border-[rgba(200,255,0,0.3)]'
+                          : 'bg-[#252527] border border-[#3A3A3C]'}`}>
+                      <Check size={18} color={s.done ? '#C8FF00' : '#8A8A8E'}/>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Rest timer float */}
+      {restTimer && restTimer.seconds > 0 && (
+        <div className="absolute bottom-24 left-1/2 -translate-x-1/2 bg-[#1A1A1C] rounded-2xl px-5 py-3
+          flex items-center gap-4 border border-[#3A3A3C] shadow-2xl z-10 animate-scale-in">
+          <div className="relative w-12 h-12 flex-shrink-0">
+            <svg className="w-12 h-12 -rotate-90" viewBox="0 0 44 44">
+              <circle cx="22" cy="22" r="18" fill="none" stroke="#252527" strokeWidth="3"/>
+              <circle cx="22" cy="22" r="18" fill="none" stroke="#C8FF00" strokeWidth="3"
+                strokeDasharray={`${2 * Math.PI * 18}`}
+                strokeDashoffset={`${2 * Math.PI * 18 * (1 - restTimer.seconds / restTimer.total)}`}
+                strokeLinecap="round" className="transition-all duration-1000"/>
+            </svg>
+            <span className="absolute inset-0 flex items-center justify-center font-display text-xs text-[#C8FF00]"
+              style={{ fontFamily:"'Bebas Neue',sans-serif" }}>{restTimer.seconds}</span>
+          </div>
+          <div className="min-w-0">
+            <p className="font-display text-lg text-[#F5F5F0] leading-none"
+              style={{ fontFamily:"'Bebas Neue',sans-serif" }}>REST</p>
+            <p className="text-[#8A8A8E] text-xs">{restTimer.seconds}s remaining</p>
+          </div>
+          <button onClick={() => setRestTimer(null)}
+            className="px-3 py-1.5 rounded-lg bg-[#252527] text-[#F5F5F0] text-xs font-semibold active:scale-95 flex items-center gap-1 flex-shrink-0">
+            <SkipForward size={12}/> SKIP
+          </button>
+        </div>
+      )}
+
+      {/* Finish button */}
+      <div className="absolute bottom-0 left-0 right-0 px-5 py-3 bg-[#0D0D0F] border-t border-[#1A1A1C]"
+        style={{ paddingBottom:'max(1.25rem, env(safe-area-inset-bottom))' }}>
+        <button onClick={handleFinish}
+          className="w-full py-4 rounded-2xl bg-[#C8FF00] text-[#0D0D0F] font-display text-xl tracking-wider active:scale-95 transition-all"
+          style={{ fontFamily:"'Bebas Neue',sans-serif" }}>
+          FINISH WORKOUT
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   CELEBRATION SCREEN
+═══════════════════════════════════════════════ */
+function CelebrationScreen({ result, newBadges, onDone }) {
+  const [note, setNote]       = useState('');
+  const [showNote, setShowNote] = useState(false);
+  const fmtVol = v => v >= 1000 ? `${(v/1000).toFixed(1)}t` : `${Math.round(v)}kg`;
+  const doneSets = result.exercises.reduce((n,ex) => n + ex.sets.filter(s => s.done).length, 0);
+
+  return (
+    <div className="fixed inset-0 bg-[#0D0D0F] z-50 flex flex-col overflow-y-auto animate-fade-slide"
+      style={{ maxWidth:430, left:'50%', transform:'translateX(-50%)' }}>
+      <Confetti/>
+
+      <div className="flex flex-col items-center flex-1 px-5 py-10 text-center">
+        <div className="text-7xl mb-4 animate-scale-in">💪</div>
+        <h1 className="font-display leading-none mb-6" style={{ fontFamily:"'Bebas Neue',sans-serif" }}>
+          <span className="text-6xl text-[#C8FF00] block">WORKOUT</span>
+          <span className="text-6xl text-[#F5F5F0] block">COMPLETE</span>
+        </h1>
+
+        {/* Stats */}
+        <div className="w-full grid grid-cols-3 gap-3 mb-5">
+          {[
+            { label:'DURATION', val:`${result.duration}m` },
+            { label:'VOLUME',   val: fmtVol(result.totalVolume) },
+            { label:'SETS',     val: doneSets },
+          ].map(({ label, val }) => (
+            <div key={label} className="bg-[#1A1A1C] rounded-2xl p-4 border border-[#252527]">
+              <p className="font-display text-3xl text-[#C8FF00] leading-none"
+                style={{ fontFamily:"'Bebas Neue',sans-serif" }}>{val}</p>
+              <p className="text-[#8A8A8E] text-xs uppercase tracking-wider mt-1">{label}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* PRs */}
+        {result.newPRs?.length > 0 && (
+          <div className="w-full bg-[rgba(200,255,0,0.05)] border border-[rgba(200,255,0,0.2)] rounded-2xl p-4 mb-4 text-left">
+            <p className="text-[#C8FF00] font-display text-sm tracking-wider mb-2"
+              style={{ fontFamily:"'Bebas Neue',sans-serif" }}>🏆 NEW PERSONAL RECORDS</p>
+            {result.newPRs.map((pr, i) => (
+              <p key={i} className="text-[#F5F5F0] text-sm">{pr.exercise}: {pr.weight}kg × {pr.reps}</p>
+            ))}
+          </div>
+        )}
+
+        {/* New badges */}
+        {newBadges?.length > 0 && (
+          <div className="w-full space-y-2 mb-4">
+            {newBadges.map(badge => (
+              <div key={badge.id}
+                className="bg-[#1A1A1C] border border-[#C8FF00] rounded-2xl px-5 py-3 flex items-center gap-3 animate-scale-in">
+                <span className="text-3xl">{badge.emoji}</span>
+                <div className="text-left">
+                  <p className="text-[#C8FF00] font-display text-lg leading-none"
+                    style={{ fontFamily:"'Bebas Neue',sans-serif" }}>{badge.name} UNLOCKED</p>
+                  <p className="text-[#8A8A8E] text-xs">{badge.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Note */}
+        {!showNote ? (
+          <button onClick={() => setShowNote(true)}
+            className="text-[#8A8A8E] text-sm underline active:scale-95 mb-4">
+            + Add workout note
+          </button>
+        ) : (
+          <textarea value={note} onChange={e => setNote(e.target.value)}
+            placeholder="How did it feel? Any notes…"
+            className="w-full bg-[#1A1A1C] text-[#F5F5F0] rounded-2xl px-4 py-3 text-sm border border-[#3A3A3C] focus:border-[#C8FF00] outline-none resize-none mb-4 h-20"
+          />
+        )}
+      </div>
+
+      <div className="px-5 flex-shrink-0"
+        style={{ paddingBottom:'max(2.5rem, env(safe-area-inset-bottom))' }}>
+        <button onClick={() => onDone(note)}
+          className="w-full py-4 rounded-2xl bg-[#C8FF00] text-[#0D0D0F] font-display text-xl tracking-wider active:scale-95 transition-all"
+          style={{ fontFamily:"'Bebas Neue',sans-serif" }}>
+          BACK TO HOME
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   PROGRESS SCREEN
+═══════════════════════════════════════════════ */
+function ProgressScreen({ logs, prs, badges, profile }) {
+  const [insights, setInsights]         = useState(null);
+  const [loadingInsights, setLoading]   = useState(false);
+  const [insightError, setInsightError] = useState(null);
+
+  /* Weekly volume — last 8 weeks */
+  const weeklyData = useMemo(() => {
+    return Array.from({ length: 8 }, (_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - (7 - i) * 7);
+      const wStart = getWeekStart(d);
+      const wEnd   = new Date(wStart);
+      wEnd.setDate(wEnd.getDate() + 6);
+      const wEndISO = wEnd.toISOString().split('T')[0];
+      const vol = logs.filter(l => l.date >= wStart && l.date <= wEndISO)
+                      .reduce((s,l) => s + (l.totalVolume||0), 0);
+      const isNow = i === 7;
+      const label = isNow ? 'Now' : `-${7-i}w`;
+      return { label, volume: Math.round(vol), isNow };
+    });
+  }, [logs]);
+
+  const maxVol = Math.max(...weeklyData.map(w => w.volume), 1);
+
+  /* Heatmap — last 56 days */
+  const heatmapData = useMemo(() => {
+    return Array.from({ length: 56 }, (_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - (55 - i));
+      const iso = d.toISOString().split('T')[0];
+      const log = logs.find(l => l.date === iso);
+      return { iso, volume: log?.totalVolume || 0, has: !!log };
+    });
+  }, [logs]);
+
+  const maxCell = Math.max(...heatmapData.map(c => c.volume), 1);
+
+  const totalVolume = logs.reduce((s,l) => s + (l.totalVolume||0), 0);
+  const fmtVol = v => v >= 1000 ? `${(v/1000).toFixed(1)}t` : `${Math.round(v)}kg`;
+
+  const loadInsights = async () => {
+    if (!profile.apiKey) { setInsightError('Add your API key in Profile to unlock AI insights.'); return; }
+    setLoading(true); setInsightError(null);
+    try {
+      const data = await generateInsights(profile, logs, prs);
+      setInsights(data);
+    } catch(e) { setInsightError(e.message); }
+    finally { setLoading(false); }
+  };
+
+  return (
+    <div className="h-full overflow-y-auto pb-28">
+      <div className="px-5 pt-14 pb-4">
+        <h1 className="font-display text-5xl text-[#F5F5F0]"
+          style={{ fontFamily:"'Bebas Neue',sans-serif" }}>PROGRESS</h1>
+        <p className="text-[#8A8A8E] text-sm">{logs.length} workouts logged</p>
+      </div>
+
+      {logs.length === 0 ? (
+        <div className="px-5 py-16 text-center">
+          <div className="text-6xl mb-4">📊</div>
+          <h2 className="font-display text-3xl text-[#F5F5F0] mb-2"
+            style={{ fontFamily:"'Bebas Neue',sans-serif" }}>THE IRON AWAITS</h2>
+          <p className="text-[#8A8A8E]">Hit that LOG button to start tracking your gains.</p>
+        </div>
+      ) : (
+        <>
+          {/* Quick stats */}
+          <div className="px-5 mb-6">
+            <div className="flex gap-3">
+              <StatCard label="SESSIONS" value={logs.length}/>
+              <StatCard label="TOTAL VOL" value={fmtVol(totalVolume)}/>
+              <StatCard label="PRs SET" value={Object.keys(prs).length}/>
+            </div>
+          </div>
+
+          {/* Volume bar chart */}
+          <div className="px-5 mb-6">
+            <h2 className="font-display text-2xl text-[#F5F5F0] mb-3"
+              style={{ fontFamily:"'Bebas Neue',sans-serif" }}>WEEKLY VOLUME</h2>
+            <div className="bg-[#1A1A1C] rounded-2xl p-4 border border-[#252527]">
+              <svg viewBox="0 0 336 110" width="100%" style={{ display:'block' }}>
+                {weeklyData.map((w, i) => {
+                  const barH = Math.max(2, (w.volume / maxVol) * 72);
+                  const x    = i * 42 + 4;
+                  const y    = 80 - barH;
+                  return (
+                    <g key={i}>
+                      <rect x={x} y={y} width={34} height={barH} rx="4"
+                        fill={w.isNow ? '#C8FF00' : '#3A3A3C'}/>
+                      <text x={x+17} y={97} textAnchor="middle"
+                        fill={w.isNow ? '#C8FF00' : '#8A8A8E'} fontSize="8" fontFamily="DM Sans">
+                        {w.label}
+                      </text>
+                      {w.volume > 0 && (
+                        <text x={x+17} y={y-4} textAnchor="middle"
+                          fill={w.isNow ? '#C8FF00' : '#8A8A8E'} fontSize="7" fontFamily="DM Sans">
+                          {fmtVol(w.volume)}
+                        </text>
+                      )}
+                    </g>
+                  );
+                })}
+              </svg>
+            </div>
+          </div>
+
+          {/* Heatmap */}
+          <div className="px-5 mb-6">
+            <h2 className="font-display text-2xl text-[#F5F5F0] mb-3"
+              style={{ fontFamily:"'Bebas Neue',sans-serif" }}>CONSISTENCY</h2>
+            <div className="bg-[#1A1A1C] rounded-2xl p-4 border border-[#252527]">
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(8,1fr)', gap:4 }}>
+                {heatmapData.map((cell, i) => {
+                  let bg = '#252527';
+                  if (cell.has) {
+                    const pct = cell.volume / maxCell;
+                    bg = pct > 0.7 ? '#C8FF00'
+                       : pct > 0.4 ? 'rgba(200,255,0,0.65)'
+                       : pct > 0.15 ? 'rgba(200,255,0,0.35)'
+                       : 'rgba(200,255,0,0.15)';
+                  }
+                  return (
+                    <div key={i} style={{ background:bg, borderRadius:3, aspectRatio:'1' }}
+                      title={cell.iso}/>
+                  );
+                })}
+              </div>
+              <p className="text-[#8A8A8E] text-xs mt-3">Last 8 weeks · darker = more volume</p>
+            </div>
+          </div>
+
+          {/* PRs */}
+          {Object.keys(prs).length > 0 && (
+            <div className="px-5 mb-6">
+              <h2 className="font-display text-2xl text-[#F5F5F0] mb-3"
+                style={{ fontFamily:"'Bebas Neue',sans-serif" }}>PERSONAL RECORDS</h2>
+              <div className="bg-[#1A1A1C] rounded-2xl overflow-hidden border border-[#252527]">
+                {Object.entries(prs).map(([exercise, pr], i) => (
+                  <div key={exercise}
+                    className={`flex items-center justify-between px-4 py-3
+                      ${i > 0 ? 'border-t border-[#252527]' : ''}`}>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[#F5F5F0] text-sm font-medium truncate">{exercise}</p>
+                      <p className="text-[#8A8A8E] text-xs">{formatDate(pr.date)}</p>
+                    </div>
+                    <div className="text-right ml-3 flex-shrink-0">
+                      <p className="font-display text-xl text-[#C8FF00]"
+                        style={{ fontFamily:"'Bebas Neue',sans-serif" }}>{pr.weight}kg</p>
+                      <p className="text-[#8A8A8E] text-xs">× {pr.reps} reps</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* AI Insights — always visible */}
+      <div className="px-5 mb-6">
+        <h2 className="font-display text-2xl text-[#F5F5F0] mb-3"
+          style={{ fontFamily:"'Bebas Neue',sans-serif" }}>AI INSIGHTS</h2>
+        {!insights && !loadingInsights && (
+          <button onClick={loadInsights}
+            className="w-full py-4 rounded-2xl bg-[#1A1A1C] border border-[#3A3A3C] text-[#C8FF00] font-display text-lg tracking-wider active:scale-95 transition-all flex items-center justify-center gap-2"
+            style={{ fontFamily:"'Bebas Neue',sans-serif" }}>
+            <Zap size={18}/> ANALYSE MY TRAINING
+          </button>
+        )}
+        {loadingInsights && (
+          <div className="bg-[#1A1A1C] rounded-2xl p-6 border border-[#252527] text-center">
+            <div className="flex justify-center gap-2 mb-2">
+              {[0,1,2].map(i => (
+                <div key={i} className="w-2 h-2 rounded-full bg-[#C8FF00]"
+                  style={{ animation:`dotPulse 1.2s ${i*0.2}s ease-in-out infinite`, opacity:0.4 }}/>
+              ))}
+            </div>
+            <p className="text-[#8A8A8E] text-sm">Analysing your training data…</p>
+          </div>
+        )}
+        {insightError && (
+          <div className="bg-[#1A1A1C] rounded-2xl p-4 border border-[#FF453A]/30">
+            <p className="text-[#FF453A] text-sm">{insightError}</p>
+          </div>
+        )}
+        {insights && (
+          <div className="space-y-3">
+            {insights.map((tip, i) => (
+              <div key={i} className="bg-[#1A1A1C] rounded-2xl p-4 border border-[#252527] flex gap-3">
+                <span className="font-display text-2xl text-[#C8FF00] leading-none flex-shrink-0"
+                  style={{ fontFamily:"'Bebas Neue',sans-serif" }}>{i+1}</span>
+                <p className="text-[#F5F5F0] text-sm leading-relaxed">{tip}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Badges */}
+      <div className="px-5 mb-6">
+        <h2 className="font-display text-2xl text-[#F5F5F0] mb-3"
+          style={{ fontFamily:"'Bebas Neue',sans-serif" }}>ACHIEVEMENTS</h2>
+        <div className="grid grid-cols-3 gap-3">
+          {BADGE_DEFS.map(badge => {
+            const earned = badges[badge.id];
+            return (
+              <div key={badge.id}
+                className={`rounded-2xl p-3 text-center border transition-all
+                  ${earned
+                    ? 'bg-[rgba(200,255,0,0.05)] border-[rgba(200,255,0,0.2)]'
+                    : 'bg-[#1A1A1C] border-[#252527] opacity-35'}`}>
+                <div className="text-3xl mb-1">{badge.emoji}</div>
+                <p className={`font-display text-xs leading-tight
+                  ${earned ? 'text-[#C8FF00]' : 'text-[#8A8A8E]'}`}
+                  style={{ fontFamily:"'Bebas Neue',sans-serif" }}>
+                  {badge.name}
+                </p>
+                {earned && (
+                  <p className="text-[#8A8A8E] text-[9px] mt-0.5">{formatDate(earned.unlockedAt)}</p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   APP ROOT
+═══════════════════════════════════════════════ */
+function App() {
+  const [profile,  setProfile]  = useLocalStorage('forge_profile', {
+    name:'', fitnessLevel:'', goal:'', equipment:[],
+    trainingDaysPerWeek:3, trainingDays:[], sessionLength:60,
+    onboardingComplete:false, apiKey:''
+  });
+  const [plan,    setPlan]    = useLocalStorage('forge_plan',   null);
+  const [logs,    setLogs]    = useLocalStorage('forge_logs',   []);
+  const [prs,     setPrs]     = useLocalStorage('forge_prs',    {});
+  const [badges,  setBadges]  = useLocalStorage('forge_badges', {});
+  const [streak,  setStreak]  = useLocalStorage('forge_streak', { current:0, longest:0, lastWorkoutDate:null });
+
+  const [activeTab,      setActiveTab]     = useState('home');
+  const [activeWorkout,  setActiveWorkout] = useState(null);
+  const [workoutResult,  setWorkoutResult] = useState(null);
+  const [newBadges,      setNewBadges]     = useState([]);
+  const [generatingPlan, setGenerating]   = useState(false);
+  const [planError,      setPlanError]    = useState(null);
+
+  const handleGeneratePlan = async (profileData) => {
+    if (!profileData.apiKey?.trim()) {
+      setPlanError('Please add your Anthropic API key. Get one at console.anthropic.com');
+      return;
+    }
+    setGenerating(true); setPlanError(null);
+    try {
+      const generated = await generatePlan(profileData);
+      setPlan({ ...generated, generatedAt: new Date().toISOString() });
+      setActiveTab('home');
+    } catch(e) {
+      setPlanError(e.message);
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleWorkoutComplete = (result) => {
+    const today = getTodayISO();
+    const updatedPRs = { ...prs };
+    const newPRs = [];
+
+    result.exercises.forEach(ex => {
+      ex.sets.filter(s => s.done && s.weight && s.reps).forEach(s => {
+        const w = parseFloat(s.weight), r = parseFloat(s.reps);
+        if (w > 0 && r > 0 && (!updatedPRs[ex.exercise] || w > updatedPRs[ex.exercise].weight)) {
+          updatedPRs[ex.exercise] = { weight:w, reps:r, date:today };
+          newPRs.push({ exercise:ex.exercise, weight:w, reps:r });
+        }
+      });
+    });
+
+    const newLog = {
+      id:`log_${Date.now()}`, date:today, day:result.day, focus:result.focus,
+      duration:result.duration, exercises:result.exercises,
+      totalVolume:result.totalVolume, notes:'',
+    };
+    const updatedLogs   = [...logs, newLog];
+    const updatedStreak = updateStreak(streak, streak.lastWorkoutDate);
+    const earned        = checkNewBadges(updatedLogs, updatedPRs, updatedStreak, badges);
+    const earnedList    = Object.keys(earned).map(id => ({
+      ...BADGE_DEFS.find(b => b.id === id), ...earned[id],
+    }));
+
+    setLogs(updatedLogs);
+    setPrs(updatedPRs);
+    setStreak(updatedStreak);
+    if (Object.keys(earned).length > 0) setBadges(b => ({ ...b, ...earned }));
+    setActiveWorkout(null);
+    setWorkoutResult({ ...result, newPRs });
+    setNewBadges(earnedList);
+  };
+
+  const handleCelebrationDone = (note) => {
+    if (note?.trim()) {
+      setLogs(prev => {
+        const copy = [...prev];
+        copy[copy.length - 1] = { ...copy[copy.length - 1], notes: note.trim() };
+        return copy;
+      });
+    }
+    setWorkoutResult(null);
+    setNewBadges([]);
+    setActiveTab('home');
+  };
+
+  const LogTab = () => (
+    <div className="h-full overflow-y-auto pb-28">
+      <div className="px-5 pt-14 pb-4">
+        <h1 className="font-display text-5xl text-[#F5F5F0]"
+          style={{ fontFamily:"'Bebas Neue',sans-serif" }}>START WORKOUT</h1>
+        <p className="text-[#8A8A8E] text-sm">Choose a session from your plan</p>
+      </div>
+      {plan?.weeklySchedule?.length > 0 ? (
+        <div className="px-5 space-y-3">
+          {plan.weeklySchedule.map(day => {
+            const isToday = day.day === getTodayName();
+            return (
+              <button key={day.day} onClick={() => setActiveWorkout(day)}
+                className={`w-full rounded-2xl p-4 text-left border active:scale-95 transition-all flex items-center justify-between
+                  ${isToday
+                    ? 'bg-[rgba(200,255,0,0.06)] border-[rgba(200,255,0,0.2)]'
+                    : 'bg-[#1A1A1C] border-[#252527]'}`}>
+                <div className="min-w-0 flex-1">
+                  <p className={`text-xs uppercase tracking-widest mb-0.5 ${isToday ? 'text-[#C8FF00]' : 'text-[#8A8A8E]'}`}>
+                    {day.day}{isToday ? ' · TODAY' : ''}
+                  </p>
+                  <p className="font-semibold text-[#F5F5F0] truncate">{day.focus}</p>
+                  <p className="text-[#8A8A8E] text-xs">{day.workouts.length} exercises</p>
+                </div>
+                <ChevronRight size={20} color="#8A8A8E" className="flex-shrink-0 ml-2"/>
+              </button>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="px-5 flex flex-col items-center justify-center py-20 text-center">
+          <div className="text-6xl mb-4">🏋️</div>
+          <h2 className="font-display text-2xl text-[#F5F5F0] mb-2"
+            style={{ fontFamily:"'Bebas Neue',sans-serif" }}>THE IRON AWAITS</h2>
+          <p className="text-[#8A8A8E] text-sm mb-6">Generate a training plan first to start logging structured workouts.</p>
+          <button onClick={() => setActiveTab('profile')}
+            className="px-6 py-3 rounded-xl bg-[#C8FF00] text-[#0D0D0F] font-display text-base active:scale-95"
+            style={{ fontFamily:"'Bebas Neue',sans-serif" }}>
+            BUILD MY PLAN
+          </button>
+        </div>
+      )}
+    </div>
+  );
+
+  /* Loading / error overlay */
+  if (generatingPlan || planError) {
+    return (
+      <div className="max-w-[430px] mx-auto h-screen overflow-hidden relative bg-[#0D0D0F]"
+        style={{ fontFamily:"'DM Sans',sans-serif" }}>
+        <LoadingPlan error={planError}/>
+        {planError && (
+          <div className="absolute bottom-10 left-0 right-0 px-5">
+            <button onClick={() => { setPlanError(null); setActiveTab('profile'); }}
+              className="w-full py-4 rounded-2xl bg-[#C8FF00] text-[#0D0D0F] font-display text-xl tracking-wider active:scale-95"
+              style={{ fontFamily:"'Bebas Neue',sans-serif" }}>
+              BACK TO PROFILE
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  /* Onboarding */
+  if (!profile.onboardingComplete) {
+    return (
+      <div className="max-w-[430px] mx-auto h-screen overflow-hidden relative bg-[#0D0D0F]"
+        style={{ fontFamily:"'DM Sans',sans-serif" }}>
+        <ProfileScreen profile={profile} onSave={setProfile}
+          onGeneratePlan={handleGeneratePlan} isExisting={false}/>
+      </div>
+    );
+  }
+
+  const renderTab = () => {
+    switch (activeTab) {
+      case 'home':     return <HomeScreen profile={profile} plan={plan} logs={logs} streak={streak} prs={prs}
+                                onStartWorkout={setActiveWorkout} onSetTab={setActiveTab}/>;
+      case 'plan':     return <PlanScreen plan={plan} profile={profile}
+                                onRegenerate={() => handleGeneratePlan(profile)}/>;
+      case 'log':      return <LogTab/>;
+      case 'progress': return <ProgressScreen logs={logs} prs={prs} badges={badges} profile={profile}/>;
+      case 'profile':  return <ProfileScreen profile={profile} onSave={setProfile}
+                                onGeneratePlan={handleGeneratePlan} isExisting={true}/>;
+      default: return null;
+    }
+  };
+
+  return (
+    <div className="max-w-[430px] mx-auto h-screen overflow-hidden relative bg-[#0D0D0F]"
+      style={{ fontFamily:"'DM Sans',sans-serif" }}>
+
+      {activeWorkout && (
+        <LogScreen planDay={activeWorkout}
+          onComplete={handleWorkoutComplete}
+          onClose={() => setActiveWorkout(null)}/>
+      )}
+
+      {workoutResult && (
+        <CelebrationScreen result={workoutResult}
+          newBadges={newBadges}
+          onDone={handleCelebrationDone}/>
+      )}
+
+      <div className="h-full overflow-hidden">{renderTab()}</div>
+      <BottomNav active={activeTab} onTab={setActiveTab}/>
+    </div>
+  );
+}
+
+/* inject dotPulse keyframe for loading dots */
+const __style = document.createElement('style');
+__style.textContent = `@keyframes dotPulse{0%,100%{opacity:.2;transform:scale(.7)}50%{opacity:1;transform:scale(1)}}`;
+document.head.appendChild(__style);
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
