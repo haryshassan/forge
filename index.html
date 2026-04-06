@@ -96,6 +96,7 @@
 
 <script type="text/babel" data-presets="react">
 const { useState, useEffect, useCallback, useRef, useMemo } = React;
+const { createPortal } = ReactDOM;
 
 /* ─── Inline SVG icon system (no external dependency) ─── */
 function _S({ size, color, sw, children }) {
@@ -1630,48 +1631,91 @@ function PlanScreen({ plan, profile, onRegenerate }) {
 }
 
 /* ═══════════════════════════════════════════════
-   LOG SCREEN — Active Workout
+   LOG SCREEN — Full-screen workout mode
 ═══════════════════════════════════════════════ */
-function LogScreen({ planDay, onComplete, onClose }) {
+function LogScreen({ planDay, onComplete, onClose, logs, prs }) {
   const [exLogs, setExLogs] = useState(() =>
     (planDay?.workouts || []).map(w => ({
       ...w,
-      sets: Array.from({ length: w.sets }, () => ({ reps:'', weight:'', done:false }))
+      sets: Array.from({ length: w.sets }, () => ({
+        reps: parseInt(w.reps) || 8,
+        weight: 0,
+        done: false
+      })),
+      note: ''
     }))
   );
-  const [restTimer, setRestTimer]  = useState(null); // { seconds, total }
-  const [elapsed, setElapsed]      = useState(0);
+  const [currentExIdx, setCurrentExIdx] = useState(0);
+  const [restTimer, setRestTimer]       = useState(null); // { seconds, total }
+  const [elapsed, setElapsed]           = useState(0);    // seconds
+  const [showEndSheet, setShowEndSheet] = useState(false);
+  const [showNote, setShowNote]         = useState(false);
   const startTime = useRef(Date.now());
 
-  /* elapsed ticker — update every 30s */
+  /* HH:MM:SS live timer */
   useEffect(() => {
-    const t = setInterval(() => setElapsed(Math.round((Date.now() - startTime.current) / 60000)), 30000);
+    const t = setInterval(() => setElapsed(Math.round((Date.now() - startTime.current) / 1000)), 1000);
     return () => clearInterval(t);
   }, []);
 
-  /* rest timer countdown */
+  /* Rest timer countdown */
   useEffect(() => {
-    if (!restTimer || restTimer.seconds <= 0) { if (restTimer) setRestTimer(null); return; }
+    if (!restTimer || restTimer.seconds <= 0) {
+      if (restTimer?.seconds === 0) setRestTimer(null);
+      return;
+    }
     const t = setTimeout(() => setRestTimer(r => r ? { ...r, seconds: r.seconds - 1 } : null), 1000);
     return () => clearTimeout(t);
   }, [restTimer]);
 
-  const updateSet = (ei, si, field, value) =>
-    setExLogs(prev => prev.map((ex, eidx) =>
-      eidx !== ei ? ex : { ...ex, sets: ex.sets.map((s, sidx) =>
-        sidx !== si ? s : { ...s, [field]: value }
-      )}
-    ));
+  const fmtElapsed = (s) => {
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    if (h > 0) return `${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+    return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+  };
 
-  const completeSet = (ei, si) => {
-    setExLogs(prev => prev.map((ex, eidx) =>
-      eidx !== ei ? ex : { ...ex, sets: ex.sets.map((s, sidx) =>
-        sidx !== si ? s : { ...s, done: true }
-      )}
-    ));
-    /* start rest timer */
-    const restStr = exLogs[ei]?.rest || '60s';
-    const secs = parseInt(restStr) || 60;
+  /* Find best set from previous session with same focus */
+  const getPrevData = useCallback((exName) => {
+    if (!logs || logs.length === 0) return null;
+    const prev = [...logs]
+      .filter(l => l.focus === planDay.focus)
+      .sort((a, b) => b.date.localeCompare(a.date))[0];
+    if (!prev) return null;
+    const prevEx = prev.exercises?.find(e => e.exercise === exName);
+    if (!prevEx) return null;
+    const done = prevEx.sets?.filter(s => s.done && s.weight && s.reps);
+    if (!done?.length) return null;
+    const best = done.reduce((b, s) => parseFloat(s.weight) > parseFloat(b.weight) ? s : b, done[0]);
+    return `${best.weight}kg × ${best.reps}`;
+  }, [logs, planDay.focus]);
+
+  const stepWeight = (si, delta) => {
+    setExLogs(prev => prev.map((ex, i) => i !== currentExIdx ? ex : {
+      ...ex,
+      sets: ex.sets.map((s, j) => j !== si ? s : {
+        ...s, weight: Math.max(0, Math.round((parseFloat(s.weight || 0) + delta) * 10) / 10)
+      })
+    }));
+  };
+
+  const stepReps = (si, delta) => {
+    setExLogs(prev => prev.map((ex, i) => i !== currentExIdx ? ex : {
+      ...ex,
+      sets: ex.sets.map((s, j) => j !== si ? s : {
+        ...s, reps: Math.max(1, (parseInt(s.reps) || 0) + delta)
+      })
+    }));
+  };
+
+  const completeSet = (si) => {
+    const ex = exLogs[currentExIdx];
+    if (ex.sets[si].done) return;
+    setExLogs(prev => prev.map((e, i) => i !== currentExIdx ? e : {
+      ...e, sets: e.sets.map((s, j) => j !== si ? s : { ...s, done: true })
+    }));
+    const secs = parseInt(ex.rest) || 60;
     setRestTimer({ seconds: secs, total: secs });
   };
 
@@ -1681,149 +1725,236 @@ function LogScreen({ planDay, onComplete, onClose }) {
     onComplete({ day: planDay.day, focus: planDay.focus, duration, exercises: exLogs, totalVolume });
   };
 
+  const goToEx = (idx) => {
+    setCurrentExIdx(idx);
+    setShowNote(false);
+  };
+
+  const cur        = exLogs[currentExIdx];
+  const isFirst    = currentExIdx === 0;
+  const isLast     = currentExIdx === exLogs.length - 1;
+  const nextEx     = exLogs[currentExIdx + 1];
   const completedSets = exLogs.reduce((n, ex) => n + ex.sets.filter(s => s.done).length, 0);
   const totalSets     = exLogs.reduce((n, ex) => n + ex.sets.length, 0);
-  const progress      = totalSets > 0 ? completedSets / totalSets : 0;
+  const prevData   = getPrevData(cur.exercise);
 
   return (
-    <div className="fixed inset-0 bg-[#0D0D0F] z-40 flex flex-col animate-slide-up"
-      style={{ maxWidth:430, left:'50%', transform:'translateX(-50%)' }}>
+    <div style={{ position:'fixed', top:0, right:0, bottom:0, left:0, zIndex:9999, background:'#0D0D0F', display:'flex', flexDirection:'column', border:'4px solid red' }}>
 
-      {/* Header */}
-      <div className="flex-shrink-0 px-5 pt-14 pb-3 border-b border-[#1A1A1C]">
+      {/* ── Header ───────────────────────────── */}
+      <div className="flex-shrink-0 pt-14 px-5 pb-4 bg-[#0D0D0F]">
         <div className="flex items-center justify-between mb-3">
-          <div className="min-w-0 flex-1">
-            <p className="text-[#8A8A8E] text-xs uppercase tracking-widest">{planDay.day}</p>
-            <h1 className="font-display text-2xl text-[#F5F5F0] leading-tight truncate"
-              style={{ fontFamily:"'Bebas Neue',sans-serif" }}>{planDay.focus}</h1>
-          </div>
-          <div className="flex items-center gap-3 ml-3 flex-shrink-0">
-            <div className="text-right">
-              <p className="font-display text-xl text-[#C8FF00] leading-none"
-                style={{ fontFamily:"'Bebas Neue',sans-serif" }}>{elapsed}m</p>
-              <p className="text-[#8A8A8E] text-[10px]">elapsed</p>
-            </div>
-            <button onClick={onClose}
-              className="w-9 h-9 rounded-xl bg-[#1A1A1C] flex items-center justify-center active:scale-90 border border-[#252527]">
-              <X size={16} color="#8A8A8E"/>
-            </button>
-          </div>
-        </div>
-        <div className="h-1.5 bg-[#252527] rounded-full overflow-hidden">
-          <div className="h-full bg-[#C8FF00] rounded-full transition-all duration-500"
-            style={{ width:`${progress * 100}%` }}/>
-        </div>
-        <p className="text-[#8A8A8E] text-xs mt-1">{completedSets} / {totalSets} sets</p>
-      </div>
-
-      {/* Exercise list */}
-      <div className="flex-1 overflow-y-auto px-5 py-4 pb-28">
-        {exLogs.map((ex, ei) => {
-          const allDone = ex.sets.every(s => s.done);
-          const doneSets = ex.sets.filter(s => s.done).length;
-          return (
-            <div key={ei} className={`mb-4 rounded-2xl overflow-hidden border transition-all
-              ${allDone
-                ? 'border-[rgba(200,255,0,0.25)] bg-[rgba(200,255,0,0.03)]'
-                : 'border-[#252527] bg-[#1A1A1C]'}`}>
-
-              {/* Exercise header */}
-              <div className="px-4 py-3 flex items-center justify-between">
-                <div className="min-w-0 flex-1">
-                  <h3 className={`font-semibold truncate ${allDone ? 'text-[#C8FF00]' : 'text-[#F5F5F0]'}`}>
-                    {ex.exercise}
-                  </h3>
-                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                    <MuscleTag group={ex.muscleGroup}/>
-                    <span className="text-[#8A8A8E] text-xs">{ex.sets.length} sets · {ex.reps} reps · {ex.rest}</span>
-                  </div>
-                </div>
-                <div className="ml-3 flex-shrink-0 text-right">
-                  {allDone
-                    ? <Check size={20} color="#C8FF00"/>
-                    : <span className="text-[#8A8A8E] text-xs">{doneSets}/{ex.sets.length}</span>}
-                </div>
-              </div>
-
-              {/* Set rows */}
-              <div className="px-4 pb-4">
-                {/* Column labels */}
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="w-7 text-[#8A8A8E] text-xs text-center">SET</span>
-                  <span className="flex-1 text-[#8A8A8E] text-xs text-center">KG</span>
-                  <span className="flex-1 text-[#8A8A8E] text-xs text-center">REPS</span>
-                  <span className="w-12 text-[#8A8A8E] text-xs text-center">✓</span>
-                </div>
-
-                {ex.sets.map((s, si) => (
-                  <div key={si}
-                    className={`flex items-center gap-2 mb-2 transition-opacity ${s.done ? 'opacity-60' : ''}`}>
-                    <span className={`w-7 text-center font-display text-sm flex-shrink-0
-                      ${s.done ? 'text-[#C8FF00]' : 'text-[#8A8A8E]'}`}
-                      style={{ fontFamily:"'Bebas Neue',sans-serif" }}>
-                      {si + 1}
-                    </span>
-                    <input type="number" value={s.weight}
-                      onChange={e => updateSet(ei, si, 'weight', e.target.value)}
-                      placeholder="0" disabled={s.done}
-                      className={`set-input flex-1 ${s.done ? 'done' : ''}`}/>
-                    <input type="number" value={s.reps}
-                      onChange={e => updateSet(ei, si, 'reps', e.target.value)}
-                      placeholder="0" disabled={s.done}
-                      className={`set-input flex-1 ${s.done ? 'done' : ''}`}/>
-                    <button
-                      onClick={() => !s.done && completeSet(ei, si)}
-                      disabled={s.done}
-                      className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all active:scale-90 flex-shrink-0
-                        ${s.done
-                          ? 'bg-[rgba(200,255,0,0.12)] border border-[rgba(200,255,0,0.3)]'
-                          : 'bg-[#252527] border border-[#3A3A3C]'}`}>
-                      <Check size={18} color={s.done ? '#C8FF00' : '#8A8A8E'}/>
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Rest timer float */}
-      {restTimer && restTimer.seconds > 0 && (
-        <div className="absolute bottom-24 left-1/2 -translate-x-1/2 bg-[#1A1A1C] rounded-2xl px-5 py-3
-          flex items-center gap-4 border border-[#3A3A3C] shadow-2xl z-10 animate-scale-in">
-          <div className="relative w-12 h-12 flex-shrink-0">
-            <svg className="w-12 h-12 -rotate-90" viewBox="0 0 44 44">
-              <circle cx="22" cy="22" r="18" fill="none" stroke="#252527" strokeWidth="3"/>
-              <circle cx="22" cy="22" r="18" fill="none" stroke="#C8FF00" strokeWidth="3"
-                strokeDasharray={`${2 * Math.PI * 18}`}
-                strokeDashoffset={`${2 * Math.PI * 18 * (1 - restTimer.seconds / restTimer.total)}`}
-                strokeLinecap="round" className="transition-all duration-1000"/>
-            </svg>
-            <span className="absolute inset-0 flex items-center justify-center font-display text-xs text-[#C8FF00]"
-              style={{ fontFamily:"'Bebas Neue',sans-serif" }}>{restTimer.seconds}</span>
-          </div>
-          <div className="min-w-0">
-            <p className="font-display text-lg text-[#F5F5F0] leading-none"
-              style={{ fontFamily:"'Bebas Neue',sans-serif" }}>REST</p>
-            <p className="text-[#8A8A8E] text-xs">{restTimer.seconds}s remaining</p>
-          </div>
-          <button onClick={() => setRestTimer(null)}
-            className="px-3 py-1.5 rounded-lg bg-[#252527] text-[#F5F5F0] text-xs font-semibold active:scale-95 flex items-center gap-1 flex-shrink-0">
-            <SkipForward size={12}/> SKIP
+          <button onClick={() => setShowEndSheet(true)}
+            className="w-10 h-10 rounded-xl bg-[#1A1A1C] flex items-center justify-center active:scale-90 border border-[#252527]">
+            <X size={18} color="#8A8A8E"/>
           </button>
+          <div className="text-center flex-1 mx-3">
+            <p className="text-[#8A8A8E] text-[10px] uppercase tracking-widest leading-none">{planDay.day}</p>
+            <p className="font-display text-xl text-[#F5F5F0] leading-tight truncate"
+              style={{ fontFamily:"'Bebas Neue',sans-serif" }}>{planDay.focus}</p>
+          </div>
+          <div className="text-right">
+            <p className="font-display text-2xl text-[#C8FF00] leading-none tabular-nums"
+              style={{ fontFamily:"'Bebas Neue',sans-serif" }}>{fmtElapsed(elapsed)}</p>
+            <p className="text-[#8A8A8E] text-[10px] uppercase tracking-wider">{completedSets}/{totalSets} sets</p>
+          </div>
+        </div>
+        <div className="h-1 bg-[#1A1A1C] rounded-full overflow-hidden">
+          <div className="h-full bg-[#C8FF00] rounded-full transition-all duration-500"
+            style={{ width:`${totalSets > 0 ? (completedSets / totalSets) * 100 : 0}%` }}/>
+        </div>
+      </div>
+
+      {/* ── Scrollable content ───────────────── */}
+      <div className="flex-1 overflow-y-auto px-5 pb-4">
+
+        {/* Exercise label */}
+        <div className="mb-5">
+          <p className="text-[#8A8A8E] text-xs uppercase tracking-widest mb-0.5">
+            EXERCISE {currentExIdx + 1} OF {exLogs.length}
+          </p>
+          <h2 className="font-display leading-none mb-2"
+            style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:36 }}>
+            <span className="text-[#F5F5F0]">{cur.exercise}</span>
+          </h2>
+          <div className="flex items-center gap-2 flex-wrap">
+            <MuscleTag group={cur.muscleGroup}/>
+            <span className="text-[#C8FF00] text-xs font-semibold bg-[rgba(200,255,0,0.08)] px-2 py-0.5 rounded-lg">
+              {cur.sets.length} × {cur.reps}
+            </span>
+            {cur.rest && (
+              <span className="text-[#8A8A8E] text-xs">{cur.rest} rest</span>
+            )}
+          </div>
+          {prevData && (
+            <p className="text-[#8A8A8E] text-xs mt-2">
+              Last time: <span className="text-[#F5F5F0] font-medium">{prevData}</span>
+            </p>
+          )}
+          {cur.notes && (
+            <p className="text-[#FF9F0A] text-xs mt-1.5 italic">💡 {cur.notes}</p>
+          )}
+        </div>
+
+        {/* Set rows */}
+        <div className="mb-4">
+          <div className="flex items-center px-1 mb-2">
+            <span className="w-8 text-[#8A8A8E] text-xs text-center">SET</span>
+            <span className="flex-1 text-[#8A8A8E] text-xs text-center">WEIGHT (KG)</span>
+            <span className="flex-1 text-[#8A8A8E] text-xs text-center">REPS</span>
+            <span className="w-14 text-[#8A8A8E] text-xs text-center">✓</span>
+          </div>
+
+          <div className="space-y-2">
+            {cur.sets.map((s, si) => (
+              <div key={si}
+                className={`flex items-center gap-2 rounded-2xl px-3 py-2 border transition-all
+                  ${s.done
+                    ? 'bg-[rgba(200,255,0,0.04)] border-[rgba(200,255,0,0.15)] opacity-60'
+                    : 'bg-[#1A1A1C] border-[#252527]'}`}>
+
+                <span className={`w-6 text-center font-display text-xl leading-none flex-shrink-0
+                  ${s.done ? 'text-[#C8FF00]' : 'text-[#8A8A8E]'}`}
+                  style={{ fontFamily:"'Bebas Neue',sans-serif" }}>{si + 1}</span>
+
+                {/* Weight stepper */}
+                <div className="flex-1 flex items-center justify-center gap-1">
+                  <button onPointerDown={e => { e.preventDefault(); !s.done && stepWeight(si, -2.5); }}
+                    className="w-9 h-12 rounded-xl bg-[#252527] flex items-center justify-center text-[#8A8A8E] text-lg font-bold active:bg-[#3A3A3C] disabled:opacity-30 select-none"
+                    disabled={s.done}>−</button>
+                  <span className={`w-12 text-center font-display text-2xl leading-none select-none
+                    ${s.done ? 'text-[#8A8A8E]' : 'text-[#F5F5F0]'}`}
+                    style={{ fontFamily:"'Bebas Neue',sans-serif" }}>{s.weight}</span>
+                  <button onPointerDown={e => { e.preventDefault(); !s.done && stepWeight(si, 2.5); }}
+                    className="w-9 h-12 rounded-xl bg-[#252527] flex items-center justify-center text-[#C8FF00] text-lg font-bold active:bg-[#3A3A3C] disabled:opacity-30 select-none"
+                    disabled={s.done}>+</button>
+                </div>
+
+                {/* Reps stepper */}
+                <div className="flex-1 flex items-center justify-center gap-1">
+                  <button onPointerDown={e => { e.preventDefault(); !s.done && stepReps(si, -1); }}
+                    className="w-9 h-12 rounded-xl bg-[#252527] flex items-center justify-center text-[#8A8A8E] text-lg font-bold active:bg-[#3A3A3C] disabled:opacity-30 select-none"
+                    disabled={s.done}>−</button>
+                  <span className={`w-10 text-center font-display text-2xl leading-none select-none
+                    ${s.done ? 'text-[#8A8A8E]' : 'text-[#F5F5F0]'}`}
+                    style={{ fontFamily:"'Bebas Neue',sans-serif" }}>{s.reps}</span>
+                  <button onPointerDown={e => { e.preventDefault(); !s.done && stepReps(si, 1); }}
+                    className="w-9 h-12 rounded-xl bg-[#252527] flex items-center justify-center text-[#C8FF00] text-lg font-bold active:bg-[#3A3A3C] disabled:opacity-30 select-none"
+                    disabled={s.done}>+</button>
+                </div>
+
+                {/* Complete button */}
+                <button onPointerDown={e => { e.preventDefault(); completeSet(si); }}
+                  disabled={s.done}
+                  className={`w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0 transition-all active:scale-90
+                    ${s.done
+                      ? 'bg-[rgba(200,255,0,0.15)] border border-[rgba(200,255,0,0.4)]'
+                      : 'bg-[#252527] border border-[#3A3A3C]'}`}>
+                  <Check size={22} color={s.done ? '#C8FF00' : '#555'}/>
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Exercise note */}
+        {showNote ? (
+          <textarea
+            value={cur.note || ''}
+            onChange={e => setExLogs(prev => prev.map((ex, i) =>
+              i !== currentExIdx ? ex : { ...ex, note: e.target.value }
+            ))}
+            placeholder="Notes for this exercise..."
+            autoFocus
+            className="w-full bg-[#1A1A1C] text-[#F5F5F0] rounded-xl px-4 py-3 text-sm border border-[#3A3A3C] focus:border-[#C8FF00] outline-none resize-none h-16 mb-2"
+          />
+        ) : (
+          <button onClick={() => setShowNote(true)}
+            className="text-[#8A8A8E] text-xs underline underline-offset-2 active:scale-95 mb-2">
+            + Add note
+          </button>
+        )}
+      </div>
+
+      {/* ── Navigation buttons ──────────────── */}
+      <div className="flex-shrink-0 px-5 pt-3 bg-[#0D0D0F] border-t border-[#1A1A1C]"
+        style={{ paddingBottom: restTimer ? '6rem' : 'max(1.5rem, env(safe-area-inset-bottom))' }}>
+        <div className="flex gap-3">
+          {!isFirst && (
+            <button onClick={() => goToEx(currentExIdx - 1)}
+              className="flex-1 py-4 rounded-2xl bg-[#1A1A1C] text-[#F5F5F0] font-display text-lg tracking-wider active:scale-95 transition-all border border-[#252527]"
+              style={{ fontFamily:"'Bebas Neue',sans-serif" }}>
+              ← PREV
+            </button>
+          )}
+          {isLast ? (
+            <button onClick={handleFinish}
+              className="flex-1 py-4 rounded-2xl bg-[#C8FF00] text-[#0D0D0F] font-display text-xl tracking-wider active:scale-95 transition-all"
+              style={{ fontFamily:"'Bebas Neue',sans-serif" }}>
+              FINISH WORKOUT
+            </button>
+          ) : (
+            <button onClick={() => goToEx(currentExIdx + 1)}
+              className="flex-1 py-4 rounded-2xl bg-[#C8FF00] text-[#0D0D0F] font-display text-xl tracking-wider active:scale-95 transition-all"
+              style={{ fontFamily:"'Bebas Neue',sans-serif" }}>
+              {nextEx ? `NEXT: ${nextEx.exercise.split(' ').slice(0,2).join(' ')} →` : 'NEXT →'}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* ── Rest timer pill bar ──────────────── */}
+      {restTimer && restTimer.seconds > 0 && (
+        <div className="absolute bottom-0 left-0 right-0 z-30 pointer-events-none"
+          style={{ paddingBottom:'max(1.5rem, env(safe-area-inset-bottom))' }}>
+          <div className="mx-5 mb-0 bg-[#1A1A1C] rounded-2xl px-5 py-4 border border-[#3A3A3C] shadow-2xl pointer-events-auto">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-[#C8FF00] animate-pulse"/>
+                <span className="font-display text-lg text-[#F5F5F0] tracking-wider"
+                  style={{ fontFamily:"'Bebas Neue',sans-serif" }}>REST</span>
+                <span className="font-display text-2xl text-[#C8FF00] tabular-nums"
+                  style={{ fontFamily:"'Bebas Neue',sans-serif" }}>{restTimer.seconds}s</span>
+              </div>
+              <button onClick={() => setRestTimer(null)}
+                className="px-4 py-1.5 rounded-xl bg-[#252527] text-[#F5F5F0] text-xs font-bold tracking-wider active:scale-95 border border-[#3A3A3C]">
+                SKIP
+              </button>
+            </div>
+            <div className="h-1.5 bg-[#252527] rounded-full overflow-hidden">
+              <div className="h-full bg-[#C8FF00] rounded-full transition-all duration-1000"
+                style={{ width:`${(restTimer.seconds / restTimer.total) * 100}%` }}/>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* Finish button */}
-      <div className="absolute bottom-0 left-0 right-0 px-5 py-3 bg-[#0D0D0F] border-t border-[#1A1A1C]"
-        style={{ paddingBottom:'max(1.25rem, env(safe-area-inset-bottom))' }}>
-        <button onClick={handleFinish}
-          className="w-full py-4 rounded-2xl bg-[#C8FF00] text-[#0D0D0F] font-display text-xl tracking-wider active:scale-95 transition-all"
-          style={{ fontFamily:"'Bebas Neue',sans-serif" }}>
-          FINISH WORKOUT
-        </button>
-      </div>
+      {/* ── End workout confirmation sheet ──── */}
+      {showEndSheet && (
+        <div className="absolute inset-0 bg-[rgba(0,0,0,0.75)] z-50 flex items-end"
+          onClick={() => setShowEndSheet(false)}>
+          <div className="w-full bg-[#1A1A1C] rounded-t-3xl px-5 pt-6 border-t border-[#3A3A3C]"
+            style={{ paddingBottom:'max(2rem, env(safe-area-inset-bottom))' }}
+            onClick={e => e.stopPropagation()}>
+            <div className="w-10 h-1 bg-[#3A3A3C] rounded-full mx-auto mb-6"/>
+            <h3 className="font-display text-3xl text-[#F5F5F0] mb-1"
+              style={{ fontFamily:"'Bebas Neue',sans-serif" }}>END WORKOUT?</h3>
+            <p className="text-[#8A8A8E] text-sm mb-6">{completedSets} of {totalSets} sets completed</p>
+            <div className="space-y-3">
+              <button onClick={handleFinish}
+                className="w-full py-4 rounded-2xl bg-[#C8FF00] text-[#0D0D0F] font-display text-xl tracking-wider active:scale-95"
+                style={{ fontFamily:"'Bebas Neue',sans-serif" }}>
+                SAVE &amp; EXIT
+              </button>
+              <button onClick={() => setShowEndSheet(false)}
+                className="w-full py-4 rounded-2xl bg-[#252527] text-[#F5F5F0] font-display text-xl tracking-wider active:scale-95 border border-[#3A3A3C]"
+                style={{ fontFamily:"'Bebas Neue',sans-serif" }}>
+                KEEP GOING
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1831,11 +1962,63 @@ function LogScreen({ planDay, onComplete, onClose }) {
 /* ═══════════════════════════════════════════════
    CELEBRATION SCREEN
 ═══════════════════════════════════════════════ */
-function CelebrationScreen({ result, newBadges, onDone }) {
-  const [note, setNote]       = useState('');
+function CelebrationScreen({ result, newBadges, onDone, profile }) {
+  const [note, setNote]         = useState('');
   const [showNote, setShowNote] = useState(false);
+  const [hypeMsg, setHypeMsg]   = useState(null);
+  const [loadingHype, setLoadingHype] = useState(false);
+  const [copied, setCopied]     = useState(false);
+
   const fmtVol = v => v >= 1000 ? `${(v/1000).toFixed(1)}t` : `${Math.round(v)}kg`;
-  const doneSets = result.exercises.reduce((n,ex) => n + ex.sets.filter(s => s.done).length, 0);
+  const doneSets     = result.exercises.reduce((n, ex) => n + ex.sets.filter(s => s.done).length, 0);
+  const doneReps     = result.exercises.reduce((n, ex) =>
+    n + ex.sets.filter(s => s.done).reduce((r, s) => r + (parseInt(s.reps) || 0), 0), 0);
+  const doneExercises = result.exercises.filter(ex => ex.sets.some(s => s.done)).length;
+  const estCals      = Math.round(result.duration * 5.5);
+
+  /* Claude hype message */
+  useEffect(() => {
+    const generate = async () => {
+      setLoadingHype(true);
+      try {
+        const prText = result.newPRs?.length > 0
+          ? ` New PRs: ${result.newPRs.map(p => `${p.exercise} ${p.weight}kg×${p.reps}`).join(', ')}.` : '';
+        const summary = `${result.focus}. Duration: ${result.duration} min. ` +
+          `${doneExercises} exercises, ${doneSets} sets, ${fmtVol(result.totalVolume)} volume.${prText}`;
+        const name = profile?.name || 'Champion';
+        const resp = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': '',
+            'anthropic-version': '2023-06-01',
+            'anthropic-dangerous-direct-browser-access': 'true'
+          },
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-20250514',
+            max_tokens: 80,
+            system: "You are a world-class personal trainer. Give one punchy, specific, high-energy 1-2 sentence message celebrating this athlete's session. Use their name. Reference a specific number from their workout.",
+            messages: [{ role: 'user', content: `${name} just finished: ${summary}` }]
+          })
+        });
+        const data = await resp.json();
+        setHypeMsg(data?.content?.[0]?.text || null);
+      } catch (_) { /* silently fail */ }
+      finally { setLoadingHype(false); }
+    };
+    generate();
+  }, []);
+
+  const handleShare = () => {
+    const prLine = result.newPRs?.length > 0
+      ? `\nPRs: ${result.newPRs.map(p => `${p.exercise} ${p.weight}kg×${p.reps}`).join(', ')}` : '';
+    const text = `Just crushed a workout on FORGE 💪\n${result.focus} — ${result.duration}min\n` +
+      `${doneExercises} exercises · ${doneSets} sets · ${fmtVol(result.totalVolume)} volume${prLine}\n#FORGE #fitness`;
+    navigator.clipboard?.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
 
   return (
     <div className="fixed inset-0 bg-[#0D0D0F] z-50 flex flex-col overflow-y-auto animate-fade-slide"
@@ -1849,12 +2032,15 @@ function CelebrationScreen({ result, newBadges, onDone }) {
           <span className="text-6xl text-[#F5F5F0] block">COMPLETE</span>
         </h1>
 
-        {/* Stats */}
+        {/* 6-stat grid */}
         <div className="w-full grid grid-cols-3 gap-3 mb-5">
           {[
-            { label:'DURATION', val:`${result.duration}m` },
-            { label:'VOLUME',   val: fmtVol(result.totalVolume) },
-            { label:'SETS',     val: doneSets },
+            { label:'DURATION',  val:`${result.duration}m` },
+            { label:'EXERCISES', val: doneExercises },
+            { label:'SETS',      val: doneSets },
+            { label:'REPS',      val: doneReps },
+            { label:'VOLUME',    val: fmtVol(result.totalVolume) },
+            { label:'EST. CALS', val:`~${estCals}` },
           ].map(({ label, val }) => (
             <div key={label} className="bg-[#1A1A1C] rounded-2xl p-4 border border-[#252527]">
               <p className="font-display text-3xl text-[#C8FF00] leading-none"
@@ -1863,6 +2049,19 @@ function CelebrationScreen({ result, newBadges, onDone }) {
             </div>
           ))}
         </div>
+
+        {/* Coach hype message */}
+        {loadingHype && (
+          <div className="w-full bg-[#1A1A1C] rounded-2xl p-4 border border-[#252527] mb-4 animate-pulse">
+            <p className="text-[#8A8A8E] text-sm">Getting your coach message...</p>
+          </div>
+        )}
+        {hypeMsg && (
+          <div className="w-full bg-[rgba(200,255,0,0.05)] border border-[rgba(200,255,0,0.2)] rounded-2xl p-4 mb-4 text-left">
+            <p className="text-[#8A8A8E] text-[10px] uppercase tracking-widest mb-1.5">COACH SAYS</p>
+            <p className="text-[#F5F5F0] text-sm italic leading-relaxed">{hypeMsg}</p>
+          </div>
+        )}
 
         {/* PRs */}
         {result.newPRs?.length > 0 && (
@@ -1875,7 +2074,7 @@ function CelebrationScreen({ result, newBadges, onDone }) {
           </div>
         )}
 
-        {/* New badges */}
+        {/* Badges */}
         {newBadges?.length > 0 && (
           <div className="w-full space-y-2 mb-4">
             {newBadges.map(badge => (
@@ -1904,6 +2103,13 @@ function CelebrationScreen({ result, newBadges, onDone }) {
             className="w-full bg-[#1A1A1C] text-[#F5F5F0] rounded-2xl px-4 py-3 text-sm border border-[#3A3A3C] focus:border-[#C8FF00] outline-none resize-none mb-4 h-20"
           />
         )}
+
+        {/* Share */}
+        <button onClick={handleShare}
+          className="flex items-center gap-2 text-[#8A8A8E] text-sm border border-[#252527] rounded-xl px-5 py-2.5 active:scale-95 transition-all mb-2">
+          <span>{copied ? '✓' : '↑'}</span>
+          <span>{copied ? 'Copied to clipboard!' : 'Share Workout'}</span>
+        </button>
       </div>
 
       <div className="px-5 flex-shrink-0"
@@ -3567,24 +3773,30 @@ function App() {
   };
 
   return (
-    <div className="max-w-[430px] mx-auto h-screen overflow-hidden relative bg-[#0D0D0F]"
-      style={{ fontFamily:"'DM Sans',sans-serif" }}>
-
-      {activeWorkout && (
+    <>
+      {activeWorkout && createPortal(
         <LogScreen planDay={activeWorkout}
           onComplete={handleWorkoutComplete}
-          onClose={() => setActiveWorkout(null)}/>
+          onClose={() => setActiveWorkout(null)}
+          logs={logs}
+          prs={prs}/>,
+        document.body
       )}
 
-      {workoutResult && (
-        <CelebrationScreen result={workoutResult}
-          newBadges={newBadges}
-          onDone={handleCelebrationDone}/>
-      )}
+      <div className="max-w-[430px] mx-auto h-screen overflow-hidden relative bg-[#0D0D0F]"
+        style={{ fontFamily:"'DM Sans',sans-serif" }}>
 
-      <div className="h-full overflow-hidden">{renderTab()}</div>
-      <BottomNav active={activeTab} onTab={setActiveTab}/>
-    </div>
+        {workoutResult && (
+          <CelebrationScreen result={workoutResult}
+            newBadges={newBadges}
+            onDone={handleCelebrationDone}
+            profile={profile}/>
+        )}
+
+        <div className="h-full overflow-hidden">{renderTab()}</div>
+        <BottomNav active={activeTab} onTab={setActiveTab}/>
+      </div>
+    </>
   );
 }
 
