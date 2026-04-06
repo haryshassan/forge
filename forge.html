@@ -46,8 +46,8 @@
       100%{box-shadow:0 0 0 0 rgba(200,255,0,0)}
     }
     @keyframes slideUp{
-      from{transform:translateY(100%);opacity:0}
-      to{transform:translateY(0);opacity:1}
+      from{transform:translateY(100%)}
+      to{transform:translateY(0)}
     }
     @keyframes fadeSlide{
       from{opacity:0;transform:translateY(10px)}
@@ -66,7 +66,8 @@
       to{transform:rotate(360deg)}
     }
 
-    .animate-slide-up{animation:slideUp 0.45s cubic-bezier(0.16,1,0.3,1)}
+    .animate-slide-up{animation:slideUp 0.32s cubic-bezier(0.32,0.72,0,1) both}
+    .bottom-sheet{transform:translateY(100%);transition:transform 0.32s cubic-bezier(0.32,0.72,0,1)}
     .animate-fade-slide{animation:fadeSlide 0.3s ease-out}
     .animate-scale-in{animation:scaleIn 0.35s cubic-bezier(0.16,1,0.3,1)}
     .animate-pulse-ring{animation:pulseRing 1.6s ease-out infinite}
@@ -346,15 +347,129 @@ const FOOD_DB = [
   {id:'whole_milk_latte',name:'Latte (Whole Milk)',emoji:'☕',cat:'Beverages',cal:61,pro:3.2,carb:4.8,fat:3.3,fib:0,unit:{label:'cup (250ml)',grams:250}},
   {id:'black_coffee',name:'Black Coffee',emoji:'☕',cat:'Beverages',cal:2,pro:0.3,carb:0,fat:0,fib:0,unit:{label:'cup (250ml)',grams:250}},
   {id:'green_tea',name:'Green Tea',emoji:'🍵',cat:'Beverages',cal:1,pro:0,carb:0.2,fat:0,fib:0,unit:{label:'cup (250ml)',grams:250}},
+  // 🥛 More Beverages
+  {id:'oat_milk',name:'Oat Milk',emoji:'🥛',cat:'Beverages',cal:46,pro:1.2,carb:9,fat:1.5,fib:0.8},
+  {id:'coconut_water',name:'Coconut Water',emoji:'🥥',cat:'Beverages',cal:19,pro:0.7,carb:4.5,fat:0.2,fib:1.1},
+  {id:'cold_brew',name:'Cold Brew Coffee',emoji:'☕',cat:'Beverages',cal:3,pro:0.5,carb:0.2,fat:0,fib:0,unit:{label:'cup (250ml)',grams:250}},
+  {id:'kombucha',name:'Kombucha',emoji:'🫙',cat:'Beverages',cal:16,pro:0.2,carb:3.6,fat:0,fib:0},
+  {id:'bone_broth_drink',name:'Bone Broth',emoji:'🍲',cat:'Beverages',cal:31,pro:6.5,carb:0.5,fat:0.5,fib:0,unit:{label:'cup (240ml)',grams:240}},
+  // 🍯 Sweeteners & Condiments
+  {id:'raw_honey',name:'Raw Honey',emoji:'🍯',cat:'Sweeteners',cal:304,pro:0.3,carb:82,fat:0,fib:0.2,unit:{label:'tbsp',grams:21}},
+  {id:'manuka_honey',name:'Manuka Honey',emoji:'🍯',cat:'Sweeteners',cal:294,pro:0.4,carb:82,fat:0.1,fib:0,unit:{label:'tbsp',grams:21}},
+  {id:'maple_syrup',name:'Pure Maple Syrup',emoji:'🍁',cat:'Sweeteners',cal:260,pro:0,carb:67,fat:0.1,fib:0,unit:{label:'tbsp',grams:20}},
+  {id:'blackstrap_molasses',name:'Blackstrap Molasses',emoji:'🫙',cat:'Sweeteners',cal:290,pro:2.8,carb:75,fat:0.1,fib:0,unit:{label:'tbsp',grams:20}},
+  {id:'coconut_sugar',name:'Coconut Sugar',emoji:'🥥',cat:'Sweeteners',cal:375,pro:0,carb:100,fat:0,fib:0,unit:{label:'tsp',grams:4}},
+  {id:'apple_cider_vinegar',name:'Apple Cider Vinegar',emoji:'🍶',cat:'Sweeteners',cal:22,pro:0,carb:0.9,fat:0,fib:0,unit:{label:'tbsp',grams:15}},
+  {id:'balsamic_vinegar',name:'Balsamic Vinegar',emoji:'🍶',cat:'Sweeteners',cal:88,pro:0.5,carb:17,fat:0,fib:0,unit:{label:'tbsp',grams:16}},
+  {id:'tamari',name:'Tamari / Soy Sauce',emoji:'🫙',cat:'Sweeteners',cal:60,pro:5.8,carb:5.6,fat:0,fib:0.1,unit:{label:'tbsp',grams:18}},
+  {id:'dijon_mustard',name:'Dijon Mustard',emoji:'🫙',cat:'Sweeteners',cal:66,pro:4.5,carb:5,fat:3.6,fib:2,unit:{label:'tsp',grams:5}},
+  {id:'tomato_paste',name:'Tomato Paste',emoji:'🍅',cat:'Sweeteners',cal:82,pro:4.3,carb:19,fat:0.5,fib:4.1,unit:{label:'tbsp',grams:16}},
+  {id:'miso_paste',name:'Miso Paste',emoji:'🫙',cat:'Sweeteners',cal:199,pro:12,carb:27,fat:6,fib:5.4,unit:{label:'tbsp',grams:17}},
+  // 🌿 Herbs & Spices
+  {id:'turmeric',name:'Turmeric Powder',emoji:'🟡',cat:'Herbs & Spices',cal:312,pro:9.7,carb:68,fat:3.3,fib:21,unit:{label:'tsp',grams:3}},
+  {id:'cinnamon',name:'Cinnamon',emoji:'🌿',cat:'Herbs & Spices',cal:247,pro:4,carb:81,fat:1.2,fib:53,unit:{label:'tsp',grams:2.6}},
+  {id:'ginger_powder',name:'Ginger Powder',emoji:'🌿',cat:'Herbs & Spices',cal:335,pro:8.9,carb:72,fat:4.2,fib:14,unit:{label:'tsp',grams:1.8}},
+  {id:'paprika',name:'Paprika',emoji:'🌶️',cat:'Herbs & Spices',cal:282,pro:14,carb:55,fat:13,fib:35,unit:{label:'tsp',grams:2.3}},
+  {id:'cumin',name:'Cumin',emoji:'🌿',cat:'Herbs & Spices',cal:375,pro:18,carb:44,fat:22,fib:11,unit:{label:'tsp',grams:2.1}},
+  {id:'cacao_powder',name:'Cacao Powder',emoji:'🍫',cat:'Herbs & Spices',cal:228,pro:20,carb:57,fat:13,fib:33,unit:{label:'tbsp',grams:7.5}},
+  {id:'cacao_nibs',name:'Cacao Nibs',emoji:'🍫',cat:'Herbs & Spices',cal:539,pro:14,carb:58,fat:43,fib:33,unit:{label:'tbsp',grams:12}},
+  // 🧀 Expanded Dairy
+  {id:'goat_cheese',name:'Goat Cheese',emoji:'🧀',cat:'Dairy & Alternatives',cal:364,pro:22,carb:2.5,fat:30,fib:0},
+  {id:'labneh',name:'Labneh',emoji:'🧀',cat:'Dairy & Alternatives',cal:125,pro:6.8,carb:4.5,fat:9,fib:0},
+  {id:'skyr',name:'Skyr',emoji:'🥛',cat:'Dairy & Alternatives',cal:65,pro:11,carb:4,fat:0.2,fib:0,unit:{label:'pot (150g)',grams:150}},
+  {id:'a2_milk',name:'A2 Whole Milk',emoji:'🥛',cat:'Dairy & Alternatives',cal:61,pro:3.2,carb:4.8,fat:3.3,fib:0},
+  {id:'whey_isolate',name:'Whey Protein Isolate',emoji:'💪',cat:'Dairy & Alternatives',cal:360,pro:85,carb:4,fat:2,fib:0,unit:{label:'scoop',grams:30}},
+  {id:'collagen_powder',name:'Collagen Powder',emoji:'💊',cat:'Dairy & Alternatives',cal:360,pro:90,carb:0,fat:0,fib:0,unit:{label:'scoop',grams:10}},
+  // 🥩 More Meats
+  {id:'chicken_liver',name:'Chicken Liver',emoji:'🍗',cat:'Meats & Fish',cal:172,pro:25,carb:1,fat:7.5,fib:0},
+  {id:'beef_heart',name:'Beef Heart',emoji:'🥩',cat:'Meats & Fish',cal:112,pro:17,carb:0.1,fat:4.7,fib:0},
+  {id:'wagyu',name:'Wagyu Beef',emoji:'🥩',cat:'Meats & Fish',cal:400,pro:18,carb:0,fat:37,fib:0},
+  {id:'grass_fed_beef',name:'Grass-Fed Beef Steak',emoji:'🥩',cat:'Meats & Fish',cal:250,pro:26,carb:0,fat:16,fib:0},
+  {id:'smoked_salmon',name:'Smoked Salmon',emoji:'🐟',cat:'Meats & Fish',cal:117,pro:18,carb:0,fat:4.3,fib:0},
+  {id:'gravlax',name:'Gravlax (Cured Salmon)',emoji:'🐟',cat:'Meats & Fish',cal:170,pro:19,carb:0.1,fat:10,fib:0},
+  {id:'canned_mackerel',name:'Mackerel (Canned)',emoji:'🐟',cat:'Meats & Fish',cal:205,pro:19,carb:0,fat:14,fib:0,unit:{label:'can (125g)',grams:125}},
+  {id:'smoked_trout',name:'Smoked Trout',emoji:'🐠',cat:'Meats & Fish',cal:149,pro:20,carb:0,fat:7.5,fib:0},
+  {id:'tinned_oysters',name:'Tinned Oysters',emoji:'🦪',cat:'Meats & Fish',cal:102,pro:11,carb:5.6,fat:3.4,fib:0},
+  {id:'deli_turkey',name:'Deli Turkey Breast',emoji:'🦃',cat:'Meats & Fish',cal:104,pro:22,carb:0.5,fat:1.2,fib:0,unit:{label:'slice',grams:28}},
+  {id:'deli_chicken',name:'Deli Chicken Breast',emoji:'🍗',cat:'Meats & Fish',cal:98,pro:21,carb:1,fat:1,fib:0,unit:{label:'slice',grams:28}},
+  // 🥦 More Vegetables & Fermented
+  {id:'nori',name:'Nori Sheet',emoji:'🌿',cat:'Vegetables',cal:35,pro:5.8,carb:5.1,fat:0.7,fib:0.3,unit:{label:'sheet',grams:2.5}},
+  {id:'wakame',name:'Wakame Seaweed',emoji:'🌿',cat:'Vegetables',cal:45,pro:3,carb:9.1,fat:0.6,fib:0.5},
+  {id:'microgreens',name:'Microgreens',emoji:'🌱',cat:'Vegetables',cal:31,pro:3.1,carb:5.2,fat:0.5,fib:1.8},
+  {id:'hearts_of_palm',name:'Hearts of Palm',emoji:'🌿',cat:'Vegetables',cal:36,pro:3.7,carb:3.8,fat:0.4,fib:2.2},
+  {id:'jackfruit',name:'Jackfruit (Young)',emoji:'🫛',cat:'Vegetables',cal:95,pro:1.7,carb:23,fat:0.4,fib:1.5},
+  {id:'sun_dried_tomato',name:'Sun-Dried Tomatoes',emoji:'🍅',cat:'Vegetables',cal:258,pro:14,carb:56,fat:3,fib:12},
+  {id:'sauerkraut',name:'Sauerkraut',emoji:'🫙',cat:'Vegetables',cal:19,pro:0.9,carb:4.3,fat:0.1,fib:2.9},
+  {id:'kimchi',name:'Kimchi',emoji:'🌶️',cat:'Vegetables',cal:15,pro:1.1,carb:2.4,fat:0.5,fib:1.6},
+  {id:'pickles',name:'Pickles (Gherkins)',emoji:'🥒',cat:'Vegetables',cal:11,pro:0.7,carb:2.3,fat:0.2,fib:1.2},
+  {id:'bamboo_shoots',name:'Bamboo Shoots',emoji:'🎋',cat:'Vegetables',cal:27,pro:2.6,carb:5.2,fat:0.3,fib:2.2},
+  {id:'water_chestnuts',name:'Water Chestnuts',emoji:'🤍',cat:'Vegetables',cal:97,pro:2,carb:23,fat:0.1,fib:3},
+  // 🍎 Dried Fruits
+  {id:'dried_apricots',name:'Dried Apricots',emoji:'🍑',cat:'Fruits',cal:241,pro:3.4,carb:63,fat:0.5,fib:7.3,unit:{label:'piece',grams:8}},
+  {id:'dried_mango',name:'Dried Mango',emoji:'🥭',cat:'Fruits',cal:319,pro:2.7,carb:78,fat:1.2,fib:2.4},
+  {id:'dried_cranberries',name:'Dried Cranberries',emoji:'🍒',cat:'Fruits',cal:308,pro:0.1,carb:82,fat:1.4,fib:5.7},
+  {id:'prunes',name:'Prunes (Dried Plums)',emoji:'🫐',cat:'Fruits',cal:240,pro:2.2,carb:64,fat:0.4,fib:7.1,unit:{label:'prune',grams:8}},
+  {id:'raisins',name:'Raisins',emoji:'🍇',cat:'Fruits',cal:299,pro:3.1,carb:79,fat:0.5,fib:3.7,unit:{label:'tbsp',grams:9}},
+  {id:'goji_berries',name:'Goji Berries',emoji:'🔴',cat:'Fruits',cal:349,pro:14,carb:77,fat:0.4,fib:13,unit:{label:'tbsp',grams:9}},
+  {id:'acai_pulp',name:'Acai Pulp',emoji:'🫐',cat:'Fruits',cal:70,pro:1.5,carb:7,fat:5,fib:2},
+  {id:'guava',name:'Guava',emoji:'🟢',cat:'Fruits',cal:68,pro:2.6,carb:14,fat:1,fib:5.4},
+  // 🌾 More Grains & Noodles
+  {id:'white_rice_cooked',name:'White Rice (Cooked)',emoji:'🍚',cat:'Grains & Legumes',cal:130,pro:2.7,carb:28,fat:0.3,fib:0.4,unit:{label:'cup (186g)',grams:186}},
+  {id:'brown_rice_cooked',name:'Brown Rice (Cooked)',emoji:'🍚',cat:'Grains & Legumes',cal:111,pro:2.6,carb:23,fat:0.9,fib:1.8,unit:{label:'cup (195g)',grams:195}},
+  {id:'oats_cooked',name:'Oats (Cooked Porridge)',emoji:'🌾',cat:'Grains & Legumes',cal:71,pro:2.5,carb:12,fat:1.4,fib:1.7,unit:{label:'cup (240g)',grams:240}},
+  {id:'sushi_rice',name:'Sushi Rice (Cooked)',emoji:'🍚',cat:'Grains & Legumes',cal:169,pro:3,carb:38,fat:0.3,fib:0.3},
+  {id:'udon',name:'Udon Noodles (Cooked)',emoji:'🍜',cat:'Grains & Legumes',cal:132,pro:3.6,carb:27,fat:0.7,fib:1.5},
+  {id:'glass_noodles',name:'Glass Noodles (Cooked)',emoji:'🍜',cat:'Grains & Legumes',cal:82,pro:0.1,carb:20,fat:0,fib:0.5},
+  {id:'rice_paper',name:'Rice Paper Wrapper',emoji:'🫓',cat:'Grains & Legumes',cal:320,pro:0,carb:80,fat:0,fib:0.9,unit:{label:'sheet',grams:16}},
+  // 🥜 More Seeds & Nut Butters
+  {id:'sunflower_butter',name:'Sunflower Seed Butter',emoji:'🌻',cat:'Nuts & Seeds',cal:617,pro:22,carb:22,fat:57,fib:6.4,unit:{label:'tbsp',grams:16}},
+  {id:'black_sesame',name:'Black Sesame Seeds',emoji:'⚫',cat:'Nuts & Seeds',cal:573,pro:18,carb:23,fat:50,fib:11.8,unit:{label:'tbsp',grams:9}},
+  {id:'coconut_butter',name:'Coconut Butter',emoji:'🥥',cat:'Nuts & Seeds',cal:671,pro:7.1,carb:25,fat:67,fib:16,unit:{label:'tbsp',grams:14}},
+  {id:'trail_mix',name:'Trail Mix',emoji:'🥜',cat:'Nuts & Seeds',cal:462,pro:11,carb:45,fat:28,fib:5,unit:{label:'handful',grams:30}},
+  // 🍳 Common Prepared Foods
+  {id:'hard_boiled_egg',name:'Hard Boiled Egg',emoji:'🥚',cat:'Prepared Foods',cal:155,pro:13,carb:1.1,fat:11,fib:0,unit:{label:'egg',grams:50}},
+  {id:'scrambled_eggs',name:'Scrambled Eggs (with butter)',emoji:'🍳',cat:'Prepared Foods',cal:182,pro:12,carb:1.4,fat:14,fib:0},
+  {id:'grilled_chicken',name:'Grilled Chicken Breast',emoji:'🍗',cat:'Prepared Foods',cal:165,pro:31,carb:0,fat:3.6,fib:0},
+  {id:'baked_salmon',name:'Baked Salmon (Cooked)',emoji:'🐟',cat:'Prepared Foods',cal:208,pro:20,carb:0,fat:13,fib:0},
+  {id:'steamed_broccoli',name:'Steamed Broccoli',emoji:'🥦',cat:'Prepared Foods',cal:28,pro:2.4,carb:5.6,fat:0.4,fib:2.4},
+  {id:'roasted_sweet_potato',name:'Roasted Sweet Potato',emoji:'🍠',cat:'Prepared Foods',cal:90,pro:2,carb:21,fat:0.1,fib:3.3},
+  {id:'overnight_oats',name:'Overnight Oats',emoji:'🌾',cat:'Prepared Foods',cal:150,pro:7,carb:24,fat:3.5,fib:3},
+  {id:'chia_pudding',name:'Chia Pudding',emoji:'🌱',cat:'Prepared Foods',cal:140,pro:5,carb:15,fat:7,fib:8},
+  {id:'smoothie_bowl',name:'Smoothie Bowl Base',emoji:'🍓',cat:'Prepared Foods',cal:120,pro:3,carb:28,fat:0.5,fib:3},
+  {id:'homemade_granola',name:'Homemade Granola',emoji:'🌾',cat:'Prepared Foods',cal:455,pro:10,carb:61,fat:20,fib:5},
+  {id:'acai_bowl',name:'Acai Bowl Base',emoji:'🫐',cat:'Prepared Foods',cal:100,pro:2,carb:18,fat:3,fib:3,unit:{label:'bowl (200g)',grams:200}},
 ];
 
-const FOOD_CATEGORIES = ['Meats & Fish','Vegetables','Fruits','Grains & Legumes','Dairy & Alternatives','Nuts & Seeds','Snacks & Extras','Beverages'];
+const FOOD_CATEGORIES = ['Meats & Fish','Vegetables','Fruits','Grains & Legumes','Dairy & Alternatives','Nuts & Seeds','Snacks & Extras','Beverages','Sweeteners','Herbs & Spices','Prepared Foods'];
 
 const FOOD_ALIASES = {
-  prawn: 'shrimp', courgette: 'zucchini', aubergine: 'eggplant',
-  coriander: 'cilantro', rocket: 'arugula', biscuit: 'cookie',
-  mince: 'beef mince', crisps: 'chips', chips: 'fries',
-  prawns: 'shrimp', tinned: 'canned', squash: 'butternut squash',
+  // British / regional alternates
+  prawn: 'shrimp', prawns: 'shrimp', courgette: 'zucchini',
+  aubergine: 'eggplant', coriander: 'cilantro', rocket: 'arugula',
+  biscuit: 'cookie', crisps: 'chips', tinned: 'canned',
+  squash: 'butternut', mince: 'beef mince',
+  capsicum: 'capsicum', 'bell pepper': 'capsicum', pepper: 'capsicum',
+  // Proteins
+  'protein powder': 'whey', 'whey powder': 'whey', pb: 'peanut butter',
+  'nut butter': 'peanut butter', 'almond butter': 'almond',
+  chicken: 'chicken', beef: 'beef', tuna: 'tuna', fish: 'salmon',
+  // Dairy
+  yoghurt: 'yoghurt', yogurt: 'greek', kefir: 'skyr',
+  'cream cheese': 'cream', ricotta: 'cottage', feta: 'feta',
+  // Grains
+  oatmeal: 'oats', porridge: 'oats', pasta: 'pasta', noodles: 'noodle',
+  rice: 'rice', bread: 'bread', toast: 'sourdough',
+  // Sweeteners
+  honey: 'honey', maple: 'maple', molasses: 'molasses', syrup: 'maple',
+  // Cacao
+  cacao: 'cacao', cocoa: 'cacao', chocolate: 'dark chocolate',
+  // Fermented
+  kimchi: 'kimchi', sauerkraut: 'sauerkraut', kombucha: 'kombucha',
+  // Other
+  nuts: 'almonds', 'mixed nuts': 'mixed', 'dried fruit': 'raisins',
+  collagen: 'collagen', 'bone broth': 'bone', seaweed: 'nori',
+  avocado: 'avocado', avo: 'avocado',
+  'sweet potato': 'sweet potato', yam: 'sweet potato',
 };
 
 const TRAINING_SPLITS = {
@@ -373,9 +488,14 @@ const TRAINING_SPLITS = {
     { id:'ppl_4',      name:'PPL + Full Body',  desc:'Push, Pull, Legs with an extra full-body day' },
   ],
   5: [
-    { id:'ppl_5',      name:'PPL ×2 + Rest',    desc:'Push/Pull/Legs run twice, one session cut' },
-    { id:'arnold',     name:'Arnold Split',      desc:'Chest/Back, Shoulders/Arms, Legs — 2-day rotation' },
-    { id:'bro',        name:'Bro Split',         desc:'One muscle group per day — classic bodybuilder split' },
+    { id:'pplul',      name:'PPL + Upper/Lower', days:'Push · Pull · Legs · Upper · Lower',
+      desc:'Classic PPL with dedicated upper and lower days for extra volume', bestFor:'Intermediate–Advanced' },
+    { id:'arnold_ul',  name:'Arnold + Upper/Lower', badge:'POPULAR', days:'Chest+Back · Shoulders+Arms · Legs · Upper · Lower',
+      desc:"Arnold's classic 3-day split paired with Upper/Lower for full-week coverage", bestFor:'Intermediate–Advanced' },
+    { id:'ppl_5',      name:'PPL ×2 – Rest Day', days:'Push · Pull · Legs · Push · Pull',
+      desc:'Run Push/Pull/Legs twice, drop one session for recovery', bestFor:'Advanced' },
+    { id:'ul_full_5',  name:'Upper/Lower ×2 + Full Body', days:'Upper · Lower · Upper · Lower · Full Body',
+      desc:'Strength base with upper and lower twice, finishing on full-body', bestFor:'Beginner–Intermediate' },
   ],
   6: [
     { id:'ppl_6',      name:'Push / Pull / Legs ×2', desc:'Full PPL cycle run twice per week' },
@@ -447,11 +567,20 @@ function fuzzySearch(query, limit=20) {
   if (!query.trim()) return [];
   const q = query.toLowerCase().trim();
   const resolved = FOOD_ALIASES[q] || q;
+  // score: exact match > start > contains
+  const score = (f, term) => {
+    const n = f.name.toLowerCase();
+    if (n === term) return 3;
+    if (n.startsWith(term)) return 2;
+    if (n.includes(term)) return 1;
+    if (f.cat.toLowerCase().includes(term)) return 0.5;
+    return 0;
+  };
   return FOOD_DB
-    .filter(f => {
-      const n = f.name.toLowerCase(), c = f.cat.toLowerCase();
-      return n.includes(q) || c.includes(q) || n.includes(resolved) || c.includes(resolved);
-    })
+    .map(f => ({ f, s: Math.max(score(f, q), score(f, resolved)) }))
+    .filter(x => x.s > 0)
+    .sort((a, b) => b.s - a.s)
+    .map(x => x.f)
     .slice(0, limit);
 }
 
@@ -559,7 +688,31 @@ async function callClaude(apiKey, messages, maxTokens = 4000) {
   return data.content[0].text;
 }
 
+function getSplitInstructions(profile) {
+  const split = profile.trainingSplit;
+  const days = profile.trainingDays || [];
+  if (split === 'arnold_ul' && days.length >= 5) {
+    return `MANDATORY SPLIT STRUCTURE — Arnold Split + Upper/Lower (DO NOT deviate):
+- ${days[0]}: Chest + Back (compound supersets — bench press paired with barbell rows, incline press paired with pull-ups, cable flyes paired with pullovers)
+- ${days[1]}: Shoulders + Arms (overhead press, lateral raises, rear delt flyes, bicep curls, hammer curls, tricep extensions, skull crushers, face pulls)
+- ${days[2]}: Legs (back squats, Romanian deadlifts, leg press, walking lunges, leg curl, calf raises)
+- ${days[3]}: Upper Body (conventional upper push + pull balance — compound pressing and pulling)
+- ${days[4]}: Lower Body (quad and hamstring focus — squats variation, deadlift variation, glute and calf work)
+You MUST follow this day-by-day structure exactly. Do not merge days or create a generic 3-day split.`;
+  }
+  if (split === 'pplul' && days.length >= 5) {
+    return `MANDATORY SPLIT: PPL + Upper/Lower over 5 days:
+- ${days[0]}: Push (chest, shoulders, triceps)
+- ${days[1]}: Pull (back, biceps, rear delts)
+- ${days[2]}: Legs (quads, hamstrings, glutes, calves)
+- ${days[3]}: Upper Body (push + pull balance)
+- ${days[4]}: Lower Body (quad + hamstring + glute)`;
+  }
+  return `Training Split: ${split || 'auto-select based on days'}\nCreate a plan following the specified training split structure.`;
+}
+
 async function generatePlan(profile) {
+  const splitInstructions = getSplitInstructions(profile);
   const prompt = `You are an expert personal trainer. Generate a personalised weekly training plan.
 
 ATHLETE PROFILE:
@@ -570,9 +723,10 @@ ATHLETE PROFILE:
 - Training Days Per Week: ${profile.trainingDaysPerWeek || profile.trainingDays?.length || 3}
 - Preferred Training Days: ${(profile.trainingDays||[]).join(', ')}
 - Session Length: ${profile.sessionLength} minutes
-- Training Split: ${profile.trainingSplit || 'auto-select based on days'}
 
-Create a structured plan ONLY for the preferred training days, following the specified training split structure. Each session should have 4–7 exercises appropriate for the session length and equipment. Lead with compound movements.
+${splitInstructions}
+
+Create a structured plan ONLY for the preferred training days. Each session should have 4–7 exercises appropriate for the session length and equipment. Lead with compound movements.
 
 Return ONLY a valid JSON object (no markdown, no explanation) matching this EXACT schema:
 {
@@ -1119,17 +1273,30 @@ function ProfileScreen({ profile, onSave, onGeneratePlan, isExisting, onNutritio
             <h2 className="font-display text-5xl text-[#F5F5F0] mb-2" style={{ fontFamily:"'Bebas Neue',sans-serif" }}>YOUR SPLIT?</h2>
             <p className="text-[#8A8A8E] mb-6">Choose how to structure your {form.trainingDays.length}-day week.</p>
             <div className="space-y-3">
-              {(TRAINING_SPLITS[Math.min(form.trainingDays.length, 7)] || TRAINING_SPLITS[3]).map(split => (
+              {(TRAINING_SPLITS[Math.min(form.trainingDays.length, 7)] || TRAINING_SPLITS[3]).map(split => {
+                const sel = form.trainingSplit === split.id;
+                return (
                 <button key={split.id} onClick={() => set('trainingSplit', split.id)}
-                  className={`w-full text-left px-5 py-4 rounded-2xl border-2 transition-all active:scale-95
-                    ${form.trainingSplit === split.id
-                      ? 'border-[#C8FF00] bg-[rgba(200,255,0,0.07)]'
-                      : 'border-[#3A3A3C] bg-[#1A1A1C]'}`}>
-                  <p className={`font-display text-xl ${form.trainingSplit === split.id ? 'text-[#C8FF00]' : 'text-[#F5F5F0]'}`}
+                  className={`w-full text-left px-5 py-4 rounded-2xl border-2 transition-all active:scale-95 relative
+                    ${sel ? 'border-[#C8FF00] bg-[rgba(200,255,0,0.07)]' : 'border-[#3A3A3C] bg-[#1A1A1C]'}`}>
+                  {split.badge && (
+                    <span className="absolute top-3 right-4 text-[9px] font-bold px-2 py-0.5 rounded-full"
+                      style={{ background:'rgba(200,255,0,0.2)', color:'#C8FF00', border:'1px solid rgba(200,255,0,0.3)' }}>
+                      {split.badge}
+                    </span>
+                  )}
+                  <p className={`font-display text-xl ${sel ? 'text-[#C8FF00]' : 'text-[#F5F5F0]'}`}
                     style={{ fontFamily:"'Bebas Neue',sans-serif" }}>{split.name.toUpperCase()}</p>
-                  <p className="text-[#8A8A8E] text-sm mt-0.5">{split.desc}</p>
+                  {split.days && (
+                    <p className="text-[#8A8A8E] text-xs mt-0.5">{split.days}</p>
+                  )}
+                  <p className={`text-sm mt-1 ${sel ? 'text-[rgba(200,255,0,0.7)]' : 'text-[#8A8A8E]'}`}>{split.desc}</p>
+                  {split.bestFor && (
+                    <p className="text-[#8A8A8E] text-[11px] mt-1">Best for: {split.bestFor}</p>
+                  )}
                 </button>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
@@ -2382,12 +2549,12 @@ function WeightChart({ history, goalWeight }) {
   );
 }
 
-/* Food quantity bottom sheet (shared by inline search + modal) */
-function FoodDetailSheet({ food, onAdd, onClose }) {
+/* Food quantity bottom sheet — lockedMeal: if set, hides meal picker and locks to that meal */
+function FoodDetailSheet({ food, onAdd, onClose, lockedMeal=null }) {
   const [byUnit, setByUnit]   = useState(!!food.unit);
   const [count,  setCount]    = useState(1);
   const [grams,  setGrams]    = useState(food.unit ? food.unit.grams : 100);
-  const [meal,   setMeal]     = useState('Lunch');
+  const [meal,   setMeal]     = useState(lockedMeal || 'Lunch');
   const MEALS = ['Breakfast','Lunch','Dinner','Snack'];
 
   const effectiveGrams = byUnit && food.unit ? Math.round(count * food.unit.grams) : grams;
@@ -2503,19 +2670,24 @@ function FoodDetailSheet({ food, onAdd, onClose }) {
             ))}
           </div>
 
-          {/* meal tag */}
-          <p className="text-[#8A8A8E] text-xs uppercase tracking-widest mb-2">Meal</p>
-          <div className="flex gap-2 mb-5">
-            {MEALS.map(m=>(
-              <Pill key={m} active={meal===m} onClick={()=>setMeal(m)}
-                className="flex-1 text-xs px-2">{m}</Pill>
-            ))}
-          </div>
+          {/* meal tag — hidden when locked */}
+          {!lockedMeal && (
+            <>
+              <p className="text-[#8A8A8E] text-xs uppercase tracking-widest mb-2">Meal</p>
+              <div className="flex gap-2 mb-5">
+                {MEALS.map(m=>(
+                  <Pill key={m} active={meal===m} onClick={()=>setMeal(m)}
+                    className="flex-1 text-xs px-2">{m}</Pill>
+                ))}
+              </div>
+            </>
+          )}
+          {lockedMeal && <div className="mb-5"/>}
 
           <button onClick={handleAdd}
             className="w-full py-4 rounded-2xl bg-[#C8FF00] text-[#0D0D0F] font-display text-xl tracking-wider active:scale-95 transition-all"
             style={{ fontFamily:"'Bebas Neue',sans-serif" }}>
-            ADD TO TODAY
+            ADD TO {lockedMeal ? lockedMeal.toUpperCase() : 'TODAY'}
           </button>
         </div>
       </div>
@@ -2714,16 +2886,17 @@ function FuelScreen({ nutritionLog, nutritionGoals, weightHistory, onAddFood, on
   const totals = sumMacros(todayLog.meals);
   const goals = nutritionGoals;
   const MEALS = ['Breakfast','Lunch','Dinner','Snack'];
-  const [showAdd, setShowAdd]       = useState(false);
-  const [showCardio, setShowCardio] = useState(false);
-  const [selFood, setSelFood]       = useState(null);
-  const [searchQ, setSearchQ]       = useState('');
+  // Search & add state
+  const [showCardio, setShowCardio]     = useState(false);
+  const [selFood,    setSelFood]        = useState(null);     // food selected for detail sheet
+  const [addingToMeal, setAddingToMeal] = useState(null);    // null = free, string = locked meal
+  const [mealSearchOpen, setMealSearchOpen] = useState(false); // inline search banner open
+  const [searchQ,    setSearchQ]        = useState('');
   const [searchResults, setSearchResults] = useState([]);
-  const [searchFocused, setSearchFocused] = useState(false);
-  const [addToast, setAddToast]     = useState('');
-  const [weightInput, setWeightInput] = useState('');
-  const [expanded, setExpanded]     = useState({ Breakfast:true, Lunch:true, Dinner:true, Snack:true });
-  const [showChart, setShowChart]   = useState(false);
+  const [addToast,   setAddToast]       = useState('');
+  const [weightInput, setWeightInput]   = useState('');
+  const [expanded,   setExpanded]       = useState({ Breakfast:true, Lunch:true, Dinner:true, Snack:true });
+  const [showChart,  setShowChart]      = useState(false);
   const searchRef = useRef(null);
 
   const todayCardio = (cardioLog[today] || []);
@@ -2745,12 +2918,29 @@ function FuelScreen({ nutritionLog, nutritionGoals, weightHistory, onAddFood, on
     }
   }, [searchQ]);
 
+  const openMealSearch = (mealName) => {
+    setAddingToMeal(mealName);
+    setMealSearchOpen(true);
+    setSearchQ('');
+    setTimeout(() => searchRef.current?.focus(), 80);
+  };
+
+  const closeMealSearch = () => {
+    setAddingToMeal(null);
+    setMealSearchOpen(false);
+    setSearchQ('');
+    setSelFood(null);
+  };
+
   const handleAddFood = (entry) => {
     onAddFood(today, entry);
     setSelFood(null);
     setSearchQ('');
-    setSearchFocused(false);
-    setAddToast(`✓ ${entry.name} added`);
+    // If in meal-specific mode, keep banner open but clear food selection
+    if (!addingToMeal) {
+      setMealSearchOpen(false);
+    }
+    setAddToast(`✓ ${entry.name} added to ${entry.meal}`);
     setTimeout(() => setAddToast(''), 2500);
   };
 
@@ -2790,7 +2980,11 @@ function FuelScreen({ nutritionLog, nutritionGoals, weightHistory, onAddFood, on
 
       {/* Food detail sheet for selected food */}
       {selFood && (
-        <FoodDetailSheet food={selFood} onAdd={handleAddFood} onClose={()=>setSelFood(null)}/>
+        <FoodDetailSheet
+          food={selFood}
+          onAdd={handleAddFood}
+          onClose={()=>setSelFood(null)}
+          lockedMeal={addingToMeal}/>
       )}
 
       {/* Header */}
@@ -2802,29 +2996,77 @@ function FuelScreen({ nutritionLog, nutritionGoals, weightHistory, onAddFood, on
         </p>
       </div>
 
-      {/* Inline search bar */}
-      <div className="px-5 mb-3 relative" style={{ zIndex: searchFocused ? 40 : 1 }}>
-        <div className={`flex items-center gap-3 rounded-2xl px-4 py-3 border transition-all
-          ${searchFocused ? 'bg-[#1A1A1C] border-[#C8FF00]' : 'bg-[#1A1A1C] border-[#3A3A3C]'}`}>
-          <Search size={17} color={searchFocused ? '#C8FF00' : '#8A8A8E'}/>
-          <input ref={searchRef} value={searchQ}
-            onChange={e=>setSearchQ(e.target.value)}
-            onFocus={()=>setSearchFocused(true)}
-            onBlur={()=>setTimeout(()=>setSearchFocused(false),200)}
-            placeholder="Search 300+ foods to add…"
-            className="flex-1 bg-transparent text-[#F5F5F0] text-sm outline-none placeholder:text-[#8A8A8E]"/>
-          {searchQ ? (
-            <button onMouseDown={e=>{e.preventDefault();setSearchQ('');}}><X size={14} color="#8A8A8E"/></button>
-          ) : (
-            <button onMouseDown={e=>{e.preventDefault();setShowCardio(true);}}
-              className="flex items-center gap-1.5 bg-[#252527] px-2.5 py-1.5 rounded-lg active:scale-90">
-              <Activity size={13} color="#C8FF00"/><span className="text-[#C8FF00] text-xs font-semibold">CARDIO</span>
-            </button>
+      {/* Meal-first search bar — shown when mealSearchOpen or addingToMeal */}
+      {mealSearchOpen && (
+        <div className="px-5 mb-3" style={{ zIndex:40, position:'relative' }}>
+          {/* Meal context banner */}
+          {addingToMeal && (
+            <div className="flex items-center justify-between px-4 py-2 mb-2 rounded-xl"
+              style={{ background:'rgba(200,255,0,0.08)', border:'1px solid rgba(200,255,0,0.2)' }}>
+              <span className="text-[#C8FF00] text-sm font-semibold">Adding to: {addingToMeal.toUpperCase()}</span>
+              <button onClick={closeMealSearch} className="active:scale-90">
+                <X size={14} color="#C8FF00"/>
+              </button>
+            </div>
+          )}
+          <div className="flex items-center gap-3 bg-[#1A1A1C] rounded-2xl px-4 py-3 border border-[#C8FF00]">
+            <Search size={17} color="#C8FF00"/>
+            <input ref={searchRef} value={searchQ}
+              onChange={e=>setSearchQ(e.target.value)}
+              placeholder={`Search for ${addingToMeal ? addingToMeal.toLowerCase() : 'any food'}…`}
+              className="flex-1 bg-transparent text-[#F5F5F0] text-sm outline-none placeholder:text-[#8A8A8E]"
+              autoFocus/>
+            {searchQ ? (
+              <button onMouseDown={e=>{e.preventDefault();setSearchQ('');}}><X size={14} color="#8A8A8E"/></button>
+            ) : (
+              <button onMouseDown={e=>{e.preventDefault();closeMealSearch();}}
+                className="text-[#8A8A8E] text-xs active:scale-90">CANCEL</button>
+            )}
+          </div>
+          {/* Inline results */}
+          {searchQ.length > 0 && (
+            <div className="mt-1 bg-[#1A1A1C] border border-[#3A3A3C] rounded-2xl overflow-hidden shadow-2xl">
+              {searchResults.length === 0 ? (
+                <p className="text-[#8A8A8E] text-sm text-center py-4">No results for "{searchQ}"</p>
+              ) : (
+                searchResults.map((food, i) => (
+                  <button key={food.id} onMouseDown={e=>{e.preventDefault();setSelFood(food);}}
+                    className={`w-full flex items-center gap-3 px-4 py-3 text-left active:bg-[#252527] ${i>0?'border-t border-[#252527]':''}`}>
+                    <span className="text-xl">{food.emoji}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[#F5F5F0] text-sm font-medium truncate">{food.name}</p>
+                      <p className="text-[#8A8A8E] text-xs">{food.cat}{food.unit?` · 1 ${food.unit.label}`:''}</p>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-[#C8FF00] text-xs font-display" style={{ fontFamily:"'Bebas Neue',sans-serif" }}>{food.cal}</p>
+                      <p className="text-[#8A8A8E] text-[10px]">per 100g</p>
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
           )}
         </div>
+      )}
 
-        {/* Inline results */}
-        {searchFocused && searchQ.length > 0 && (
+      {/* Persistent search bar (always visible when NOT in meal mode) */}
+      {!mealSearchOpen && (
+      <div className="px-5 mb-3 relative" style={{ zIndex:1 }}>
+        <div className="flex items-center gap-3 bg-[#1A1A1C] rounded-2xl px-4 py-3 border border-[#3A3A3C]">
+          <Search size={17} color="#8A8A8E"/>
+          <input ref={searchRef} value={searchQ}
+            onChange={e=>{setSearchQ(e.target.value);if(!mealSearchOpen)setMealSearchOpen(true);}}
+            onFocus={()=>{setMealSearchOpen(true);}}
+            placeholder="Search 500+ foods to add…"
+            className="flex-1 bg-transparent text-[#F5F5F0] text-sm outline-none placeholder:text-[#8A8A8E]"/>
+          <button onMouseDown={e=>{e.preventDefault();setShowCardio(true);}}
+            className="flex items-center gap-1.5 bg-[#252527] px-2.5 py-1.5 rounded-lg active:scale-90">
+            <Activity size={13} color="#C8FF00"/><span className="text-[#C8FF00] text-xs font-semibold">CARDIO</span>
+          </button>
+        </div>
+
+        {/* Inline results when typing in persistent bar */}
+        {searchQ.length > 0 && (
           <div className="absolute left-5 right-5 top-full mt-1 bg-[#1A1A1C] border border-[#3A3A3C] rounded-2xl overflow-hidden shadow-2xl"
             style={{ zIndex:50 }}>
             {searchResults.length === 0 ? (
@@ -2849,6 +3091,7 @@ function FuelScreen({ nutritionLog, nutritionGoals, weightHistory, onAddFood, on
           </div>
         )}
       </div>
+      )}
 
       {/* Calorie ring + macros */}
       <div className="px-5 mb-4">
@@ -2996,34 +3239,39 @@ function FuelScreen({ nutritionLog, nutritionGoals, weightHistory, onAddFood, on
         const items = todayLog.meals.filter(m => m.meal === mealName);
         const mealTotals = sumMacros(items);
         const isOpen = expanded[mealName];
+        const isActiveSearch = addingToMeal === mealName && mealSearchOpen;
         return (
           <div key={mealName} className="px-5 mb-3">
-            <button
-              onClick={()=>setExpanded(e=>({...e,[mealName]:!e[mealName]}))}
-              className="w-full flex items-center justify-between py-2 active:opacity-70">
-              <div className="flex items-center gap-2">
-                <span className="font-display text-lg text-[#F5F5F0]"
+            {/* Meal header row */}
+            <div className="flex items-center justify-between py-2">
+              <button onClick={()=>setExpanded(e=>({...e,[mealName]:!e[mealName]}))}
+                className="flex items-center gap-2 active:opacity-70 flex-1 min-w-0 text-left">
+                <span className={`font-display text-lg transition-colors
+                  ${isActiveSearch ? 'text-[#C8FF00]' : 'text-[#F5F5F0]'}`}
                   style={{ fontFamily:"'Bebas Neue',sans-serif" }}>{mealName.toUpperCase()}</span>
                 {items.length > 0 && (
-                  <span className="text-[#8A8A8E] text-xs">{items.length} item{items.length!==1?'s':''}</span>
+                  <span className="text-[#8A8A8E] text-xs">{items.length} item{items.length!==1?'s':''} · {mealTotals.cal} kcal</span>
                 )}
-              </div>
-              <div className="flex items-center gap-3">
-                {items.length > 0 && (
-                  <span className="text-[#8A8A8E] text-xs font-display"
-                    style={{ fontFamily:"'Bebas Neue',sans-serif" }}>{mealTotals.cal} kcal</span>
-                )}
-                <ChevronRight size={16} color="#8A8A8E"
-                  style={{ transform: isOpen ? 'rotate(90deg)' : 'none', transition:'transform 0.2s' }}/>
-              </div>
-            </button>
+              </button>
+              {/* + Add button */}
+              <button
+                onClick={()=>{ openMealSearch(mealName); setExpanded(e=>({...e,[mealName]:true})); }}
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold active:scale-90 transition-all ml-2
+                  ${isActiveSearch
+                    ? 'bg-[#C8FF00] text-[#0D0D0F]'
+                    : 'bg-[rgba(200,255,0,0.1)] text-[#C8FF00] border border-[rgba(200,255,0,0.2)]'}`}>
+                <Plus size={11} color={isActiveSearch ? '#0D0D0F' : '#C8FF00'} strokeWidth={2.5}/>
+                <span>ADD</span>
+              </button>
+            </div>
 
             {isOpen && (
               <div className="bg-[#1A1A1C] rounded-2xl overflow-hidden border border-[#252527]">
                 {items.length === 0 ? (
-                  <div className="px-4 py-4 text-center">
-                    <p className="text-[#8A8A8E] text-xs">Nothing logged yet</p>
-                  </div>
+                  <button onClick={()=>{ openMealSearch(mealName); setExpanded(e=>({...e,[mealName]:true})); }}
+                    className="w-full px-4 py-4 text-center active:bg-[#252527]">
+                    <p className="text-[#8A8A8E] text-xs">Nothing logged yet — tap to add</p>
+                  </button>
                 ) : (
                   items.map((item, i) => (
                     <div key={item.id}
@@ -3049,15 +3297,17 @@ function FuelScreen({ nutritionLog, nutritionGoals, weightHistory, onAddFood, on
         );
       })}
 
-      {/* Empty state */}
-      {todayLog.meals.length === 0 && todayCardio.length === 0 && (
-        <div className="px-5 py-8 text-center">
-          <div className="text-5xl mb-3">💪</div>
-          <p className="font-display text-2xl text-[#F5F5F0] mb-2"
-            style={{ fontFamily:"'Bebas Neue',sans-serif" }}>YOUR TANK IS EMPTY</p>
-          <p className="text-[#8A8A8E] text-sm">Search above to log food, or tap CARDIO to log activity.</p>
+      {/* Floating ADD FOOD button (free mode — shows meal selector) */}
+      <div className="fixed left-1/2 z-20"
+        style={{ bottom:'calc(4.5rem + env(safe-area-inset-bottom))', transform:'translateX(-50%)', maxWidth:430, width:'100%', pointerEvents:'none' }}>
+        <div className="px-5" style={{ pointerEvents:'all' }}>
+          <button onClick={()=>{ setAddingToMeal(null); setMealSearchOpen(true); setTimeout(()=>searchRef.current?.focus(),80); }}
+            className="w-full py-3.5 rounded-2xl bg-[#C8FF00] text-[#0D0D0F] font-display text-xl tracking-wider active:scale-95 transition-all shadow-xl flex items-center justify-center gap-2"
+            style={{ fontFamily:"'Bebas Neue',sans-serif" }}>
+            <Plus size={20} color="#0D0D0F" strokeWidth={2.5}/> ADD FOOD
+          </button>
         </div>
-      )}
+      </div>
     </div>
   );
 }
