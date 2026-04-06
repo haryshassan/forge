@@ -123,6 +123,10 @@ const SkipForward   = _i(() => <><polygon points="5 4 15 12 5 20 5 4"/><line x1=
 const TrendingUp    = _i(() => <><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></>);
 const Activity      = _i(() => <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>);
 const Award         = _i(() => <><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></>);
+const Flame         = _i(() => <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>);
+const Minus         = _i(() => <line x1="5" y1="12" x2="19" y2="12"/>);
+const Search        = _i(() => <><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></>);
+const Scale         = _i(() => <><path d="M16 16l3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1z"/><path d="M2 16l3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1z"/><path d="M7 21H17"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></>);
 
 /* ═══════════════════════════════════════════════
    CONSTANTS
@@ -177,6 +181,187 @@ const MUSCLE_COLORS = {
   Hamstrings:'#DDA0DD', Glutes:'#F0E68C', Core:'#87CEEB', Abs:'#87CEEB',
   Cardio:'#98FB98', Calves:'#FFB347', default:'#8A8A8E',
 };
+
+/* ── Nutrition badge definitions ── */
+const NUTRITION_BADGE_DEFS = [
+  { id:'first_meal',    name:'FIRST LOG',     emoji:'🥗', desc:'Logged your first meal' },
+  { id:'clean_eater',   name:'CLEAN EATER',   emoji:'🌿', desc:'7 days of whole foods' },
+  { id:'protein_king',  name:'PROTEIN KING',  emoji:'💪', desc:'Hit protein goal 5 days in a row' },
+  { id:'fuel_streak',   name:'CONSISTENT AF', emoji:'🔥', desc:'14-day nutrition streak' },
+  { id:'goal_weight',   name:'GOAL WEIGHT',   emoji:'🎯', desc:'Reached your target weight' },
+];
+
+const ALL_BADGE_DEFS = [...BADGE_DEFS.map(b=>({...b,type:'fitness'})), ...NUTRITION_BADGE_DEFS.map(b=>({...b,type:'nutrition'}))];
+
+/* ── Food database (per 100g values) ── */
+// Fields: id, name, emoji, cat, cal, pro, carb, fat, fib
+const FOOD_DB = [
+  // 🥩 Meats & Fish
+  {id:'chicken_breast',name:'Chicken Breast',emoji:'🍗',cat:'Meats & Fish',cal:165,pro:31,carb:0,fat:3.6,fib:0},
+  {id:'salmon',name:'Salmon',emoji:'🐟',cat:'Meats & Fish',cal:208,pro:20,carb:0,fat:13,fib:0},
+  {id:'beef_mince',name:'Beef Mince (Lean)',emoji:'🥩',cat:'Meats & Fish',cal:215,pro:26,carb:0,fat:12,fib:0},
+  {id:'tuna_can',name:'Tuna (Canned)',emoji:'🐡',cat:'Meats & Fish',cal:116,pro:26,carb:0,fat:1,fib:0},
+  {id:'turkey_breast',name:'Turkey Breast',emoji:'🦃',cat:'Meats & Fish',cal:157,pro:29,carb:0,fat:3.5,fib:0},
+  {id:'eggs',name:'Eggs',emoji:'🥚',cat:'Meats & Fish',cal:155,pro:13,carb:1.1,fat:11,fib:0},
+  {id:'sardines',name:'Sardines',emoji:'🐟',cat:'Meats & Fish',cal:208,pro:25,carb:0,fat:11,fib:0},
+  {id:'lamb',name:'Lamb (Lean)',emoji:'🥩',cat:'Meats & Fish',cal:258,pro:25,carb:0,fat:17,fib:0},
+  {id:'pork_loin',name:'Pork Loin',emoji:'🥩',cat:'Meats & Fish',cal:242,pro:27,carb:0,fat:14,fib:0},
+  {id:'cod',name:'Cod',emoji:'🐠',cat:'Meats & Fish',cal:82,pro:18,carb:0,fat:0.7,fib:0},
+  {id:'shrimp',name:'Shrimp',emoji:'🍤',cat:'Meats & Fish',cal:85,pro:18,carb:0.9,fat:0.5,fib:0},
+  {id:'beef_steak',name:'Beef Steak',emoji:'🥩',cat:'Meats & Fish',cal:271,pro:26,carb:0,fat:18,fib:0},
+  {id:'chicken_thigh',name:'Chicken Thigh',emoji:'🍗',cat:'Meats & Fish',cal:209,pro:26,carb:0,fat:11,fib:0},
+  {id:'bacon',name:'Bacon (Nitrate-Free)',emoji:'🥓',cat:'Meats & Fish',cal:541,pro:37,carb:1.4,fat:42,fib:0},
+  // 🥦 Vegetables
+  {id:'broccoli',name:'Broccoli',emoji:'🥦',cat:'Vegetables',cal:34,pro:2.8,carb:7,fat:0.4,fib:2.6},
+  {id:'spinach',name:'Spinach',emoji:'🥬',cat:'Vegetables',cal:23,pro:2.9,carb:3.6,fat:0.4,fib:2.2},
+  {id:'kale',name:'Kale',emoji:'🥬',cat:'Vegetables',cal:49,pro:4.3,carb:9,fat:0.9,fib:3.6},
+  {id:'sweet_potato',name:'Sweet Potato',emoji:'🍠',cat:'Vegetables',cal:86,pro:1.6,carb:20,fat:0.1,fib:3},
+  {id:'zucchini',name:'Zucchini',emoji:'🥒',cat:'Vegetables',cal:17,pro:1.2,carb:3.1,fat:0.3,fib:1},
+  {id:'capsicum',name:'Capsicum (Red)',emoji:'🫑',cat:'Vegetables',cal:31,pro:1,carb:6,fat:0.3,fib:2.1},
+  {id:'cauliflower',name:'Cauliflower',emoji:'🥦',cat:'Vegetables',cal:25,pro:1.9,carb:5,fat:0.3,fib:2},
+  {id:'asparagus',name:'Asparagus',emoji:'🌿',cat:'Vegetables',cal:20,pro:2.2,carb:3.9,fat:0.1,fib:2.1},
+  {id:'green_beans',name:'Green Beans',emoji:'🫘',cat:'Vegetables',cal:31,pro:1.8,carb:7,fat:0.2,fib:2.7},
+  {id:'cucumber',name:'Cucumber',emoji:'🥒',cat:'Vegetables',cal:15,pro:0.7,carb:3.6,fat:0.1,fib:0.5},
+  {id:'tomato',name:'Tomato',emoji:'🍅',cat:'Vegetables',cal:18,pro:0.9,carb:3.9,fat:0.2,fib:1.2},
+  {id:'carrot',name:'Carrot',emoji:'🥕',cat:'Vegetables',cal:41,pro:0.9,carb:10,fat:0.2,fib:2.8},
+  {id:'beetroot',name:'Beetroot',emoji:'🫀',cat:'Vegetables',cal:43,pro:1.6,carb:10,fat:0.2,fib:2.8},
+  {id:'mushrooms',name:'Mushrooms',emoji:'🍄',cat:'Vegetables',cal:22,pro:3.1,carb:3.3,fat:0.3,fib:1},
+  {id:'onion',name:'Onion',emoji:'🧅',cat:'Vegetables',cal:40,pro:1.1,carb:9,fat:0.1,fib:1.7},
+  {id:'garlic',name:'Garlic',emoji:'🧄',cat:'Vegetables',cal:149,pro:6.4,carb:33,fat:0.5,fib:2.1},
+  {id:'avocado',name:'Avocado',emoji:'🥑',cat:'Vegetables',cal:160,pro:2,carb:9,fat:15,fib:7},
+  {id:'edamame',name:'Edamame',emoji:'🫘',cat:'Vegetables',cal:122,pro:11,carb:10,fat:5,fib:5},
+  // 🍎 Fruits
+  {id:'banana',name:'Banana',emoji:'🍌',cat:'Fruits',cal:89,pro:1.1,carb:23,fat:0.3,fib:2.6},
+  {id:'apple',name:'Apple',emoji:'🍎',cat:'Fruits',cal:52,pro:0.3,carb:14,fat:0.2,fib:2.4},
+  {id:'blueberries',name:'Blueberries',emoji:'🫐',cat:'Fruits',cal:57,pro:0.7,carb:14,fat:0.3,fib:2.4},
+  {id:'strawberries',name:'Strawberries',emoji:'🍓',cat:'Fruits',cal:32,pro:0.7,carb:7.7,fat:0.3,fib:2},
+  {id:'mango',name:'Mango',emoji:'🥭',cat:'Fruits',cal:60,pro:0.8,carb:15,fat:0.4,fib:1.6},
+  {id:'orange',name:'Orange',emoji:'🍊',cat:'Fruits',cal:47,pro:0.9,carb:12,fat:0.1,fib:2.4},
+  {id:'grapes',name:'Grapes',emoji:'🍇',cat:'Fruits',cal:67,pro:0.6,carb:17,fat:0.4,fib:0.9},
+  {id:'watermelon',name:'Watermelon',emoji:'🍉',cat:'Fruits',cal:30,pro:0.6,carb:7.6,fat:0.2,fib:0.4},
+  {id:'pineapple',name:'Pineapple',emoji:'🍍',cat:'Fruits',cal:50,pro:0.5,carb:13,fat:0.1,fib:1.4},
+  {id:'raspberries',name:'Raspberries',emoji:'🍓',cat:'Fruits',cal:52,pro:1.2,carb:12,fat:0.7,fib:6.5},
+  {id:'dates',name:'Dates',emoji:'🫐',cat:'Fruits',cal:277,pro:1.8,carb:75,fat:0.2,fib:6.7},
+  {id:'kiwi',name:'Kiwi',emoji:'🥝',cat:'Fruits',cal:61,pro:1.1,carb:15,fat:0.5,fib:3},
+  // 🌾 Whole Grains & Legumes
+  {id:'brown_rice',name:'Brown Rice (Cooked)',emoji:'🍚',cat:'Grains & Legumes',cal:216,pro:4.5,carb:45,fat:1.8,fib:3.5},
+  {id:'oats',name:'Oats (Dry)',emoji:'🌾',cat:'Grains & Legumes',cal:389,pro:17,carb:66,fat:7,fib:11},
+  {id:'quinoa',name:'Quinoa (Cooked)',emoji:'🌾',cat:'Grains & Legumes',cal:120,pro:4.4,carb:22,fat:1.9,fib:2.8},
+  {id:'lentils',name:'Lentils (Cooked)',emoji:'🫘',cat:'Grains & Legumes',cal:116,pro:9,carb:20,fat:0.4,fib:7.9},
+  {id:'black_beans',name:'Black Beans (Cooked)',emoji:'🫘',cat:'Grains & Legumes',cal:132,pro:8.9,carb:24,fat:0.5,fib:8.7},
+  {id:'chickpeas',name:'Chickpeas (Cooked)',emoji:'🫘',cat:'Grains & Legumes',cal:164,pro:8.9,carb:27,fat:2.6,fib:7.6},
+  {id:'wg_bread',name:'Whole Grain Bread',emoji:'🍞',cat:'Grains & Legumes',cal:247,pro:9,carb:47,fat:3.4,fib:6},
+  {id:'buckwheat',name:'Buckwheat (Cooked)',emoji:'🌾',cat:'Grains & Legumes',cal:92,pro:3.4,carb:20,fat:0.6,fib:2.7},
+  // 🥛 Dairy & Alternatives
+  {id:'greek_yoghurt',name:'Greek Yoghurt',emoji:'🥛',cat:'Dairy & Alternatives',cal:97,pro:9,carb:3.6,fat:5,fib:0},
+  {id:'cottage_cheese',name:'Cottage Cheese',emoji:'🧀',cat:'Dairy & Alternatives',cal:98,pro:11,carb:3.4,fat:4.3,fib:0},
+  {id:'whole_milk',name:'Whole Milk',emoji:'🥛',cat:'Dairy & Alternatives',cal:61,pro:3.2,carb:4.8,fat:3.3,fib:0},
+  {id:'almond_milk',name:'Almond Milk',emoji:'🥛',cat:'Dairy & Alternatives',cal:15,pro:0.6,carb:0.3,fat:1.2,fib:0.2},
+  {id:'cheddar',name:'Cheddar Cheese',emoji:'🧀',cat:'Dairy & Alternatives',cal:402,pro:25,carb:1.3,fat:33,fib:0},
+  {id:'mozzarella',name:'Mozzarella',emoji:'🧀',cat:'Dairy & Alternatives',cal:300,pro:22,carb:2.2,fat:22,fib:0},
+  // 🥜 Nuts, Seeds & Fats
+  {id:'almonds',name:'Almonds',emoji:'🥜',cat:'Nuts & Seeds',cal:579,pro:21,carb:22,fat:50,fib:12},
+  {id:'walnuts',name:'Walnuts',emoji:'🌰',cat:'Nuts & Seeds',cal:654,pro:15,carb:14,fat:65,fib:6.7},
+  {id:'cashews',name:'Cashews',emoji:'🥜',cat:'Nuts & Seeds',cal:553,pro:18,carb:30,fat:44,fib:3.3},
+  {id:'chia_seeds',name:'Chia Seeds',emoji:'🌱',cat:'Nuts & Seeds',cal:486,pro:17,carb:42,fat:31,fib:34},
+  {id:'flaxseeds',name:'Flaxseeds',emoji:'🌱',cat:'Nuts & Seeds',cal:534,pro:18,carb:29,fat:42,fib:27},
+  {id:'olive_oil',name:'Olive Oil',emoji:'🫒',cat:'Nuts & Seeds',cal:884,pro:0,carb:0,fat:100,fib:0},
+  {id:'coconut_oil',name:'Coconut Oil',emoji:'🥥',cat:'Nuts & Seeds',cal:862,pro:0,carb:0,fat:100,fib:0},
+  {id:'peanut_butter',name:'Peanut Butter',emoji:'🥜',cat:'Nuts & Seeds',cal:588,pro:25,carb:20,fat:50,fib:6},
+  {id:'almond_butter',name:'Almond Butter',emoji:'🥜',cat:'Nuts & Seeds',cal:614,pro:21,carb:19,fat:56,fib:10},
+];
+
+const FOOD_CATEGORIES = ['Meats & Fish','Vegetables','Fruits','Grains & Legumes','Dairy & Alternatives','Nuts & Seeds'];
+
+/* ── Nutrition utilities ── */
+function scaleMacros(food, grams) {
+  const s = grams / 100;
+  return {
+    cal: Math.round(food.cal * s),
+    pro: Math.round(food.pro * s * 10) / 10,
+    carb: Math.round(food.carb * s * 10) / 10,
+    fat: Math.round(food.fat * s * 10) / 10,
+    fib: Math.round(food.fib * s * 10) / 10,
+  };
+}
+
+function sumMacros(meals) {
+  return meals.reduce((t, m) => ({
+    cal:  t.cal  + (m.macros?.cal  || 0),
+    pro:  t.pro  + (m.macros?.pro  || 0),
+    carb: t.carb + (m.macros?.carb || 0),
+    fat:  t.fat  + (m.macros?.fat  || 0),
+    fib:  t.fib  + (m.macros?.fib  || 0),
+  }), { cal:0, pro:0, carb:0, fat:0, fib:0 });
+}
+
+function calcNutritionGoals(profile, nutritionGoals) {
+  const bw = nutritionGoals.bodyweight || 80;
+  const days = profile.trainingDaysPerWeek || 3;
+  const mult = days <= 2 ? 26 : days <= 4 ? 28 : 30;
+  const goalType = nutritionGoals.goalType || 'maintain';
+  const tdee = bw * mult;
+  const calories = goalType === 'lose' ? Math.round(tdee * 0.82)
+                 : goalType === 'gain' ? Math.round(tdee * 1.12)
+                 : Math.round(tdee);
+  const proMult = goalType === 'lose' ? 2.2 : goalType === 'gain' ? 2.4 : 2.0;
+  const protein = Math.round(bw * proMult);
+  const fatCals = Math.round(calories * 0.25);
+  const fatG = Math.round(fatCals / 9);
+  const carbCals = calories - (protein * 4) - fatCals;
+  const carbs = Math.max(50, Math.round(carbCals / 4));
+  return { calories, protein, carbs, fat: fatG };
+}
+
+function fuzzySearch(query, limit=20) {
+  if (!query.trim()) return [];
+  const q = query.toLowerCase();
+  return FOOD_DB
+    .filter(f => f.name.toLowerCase().includes(q) || f.cat.toLowerCase().includes(q))
+    .slice(0, limit);
+}
+
+function getNutritionLog(nutritionLog, date) {
+  return nutritionLog[date] || { meals: [] };
+}
+
+function checkNutritionBadges(nutritionLog, weightHistory, nutritionGoals, existing) {
+  const now = new Date().toISOString();
+  const earned = {};
+  const allMeals = Object.values(nutritionLog).flatMap(d => d.meals || []);
+  if (allMeals.length >= 1 && !existing.first_meal) earned.first_meal = { unlockedAt: now };
+  // Count nutrition streaks
+  let streak = 0, maxStreak = 0;
+  const sorted = Object.keys(nutritionLog).sort();
+  for (let i = 0; i < sorted.length; i++) {
+    const d = nutritionLog[sorted[i]];
+    const total = sumMacros(d.meals || []);
+    if (total.cal >= (nutritionGoals.calories || 1500) * 0.8) {
+      streak++;
+      maxStreak = Math.max(maxStreak, streak);
+    } else streak = 0;
+  }
+  if (maxStreak >= 14 && !existing.fuel_streak) earned.fuel_streak = { unlockedAt: now };
+  // Protein goal streak
+  let proStreak = 0;
+  for (let i = sorted.length - 1; i >= 0; i--) {
+    const d = nutritionLog[sorted[i]];
+    const total = sumMacros(d.meals || []);
+    if (total.pro >= (nutritionGoals.protein || 150)) proStreak++;
+    else break;
+  }
+  if (proStreak >= 5 && !existing.protein_king) earned.protein_king = { unlockedAt: now };
+  // Goal weight
+  if (weightHistory.length > 0 && nutritionGoals.goalWeight) {
+    const latest = weightHistory[weightHistory.length - 1].weight;
+    const goalType = nutritionGoals.goalType;
+    const hit = goalType === 'lose' ? latest <= nutritionGoals.goalWeight
+              : goalType === 'gain' ? latest >= nutritionGoals.goalWeight
+              : Math.abs(latest - nutritionGoals.goalWeight) <= 0.5;
+    if (hit && !existing.goal_weight) earned.goal_weight = { unlockedAt: now };
+  }
+  return earned;
+}
 
 /* ═══════════════════════════════════════════════
    HOOKS
@@ -437,33 +622,36 @@ function BadgeToast({ badge, onDismiss }) {
 ═══════════════════════════════════════════════ */
 function BottomNav({ active, onTab }) {
   const tabs = [
-    { id:'home',     icon:Home,          label:'HOME'     },
-    { id:'plan',     icon:ClipboardList, label:'PLAN'     },
-    { id:'log',      icon:Plus,          label:'LOG',     center:true },
-    { id:'progress', icon:BarChart2,     label:'PROGRESS' },
-    { id:'profile',  icon:User,          label:'PROFILE'  },
+    { id:'home',     icon:Home,          label:'HOME'  },
+    { id:'plan',     icon:ClipboardList, label:'PLAN'  },
+    { id:'log',      icon:Plus,          label:'LOG',  cta:true },
+    { id:'fuel',     icon:Flame,         label:'FUEL'  },
+    { id:'progress', icon:BarChart2,     label:'STATS' },
+    { id:'profile',  icon:User,          label:'ME'    },
   ];
   return (
     <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] z-30"
       style={{ background:'rgba(13,13,15,0.96)', backdropFilter:'blur(20px)',
                borderTop:'1px solid #1A1A1C',
                paddingBottom:'max(0.75rem, env(safe-area-inset-bottom))' }}>
-      <div className="flex items-center justify-around px-2 pt-2">
+      <div className="flex items-center justify-around px-1 pt-2">
         {tabs.map(tab => (
           <button key={tab.id} onClick={() => onTab(tab.id)}
-            className="flex flex-col items-center gap-0.5 transition-transform active:scale-90 select-none"
-            style={{ minWidth: 48, minHeight: 48, justifyContent:'center' }}>
-            {tab.center ? (
-              <div className="w-14 h-14 rounded-2xl bg-[#C8FF00] flex items-center justify-center -mt-7 shadow-lg active:scale-90 transition-transform">
-                <Plus size={28} color="#0D0D0F" strokeWidth={2.5}/>
+            className="flex flex-col items-center gap-0.5 transition-transform active:scale-90 select-none flex-1"
+            style={{ minHeight: 48, justifyContent:'center' }}>
+            {tab.cta ? (
+              <div className={`w-11 h-11 rounded-xl flex items-center justify-center -mt-5 shadow-lg transition-all
+                ${active === 'log' ? 'bg-[#C8FF00] scale-110' : 'bg-[#C8FF00]'}`}>
+                <Plus size={24} color="#0D0D0F" strokeWidth={2.5}/>
               </div>
             ) : (
               <>
-                <tab.icon size={22}
+                <tab.icon size={20}
                   color={active === tab.id ? '#C8FF00' : '#8A8A8E'}
                   strokeWidth={active === tab.id ? 2.5 : 1.5}/>
                 <span className="font-display text-[9px] tracking-wider"
-                  style={{ color: active === tab.id ? '#C8FF00' : '#8A8A8E' }}>
+                  style={{ color: active === tab.id ? '#C8FF00' : '#8A8A8E',
+                           fontFamily:"'Bebas Neue',sans-serif" }}>
                   {tab.label}
                 </span>
               </>
@@ -531,7 +719,7 @@ function LoadingPlan({ error }) {
 /* ═══════════════════════════════════════════════
    PROFILE / ONBOARDING SCREEN
 ═══════════════════════════════════════════════ */
-function ProfileScreen({ profile, onSave, onGeneratePlan, isExisting }) {
+function ProfileScreen({ profile, onSave, onGeneratePlan, isExisting, onNutritionGoals=()=>{} }) {
   const TOTAL_STEPS = 6;
   const [step, setStep] = useState(0);
   const [form, setForm] = useState({
@@ -633,6 +821,13 @@ function ProfileScreen({ profile, onSave, onGeneratePlan, isExisting }) {
             className="w-full py-4 rounded-2xl bg-[#C8FF00] text-[#0D0D0F] font-display text-xl tracking-wider active:scale-95 transition-all"
             style={{ fontFamily:"'Bebas Neue',sans-serif" }}>
             REGENERATE PLAN
+          </button>
+
+          {/* Nutrition goals link */}
+          <button onClick={onNutritionGoals}
+            className="w-full py-4 rounded-2xl bg-[#1A1A1C] text-[#C8FF00] font-display text-xl tracking-wider active:scale-95 transition-all border border-[rgba(200,255,0,0.2)] flex items-center justify-center gap-2"
+            style={{ fontFamily:"'Bebas Neue',sans-serif" }}>
+            <Flame size={18} color="#C8FF00"/> NUTRITION GOALS
           </button>
         </div>
       </div>
@@ -1378,7 +1573,7 @@ function CelebrationScreen({ result, newBadges, onDone }) {
 /* ═══════════════════════════════════════════════
    PROGRESS SCREEN
 ═══════════════════════════════════════════════ */
-function ProgressScreen({ logs, prs, badges, profile }) {
+function ProgressScreen({ logs, prs, badges, profile, nutritionLog={}, nutritionGoals={}, weightHistory=[] }) {
   const [insights, setInsights]         = useState(null);
   const [loadingInsights, setLoading]   = useState(false);
   const [insightError, setInsightError] = useState(null);
@@ -1578,30 +1773,731 @@ function ProgressScreen({ logs, prs, badges, profile }) {
       </div>
 
       {/* Badges */}
+      {/* ── Nutrition weekly summary ── */}
+      {Object.keys(nutritionLog).length > 0 && (() => {
+        const weekStart = getWeekStart();
+        const weekDays = Object.keys(nutritionLog).filter(d => d >= weekStart);
+        const avgCal = weekDays.length > 0
+          ? Math.round(weekDays.reduce((s,d)=>s+sumMacros(nutritionLog[d].meals||[]).cal,0) / weekDays.length) : 0;
+        const avgPro = weekDays.length > 0
+          ? Math.round(weekDays.reduce((s,d)=>s+sumMacros(nutritionLog[d].meals||[]).pro,0) / weekDays.length) : 0;
+        const goalHits = weekDays.filter(d=>{
+          const t=sumMacros(nutritionLog[d].meals||[]);
+          return t.cal >= (nutritionGoals.calories||2000)*0.8;
+        }).length;
+        // nutrition streak
+        let nutrStreak=0;
+        const allDates = Object.keys(nutritionLog).sort().reverse();
+        for(const d of allDates){
+          const t=sumMacros(nutritionLog[d].meals||[]);
+          if(t.cal>=(nutritionGoals.calories||2000)*0.8) nutrStreak++;
+          else break;
+        }
+        return (
+          <div className="px-5 mb-6">
+            <h2 className="font-display text-2xl text-[#F5F5F0] mb-3"
+              style={{ fontFamily:"'Bebas Neue',sans-serif" }}>NUTRITION THIS WEEK</h2>
+            <div className="bg-[#1A1A1C] rounded-2xl p-4 border border-[#252527] space-y-3">
+              <div className="flex gap-3">
+                <StatCard label="AVG CALORIES" value={`${avgCal}`} sub="kcal/day"/>
+                <StatCard label="AVG PROTEIN"  value={`${avgPro}g`} sub="per day"/>
+                <StatCard label="GOAL DAYS"    value={`${goalHits}/7`} sub="this week"/>
+              </div>
+              {nutrStreak > 0 && (
+                <div className="flex items-center gap-2 pt-1">
+                  <span className="text-lg">🔥</span>
+                  <p className="text-[#C8FF00] font-display text-lg"
+                    style={{ fontFamily:"'Bebas Neue',sans-serif" }}>
+                    {nutrStreak} DAY NUTRITION STREAK
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── Fitness + Nutrition badges ── */}
       <div className="px-5 mb-6">
         <h2 className="font-display text-2xl text-[#F5F5F0] mb-3"
-          style={{ fontFamily:"'Bebas Neue',sans-serif" }}>ACHIEVEMENTS</h2>
-        <div className="grid grid-cols-3 gap-3">
+          style={{ fontFamily:"'Bebas Neue',sans-serif" }}>FITNESS BADGES</h2>
+        <div className="grid grid-cols-3 gap-3 mb-5">
           {BADGE_DEFS.map(badge => {
             const earned = badges[badge.id];
             return (
               <div key={badge.id}
                 className={`rounded-2xl p-3 text-center border transition-all
-                  ${earned
-                    ? 'bg-[rgba(200,255,0,0.05)] border-[rgba(200,255,0,0.2)]'
-                    : 'bg-[#1A1A1C] border-[#252527] opacity-35'}`}>
+                  ${earned ? 'bg-[rgba(200,255,0,0.05)] border-[rgba(200,255,0,0.2)]'
+                           : 'bg-[#1A1A1C] border-[#252527] opacity-35'}`}>
                 <div className="text-3xl mb-1">{badge.emoji}</div>
-                <p className={`font-display text-xs leading-tight
-                  ${earned ? 'text-[#C8FF00]' : 'text-[#8A8A8E]'}`}
-                  style={{ fontFamily:"'Bebas Neue',sans-serif" }}>
-                  {badge.name}
-                </p>
-                {earned && (
-                  <p className="text-[#8A8A8E] text-[9px] mt-0.5">{formatDate(earned.unlockedAt)}</p>
-                )}
+                <p className={`font-display text-xs leading-tight ${earned?'text-[#C8FF00]':'text-[#8A8A8E]'}`}
+                  style={{ fontFamily:"'Bebas Neue',sans-serif" }}>{badge.name}</p>
+                {earned && <p className="text-[#8A8A8E] text-[9px] mt-0.5">{formatDate(earned.unlockedAt)}</p>}
               </div>
             );
           })}
+        </div>
+
+        <h2 className="font-display text-2xl text-[#F5F5F0] mb-3"
+          style={{ fontFamily:"'Bebas Neue',sans-serif" }}>NUTRITION BADGES</h2>
+        <div className="grid grid-cols-3 gap-3">
+          {NUTRITION_BADGE_DEFS.map(badge => {
+            const earned = badges[badge.id];
+            return (
+              <div key={badge.id}
+                className={`rounded-2xl p-3 text-center border transition-all
+                  ${earned ? 'bg-[rgba(200,255,0,0.05)] border-[rgba(200,255,0,0.2)]'
+                           : 'bg-[#1A1A1C] border-[#252527] opacity-35'}`}>
+                <div className="text-3xl mb-1">{badge.emoji}</div>
+                <p className={`font-display text-xs leading-tight ${earned?'text-[#C8FF00]':'text-[#8A8A8E]'}`}
+                  style={{ fontFamily:"'Bebas Neue',sans-serif" }}>{badge.name}</p>
+                {earned && <p className="text-[#8A8A8E] text-[9px] mt-0.5">{formatDate(earned.unlockedAt)}</p>}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   NUTRITION GOALS SCREEN
+═══════════════════════════════════════════════ */
+function NutritionGoalsScreen({ profile, nutritionGoals, onSave, onBack }) {
+  const [form, setForm] = useState({
+    calories:   nutritionGoals.calories  || 2000,
+    protein:    nutritionGoals.protein   || 150,
+    carbs:      nutritionGoals.carbs     || 200,
+    fat:        nutritionGoals.fat       || 65,
+    goalType:   nutritionGoals.goalType  || 'maintain',
+    bodyweight: nutritionGoals.bodyweight|| (profile.name ? 80 : 80),
+    goalWeight: nutritionGoals.goalWeight|| '',
+  });
+  const set = (k,v) => setForm(f=>({...f,[k]:v}));
+
+  const autoCalc = () => {
+    const suggested = calcNutritionGoals(profile, { ...form, goalType: form.goalType });
+    setForm(f=>({...f, ...suggested}));
+  };
+
+  const GOAL_TYPES = [
+    { id:'lose',     label:'LOSE WEIGHT',  desc:'Calorie deficit, high protein' },
+    { id:'maintain', label:'MAINTAIN',     desc:'TDEE, balanced macros' },
+    { id:'gain',     label:'GAIN MUSCLE',  desc:'Calorie surplus, high protein' },
+  ];
+
+  return (
+    <div className="h-full overflow-y-auto pb-28">
+      <div className="px-5 pt-14 pb-4 flex items-center gap-3">
+        <button onClick={onBack}
+          className="w-10 h-10 rounded-xl bg-[#1A1A1C] flex items-center justify-center active:scale-90 border border-[#252527]">
+          <ChevronLeft size={20} color="#F5F5F0"/>
+        </button>
+        <div>
+          <h1 className="font-display text-4xl text-[#F5F5F0]"
+            style={{ fontFamily:"'Bebas Neue',sans-serif" }}>NUTRITION GOALS</h1>
+          <p className="text-[#8A8A8E] text-xs">Set your daily targets</p>
+        </div>
+      </div>
+
+      <div className="px-5 space-y-4">
+        {/* Goal type */}
+        <div className="space-y-2">
+          {GOAL_TYPES.map(g=>(
+            <button key={g.id} onClick={()=>set('goalType',g.id)}
+              className={`w-full text-left px-5 py-4 rounded-2xl border-2 transition-all active:scale-95
+                ${form.goalType===g.id
+                  ? 'border-[#C8FF00] bg-[rgba(200,255,0,0.07)]'
+                  : 'border-[#3A3A3C] bg-[#1A1A1C]'}`}>
+              <p className={`font-display text-xl ${form.goalType===g.id?'text-[#C8FF00]':'text-[#F5F5F0]'}`}
+                style={{ fontFamily:"'Bebas Neue',sans-serif" }}>{g.label}</p>
+              <p className="text-[#8A8A8E] text-xs mt-0.5">{g.desc}</p>
+            </button>
+          ))}
+        </div>
+
+        {/* Body weight */}
+        <div className="bg-[#1A1A1C] rounded-2xl p-4 border border-[#252527]">
+          <p className="text-[#8A8A8E] text-xs uppercase tracking-widest mb-3">Your Bodyweight (kg)</p>
+          <div className="flex items-center gap-3">
+            <button onClick={()=>set('bodyweight',Math.max(30,form.bodyweight-1))}
+              className="w-11 h-11 rounded-xl bg-[#252527] flex items-center justify-center active:scale-90 border border-[#3A3A3C]">
+              <Minus size={18} color="#F5F5F0"/>
+            </button>
+            <input type="number" value={form.bodyweight}
+              onChange={e=>set('bodyweight',parseFloat(e.target.value)||80)}
+              className="set-input flex-1" style={{ fontSize:20 }}/>
+            <button onClick={()=>set('bodyweight',form.bodyweight+1)}
+              className="w-11 h-11 rounded-xl bg-[#252527] flex items-center justify-center active:scale-90 border border-[#3A3A3C]">
+              <Plus size={18} color="#F5F5F0"/>
+            </button>
+          </div>
+        </div>
+
+        {/* Auto-calculate */}
+        <button onClick={autoCalc}
+          className="w-full py-3.5 rounded-2xl bg-[rgba(200,255,0,0.08)] border border-[rgba(200,255,0,0.25)] text-[#C8FF00] font-display text-lg tracking-wider active:scale-95 flex items-center justify-center gap-2"
+          style={{ fontFamily:"'Bebas Neue',sans-serif" }}>
+          <Zap size={18} color="#C8FF00"/> CALCULATE FOR ME
+        </button>
+
+        {/* Manual targets */}
+        <div className="bg-[#1A1A1C] rounded-2xl p-4 border border-[#252527] space-y-4">
+          <p className="text-[#8A8A8E] text-xs uppercase tracking-widest">Daily Targets</p>
+          {[
+            { key:'calories', label:'Calories (kcal)', color:'#C8FF00' },
+            { key:'protein',  label:'Protein (g)',     color:'#60A5FA' },
+            { key:'carbs',    label:'Carbs (g)',        color:'#FBBF24' },
+            { key:'fat',      label:'Fat (g)',          color:'#FB923C' },
+          ].map(f=>(
+            <div key={f.key} className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-2 flex-1">
+                <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background:f.color }}/>
+                <span className="text-[#F5F5F0] text-sm">{f.label}</span>
+              </div>
+              <input type="number" value={form[f.key]}
+                onChange={e=>set(f.key, parseInt(e.target.value)||0)}
+                className="set-input" style={{ width:80, fontSize:17 }}/>
+            </div>
+          ))}
+        </div>
+
+        {/* Goal weight */}
+        <div className="bg-[#1A1A1C] rounded-2xl p-4 border border-[#252527]">
+          <p className="text-[#8A8A8E] text-xs uppercase tracking-widest mb-3">Goal Weight (kg) — optional</p>
+          <input type="number" value={form.goalWeight}
+            onChange={e=>set('goalWeight',e.target.value)}
+            placeholder="e.g. 80"
+            className="set-input w-full" style={{ fontSize:20 }}/>
+          <p className="text-[#8A8A8E] text-xs mt-2">Shows a target line on your weight chart</p>
+        </div>
+
+        <button onClick={()=>onSave(form)}
+          className="w-full py-4 rounded-2xl bg-[#C8FF00] text-[#0D0D0F] font-display text-xl tracking-wider active:scale-95"
+          style={{ fontFamily:"'Bebas Neue',sans-serif" }}>
+          SAVE GOALS
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   FUEL SCREEN — COMPONENTS
+═══════════════════════════════════════════════ */
+
+/* Circular calorie ring */
+function CalorieRing({ consumed, goal }) {
+  const r = 72, cx = 90, cy = 90;
+  const circ = 2 * Math.PI * r;
+  const pct = goal > 0 ? Math.min(consumed / goal, 1.05) : 0;
+  const dash = circ * Math.min(pct, 1);
+  const color = consumed < goal * 0.5 ? '#FF453A'
+              : consumed < goal * 0.85 ? '#FF9F0A'
+              : consumed <= goal       ? '#C8FF00'
+              : '#F5F5F0';
+  return (
+    <div className="relative flex items-center justify-center" style={{ width:180,height:180 }}>
+      <svg width="180" height="180" viewBox="0 0 180 180" style={{ position:'absolute' }}>
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke="#252527" strokeWidth="14"/>
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke={color} strokeWidth="14"
+          strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
+          transform={`rotate(-90 ${cx} ${cy})`}
+          style={{ transition:'stroke-dasharray 0.7s ease, stroke 0.4s ease' }}/>
+      </svg>
+      <div className="flex flex-col items-center justify-center" style={{ zIndex:1 }}>
+        <p className="font-display leading-none" style={{ fontFamily:"'Bebas Neue',sans-serif",
+          fontSize:42, color:'#F5F5F0' }}>{consumed}</p>
+        <p className="font-display text-sm tracking-widest" style={{ fontFamily:"'Bebas Neue',sans-serif",
+          color }}>KCAL</p>
+        <p className="text-xs mt-0.5" style={{ color:'#8A8A8E' }}>of {goal} goal</p>
+      </div>
+    </div>
+  );
+}
+
+/* Single macro progress card */
+function MacroCard({ label, current, goal, color, unit='g' }) {
+  const pct = goal > 0 ? Math.min(current / goal, 1) : 0;
+  const hit = current >= goal;
+  return (
+    <div className="bg-[#1A1A1C] rounded-2xl p-3 flex-1 border border-[#252527]">
+      <div className="flex items-baseline justify-between mb-1.5">
+        <span className="text-[#8A8A8E] text-[10px] uppercase tracking-wider">{label}</span>
+        {hit && <span className="text-[9px] font-bold" style={{ color }}>✓</span>}
+      </div>
+      <p className="font-display text-xl leading-none mb-2"
+        style={{ fontFamily:"'Bebas Neue',sans-serif", color:'#F5F5F0' }}>
+        {Math.round(current)}<span className="text-xs font-body text-[#8A8A8E]">{unit}</span>
+      </p>
+      <div className="h-1.5 rounded-full bg-[#252527] overflow-hidden">
+        <div className="h-full rounded-full transition-all duration-500"
+          style={{ width:`${pct*100}%`, background: color }}/>
+      </div>
+      <p className="text-[#8A8A8E] text-[10px] mt-1">of {goal}{unit}</p>
+    </div>
+  );
+}
+
+/* Weight SVG line chart */
+function WeightChart({ history, goalWeight }) {
+  if (history.length < 2) return (
+    <div className="text-center py-6 text-[#8A8A8E] text-sm">
+      Log at least 2 days to see your trend
+    </div>
+  );
+  const data = history.slice(-30);
+  const W=320, H=100, PL=28, PR=8, PT=10, PB=22;
+  const ws = data.map(h=>h.weight);
+  const minW = Math.min(...ws) - 0.5;
+  const maxW = Math.max(...ws) + 0.5;
+  const px = i => PL + (i/(data.length-1))*(W-PL-PR);
+  const py = w => PT + ((maxW-w)/(maxW-minW))*(H-PT-PB);
+  // smooth cubic bezier path
+  let d = `M${px(0)} ${py(ws[0])}`;
+  for (let i=1;i<data.length;i++){
+    const mx=(px(i-1)+px(i))/2;
+    d+=` C${mx} ${py(ws[i-1])} ${mx} ${py(ws[i])} ${px(i)} ${py(ws[i])}`;
+  }
+  // 7-day moving average
+  const avg = data.map((_,i)=>{
+    const s=Math.max(0,i-3), e=Math.min(data.length-1,i+3);
+    return data.slice(s,e+1).reduce((a,h)=>a+h.weight,0)/(e-s+1);
+  });
+  let ad=`M${px(0)} ${py(avg[0])}`;
+  for(let i=1;i<avg.length;i++) ad+=` L${px(i)} ${py(avg[i])}`;
+
+  const latest = ws[ws.length-1];
+  const first  = ws[0];
+  const change = latest - first;
+
+  return (
+    <div>
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display:'block', marginBottom:4 }}>
+        {/* goal line */}
+        {goalWeight && goalWeight>=minW && goalWeight<=maxW && (
+          <line x1={PL} y1={py(goalWeight)} x2={W-PR} y2={py(goalWeight)}
+            stroke="#C8FF00" strokeWidth="1" strokeDasharray="4 3" opacity="0.5"/>
+        )}
+        {/* weight path */}
+        <path d={d} fill="none" stroke="#F5F5F0" strokeWidth="1.5" opacity="0.5"/>
+        {/* moving avg */}
+        <path d={ad} fill="none" stroke="#C8FF00" strokeWidth="2" opacity="0.85"/>
+        {/* dots */}
+        {data.map((h,i)=>(
+          <circle key={i} cx={px(i)} cy={py(h.weight)} r="2" fill="#F5F5F0" opacity="0.6"/>
+        ))}
+        <circle cx={px(data.length-1)} cy={py(latest)} r="4" fill="#C8FF00"/>
+        {/* x labels: first, mid, last */}
+        {[0, Math.floor((data.length-1)/2), data.length-1].map(i=>(
+          <text key={i} x={px(i)} y={H-2} textAnchor="middle"
+            fill="#8A8A8E" fontSize="7" fontFamily="DM Sans">
+            {data[i].date.slice(5)}
+          </text>
+        ))}
+        {/* y labels */}
+        <text x={PL-2} y={py(maxW)+4} textAnchor="end" fill="#8A8A8E" fontSize="7" fontFamily="DM Sans">{maxW.toFixed(1)}</text>
+        <text x={PL-2} y={py(minW)+4} textAnchor="end" fill="#8A8A8E" fontSize="7" fontFamily="DM Sans">{minW.toFixed(1)}</text>
+      </svg>
+      <div className="flex gap-3 mt-2">
+        <div className="flex-1 text-center">
+          <p className="text-[#8A8A8E] text-[10px] uppercase tracking-wider">Start</p>
+          <p className="font-display text-lg text-[#F5F5F0]"
+            style={{ fontFamily:"'Bebas Neue',sans-serif" }}>{first}kg</p>
+        </div>
+        <div className="flex-1 text-center">
+          <p className="text-[#8A8A8E] text-[10px] uppercase tracking-wider">Now</p>
+          <p className="font-display text-lg text-[#C8FF00]"
+            style={{ fontFamily:"'Bebas Neue',sans-serif" }}>{latest}kg</p>
+        </div>
+        <div className="flex-1 text-center">
+          <p className="text-[#8A8A8E] text-[10px] uppercase tracking-wider">Change</p>
+          <p className={`font-display text-lg`}
+            style={{ fontFamily:"'Bebas Neue',sans-serif",
+              color: change===0?'#8A8A8E':change>0?'#C8FF00':'#FF453A' }}>
+            {change>0?'+':''}{change.toFixed(1)}kg
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* Food search + add bottom sheet */
+function FoodAddModal({ onAdd, onClose }) {
+  const [query,   setQuery]  = useState('');
+  const [results, setResults]= useState([]);
+  const [sel,     setSel]    = useState(null); // selected food
+  const [grams,   setGrams]  = useState(100);
+  const [meal,    setMeal]   = useState('Lunch');
+  const MEALS = ['Breakfast','Lunch','Dinner','Snack'];
+
+  useEffect(()=>{
+    setResults(query.length>0 ? fuzzySearch(query) : FOOD_DB.slice(0,20));
+  },[query]);
+
+  // Init with popular foods
+  useEffect(()=>{ setResults(FOOD_DB.slice(0,20)); },[]);
+
+  const preview = sel ? scaleMacros(sel, grams) : null;
+
+  const handleAdd = () => {
+    if (!sel) return;
+    onAdd({
+      id:`food_${Date.now()}`,
+      foodId: sel.id,
+      name: sel.name,
+      emoji: sel.emoji,
+      grams,
+      meal,
+      macros: scaleMacros(sel, grams),
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col" style={{ maxWidth:430, left:'50%', transform:'translateX(-50%)' }}>
+      {/* backdrop */}
+      <div className="flex-1 bg-black/60" onClick={onClose}/>
+      {/* sheet */}
+      <div className="bg-[#1A1A1C] rounded-t-3xl animate-slide-up flex flex-col"
+        style={{ maxHeight:'88vh' }}>
+
+        {/* drag handle */}
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="w-10 h-1 rounded-full bg-[#3A3A3C]"/>
+        </div>
+
+        {!sel ? (
+          /* ── Search view ── */
+          <div className="flex flex-col flex-1 overflow-hidden px-5 pb-6">
+            <div className="flex items-center justify-between mb-4 pt-2">
+              <h2 className="font-display text-3xl text-[#F5F5F0]"
+                style={{ fontFamily:"'Bebas Neue',sans-serif" }}>ADD FOOD</h2>
+              <button onClick={onClose}
+                className="w-9 h-9 rounded-xl bg-[#252527] flex items-center justify-center active:scale-90">
+                <X size={16} color="#8A8A8E"/>
+              </button>
+            </div>
+            {/* search input */}
+            <div className="flex items-center gap-3 bg-[#252527] rounded-2xl px-4 py-3 mb-4 border border-[#3A3A3C]">
+              <Search size={17} color="#8A8A8E"/>
+              <input autoFocus value={query} onChange={e=>setQuery(e.target.value)}
+                placeholder="Search whole foods…"
+                className="flex-1 bg-transparent text-[#F5F5F0] text-sm outline-none placeholder:text-[#8A8A8E]"/>
+              {query && <button onClick={()=>setQuery('')}><X size={14} color="#8A8A8E"/></button>}
+            </div>
+            {/* results */}
+            <div className="flex-1 overflow-y-auto space-y-1">
+              {results.length === 0 && query.length > 0 && (
+                <p className="text-[#8A8A8E] text-sm text-center py-8">No foods found for "{query}"</p>
+              )}
+              {results.map(food=>(
+                <button key={food.id} onClick={()=>{ setSel(food); setGrams(100); }}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl bg-[#252527] active:scale-95 transition-all border border-[#3A3A3C] text-left">
+                  <span className="text-2xl">{food.emoji}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[#F5F5F0] text-sm font-medium truncate">{food.name}</p>
+                    <p className="text-[#8A8A8E] text-xs">{food.cat}</p>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-[#C8FF00] text-sm font-display"
+                      style={{ fontFamily:"'Bebas Neue',sans-serif" }}>{food.cal}</p>
+                    <p className="text-[#8A8A8E] text-[10px]">kcal/100g</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          /* ── Food detail + quantity view ── */
+          <div className="flex flex-col px-5 pb-6 overflow-y-auto">
+            <div className="flex items-center justify-between mb-5 pt-2">
+              <button onClick={()=>setSel(null)}
+                className="flex items-center gap-2 text-[#8A8A8E] active:scale-90">
+                <ChevronLeft size={18} color="#8A8A8E"/>
+                <span className="text-sm">Back</span>
+              </button>
+              <button onClick={onClose}><X size={16} color="#8A8A8E"/></button>
+            </div>
+
+            {/* food header */}
+            <div className="flex items-center gap-4 mb-5">
+              <span className="text-5xl">{sel.emoji}</span>
+              <div>
+                <h2 className="font-display text-2xl text-[#F5F5F0]"
+                  style={{ fontFamily:"'Bebas Neue',sans-serif" }}>{sel.name.toUpperCase()}</h2>
+                <span className="text-xs px-2 py-0.5 rounded-full border border-[#3A3A3C] text-[#8A8A8E]">
+                  {sel.cat}
+                </span>
+              </div>
+            </div>
+
+            {/* quantity stepper */}
+            <div className="bg-[#252527] rounded-2xl p-4 mb-4 border border-[#3A3A3C]">
+              <p className="text-[#8A8A8E] text-xs uppercase tracking-widest mb-3">Quantity</p>
+              <div className="flex items-center gap-3">
+                <button onClick={()=>setGrams(g=>Math.max(10,g-10))}
+                  className="w-12 h-12 rounded-xl bg-[#1A1A1C] flex items-center justify-center active:scale-90 border border-[#3A3A3C]">
+                  <Minus size={20} color="#F5F5F0"/>
+                </button>
+                <div className="flex-1 flex items-center justify-center">
+                  <input type="number" value={grams}
+                    onChange={e=>setGrams(Math.max(1,parseInt(e.target.value)||1))}
+                    className="set-input" style={{ width:80, fontSize:22 }}/>
+                  <span className="text-[#8A8A8E] text-sm ml-2">g</span>
+                </div>
+                <button onClick={()=>setGrams(g=>g+10)}
+                  className="w-12 h-12 rounded-xl bg-[#1A1A1C] flex items-center justify-center active:scale-90 border border-[#3A3A3C]">
+                  <Plus size={20} color="#F5F5F0"/>
+                </button>
+              </div>
+            </div>
+
+            {/* live macro preview */}
+            {preview && (
+              <div className="grid grid-cols-4 gap-2 mb-4">
+                {[
+                  { label:'KCAL', val: preview.cal, color:'#C8FF00' },
+                  { label:'PROT', val: preview.pro+'g', color:'#60A5FA' },
+                  { label:'CARB', val: preview.carb+'g', color:'#FBBF24' },
+                  { label:'FAT',  val: preview.fat+'g', color:'#FB923C' },
+                ].map(m=>(
+                  <div key={m.label} className="bg-[#252527] rounded-xl p-2.5 text-center border border-[#3A3A3C]">
+                    <p className="font-display text-lg leading-none"
+                      style={{ fontFamily:"'Bebas Neue',sans-serif", color: m.color }}>{m.val}</p>
+                    <p className="text-[#8A8A8E] text-[9px] mt-0.5 uppercase tracking-wider">{m.label}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* meal tag */}
+            <p className="text-[#8A8A8E] text-xs uppercase tracking-widest mb-2">Meal</p>
+            <div className="flex gap-2 mb-5">
+              {MEALS.map(m=>(
+                <Pill key={m} active={meal===m} onClick={()=>setMeal(m)}
+                  className="flex-1 text-xs px-2">{m}</Pill>
+              ))}
+            </div>
+
+            <button onClick={handleAdd}
+              className="w-full py-4 rounded-2xl bg-[#C8FF00] text-[#0D0D0F] font-display text-xl tracking-wider active:scale-95 transition-all"
+              style={{ fontFamily:"'Bebas Neue',sans-serif" }}>
+              ADD TO TODAY
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* Main FUEL screen */
+function FuelScreen({ nutritionLog, nutritionGoals, weightHistory, onAddFood, onDeleteFood, onLogWeight, profile }) {
+  const today = getTodayISO();
+  const todayLog = getNutritionLog(nutritionLog, today);
+  const totals = sumMacros(todayLog.meals);
+  const goals = nutritionGoals;
+  const MEALS = ['Breakfast','Lunch','Dinner','Snack'];
+  const [showAdd, setShowAdd]       = useState(false);
+  const [addToast, setAddToast]     = useState('');
+  const [weightInput, setWeightInput] = useState('');
+  const [expanded, setExpanded]     = useState({ Breakfast:true, Lunch:true, Dinner:true, Snack:true });
+  const [showChart, setShowChart]   = useState(false);
+  const todayWeight = weightHistory.find(w => w.date === today);
+  const latestWeight = weightHistory.length > 0 ? weightHistory[weightHistory.length-1].weight : null;
+
+  const hour = new Date().getHours();
+  const showNudge = hour >= 20 && todayLog.meals.length < 3;
+
+  const handleAddFood = (entry) => {
+    onAddFood(today, entry);
+    setShowAdd(false);
+    setAddToast(`✓ ${entry.name} added`);
+    setTimeout(() => setAddToast(''), 2500);
+  };
+
+  const handleLogWeight = () => {
+    const w = parseFloat(weightInput);
+    if (!w || w <= 0) return;
+    onLogWeight(today, w);
+    setWeightInput('');
+  };
+
+  return (
+    <div className="h-full overflow-y-auto pb-32">
+      {/* Toast */}
+      {addToast && (
+        <div className="fixed top-5 left-1/2 z-[60] animate-toast"
+          style={{ transform:'translateX(-50%)' }}>
+          <div className="bg-[#1A1A1C] border border-[#C8FF00] rounded-2xl px-5 py-3 text-[#C8FF00] font-semibold text-sm whitespace-nowrap shadow-xl">
+            {addToast}
+          </div>
+        </div>
+      )}
+
+      {/* Add food modal */}
+      {showAdd && <FoodAddModal onAdd={handleAddFood} onClose={()=>setShowAdd(false)}/>}
+
+      {/* Header */}
+      <div className="px-5 pt-14 pb-4">
+        <h1 className="font-display text-5xl text-[#F5F5F0]"
+          style={{ fontFamily:"'Bebas Neue',sans-serif" }}>FUEL</h1>
+        <p className="text-[#8A8A8E] text-sm">
+          {new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'})}
+        </p>
+      </div>
+
+      {/* Calorie ring + macros */}
+      <div className="px-5 mb-4">
+        <div className="bg-[#1A1A1C] rounded-3xl p-5 border border-[#252527]">
+          <div className="flex items-center justify-center mb-5">
+            <CalorieRing consumed={totals.cal} goal={goals.calories || 2000}/>
+          </div>
+          <div className="flex gap-2">
+            <MacroCard label="PROTEIN" current={totals.pro} goal={goals.protein||150} color="#60A5FA"/>
+            <MacroCard label="CARBS"   current={totals.carb} goal={goals.carbs||200}   color="#FBBF24"/>
+            <MacroCard label="FAT"     current={totals.fat}  goal={goals.fat||65}       color="#FB923C"/>
+          </div>
+        </div>
+      </div>
+
+      {/* 8pm nudge */}
+      {showNudge && (
+        <div className="px-5 mb-4">
+          <div className="bg-[rgba(255,159,10,0.1)] border border-[rgba(255,159,10,0.3)] rounded-2xl p-4 flex gap-3">
+            <span className="text-xl">⏰</span>
+            <p className="text-[#FF9F0A] text-sm">Don't forget to log your meals today — you're behind on your nutrition goals.</p>
+          </div>
+        </div>
+      )}
+
+      {/* Weight log card */}
+      <div className="px-5 mb-4">
+        <div className="bg-[#1A1A1C] rounded-2xl p-4 border border-[#252527]">
+          <div className="flex items-center justify-between mb-3">
+            <p className="font-display text-lg text-[#F5F5F0]"
+              style={{ fontFamily:"'Bebas Neue',sans-serif" }}>
+              {todayWeight ? 'TODAY\'S WEIGHT' : 'LOG TODAY\'S WEIGHT'}
+            </p>
+            {weightHistory.length >= 2 && (
+              <button onClick={()=>setShowChart(c=>!c)}
+                className="text-[#C8FF00] text-xs font-semibold active:scale-90">
+                {showChart ? 'HIDE' : 'CHART'}
+              </button>
+            )}
+          </div>
+          {todayWeight ? (
+            <div className="flex items-baseline gap-2">
+              <span className="font-display text-4xl text-[#C8FF00]"
+                style={{ fontFamily:"'Bebas Neue',sans-serif" }}>{todayWeight.weight}</span>
+              <span className="text-[#8A8A8E]">kg</span>
+              {nutritionGoals.goalWeight && (
+                <span className="ml-auto text-[#8A8A8E] text-sm">
+                  {Math.abs(todayWeight.weight - nutritionGoals.goalWeight).toFixed(1)} kg to goal
+                </span>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center gap-3">
+              <input type="number" value={weightInput}
+                onChange={e=>setWeightInput(e.target.value)}
+                placeholder={latestWeight ? `${latestWeight}` : "0.0"}
+                className="set-input" style={{ width:96, fontSize:22 }}/>
+              <span className="text-[#8A8A8E]">kg</span>
+              <button onClick={handleLogWeight}
+                className="ml-auto px-5 py-2.5 rounded-xl bg-[#C8FF00] text-[#0D0D0F] font-display text-base active:scale-95"
+                style={{ fontFamily:"'Bebas Neue',sans-serif" }}>
+                LOG
+              </button>
+            </div>
+          )}
+          {showChart && weightHistory.length >= 2 && (
+            <div className="mt-4 pt-4 border-t border-[#252527]">
+              <WeightChart history={weightHistory} goalWeight={nutritionGoals.goalWeight}/>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Meal sections */}
+      {MEALS.map(mealName => {
+        const items = todayLog.meals.filter(m => m.meal === mealName);
+        const mealTotals = sumMacros(items);
+        const isOpen = expanded[mealName];
+        return (
+          <div key={mealName} className="px-5 mb-3">
+            <button
+              onClick={()=>setExpanded(e=>({...e,[mealName]:!e[mealName]}))}
+              className="w-full flex items-center justify-between py-2 active:opacity-70">
+              <div className="flex items-center gap-2">
+                <span className="font-display text-lg text-[#F5F5F0]"
+                  style={{ fontFamily:"'Bebas Neue',sans-serif" }}>{mealName.toUpperCase()}</span>
+                {items.length > 0 && (
+                  <span className="text-[#8A8A8E] text-xs">{items.length} item{items.length!==1?'s':''}</span>
+                )}
+              </div>
+              <div className="flex items-center gap-3">
+                {items.length > 0 && (
+                  <span className="text-[#8A8A8E] text-xs font-display"
+                    style={{ fontFamily:"'Bebas Neue',sans-serif" }}>{mealTotals.cal} kcal</span>
+                )}
+                <ChevronRight size={16} color="#8A8A8E"
+                  style={{ transform: isOpen ? 'rotate(90deg)' : 'none', transition:'transform 0.2s' }}/>
+              </div>
+            </button>
+
+            {isOpen && (
+              <div className="bg-[#1A1A1C] rounded-2xl overflow-hidden border border-[#252527]">
+                {items.length === 0 ? (
+                  <div className="px-4 py-4 text-center">
+                    <p className="text-[#8A8A8E] text-xs">Nothing logged yet</p>
+                  </div>
+                ) : (
+                  items.map((item, i) => (
+                    <div key={item.id}
+                      className={`flex items-center gap-3 px-4 py-3 ${i>0?'border-t border-[#252527]':''}`}>
+                      <span className="text-xl flex-shrink-0">{item.emoji}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[#F5F5F0] text-sm font-medium truncate">{item.name}</p>
+                        <p className="text-[#8A8A8E] text-xs">
+                          {item.grams}g · {item.macros.cal}kcal ·
+                          P:{item.macros.pro}g C:{item.macros.carb}g F:{item.macros.fat}g
+                        </p>
+                      </div>
+                      <button onClick={()=>onDeleteFood(today, item.id)}
+                        className="w-8 h-8 rounded-lg bg-[#252527] flex items-center justify-center active:scale-90 flex-shrink-0">
+                        <X size={13} color="#FF453A"/>
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
+
+      {/* Empty state */}
+      {todayLog.meals.length === 0 && (
+        <div className="px-5 py-8 text-center">
+          <div className="text-5xl mb-3">💪</div>
+          <p className="font-display text-2xl text-[#F5F5F0] mb-2"
+            style={{ fontFamily:"'Bebas Neue',sans-serif" }}>YOUR TANK IS EMPTY</p>
+          <p className="text-[#8A8A8E] text-sm">Time to fuel up. Hit the button below.</p>
+        </div>
+      )}
+
+      {/* Floating add button */}
+      <div className="fixed left-1/2 z-20"
+        style={{ bottom:'calc(4.5rem + env(safe-area-inset-bottom))', transform:'translateX(-50%)', maxWidth:430, width:'100%', pointerEvents:'none' }}>
+        <div className="px-5" style={{ pointerEvents:'all' }}>
+          <button onClick={()=>setShowAdd(true)}
+            className="w-full py-3.5 rounded-2xl bg-[#C8FF00] text-[#0D0D0F] font-display text-xl tracking-wider active:scale-95 transition-all shadow-xl flex items-center justify-center gap-2"
+            style={{ fontFamily:"'Bebas Neue',sans-serif" }}>
+            <Plus size={20} color="#0D0D0F" strokeWidth={2.5}/> ADD FOOD
+          </button>
         </div>
       </div>
     </div>
@@ -1622,13 +2518,54 @@ function App() {
   const [prs,     setPrs]     = useLocalStorage('forge_prs',    {});
   const [badges,  setBadges]  = useLocalStorage('forge_badges', {});
   const [streak,  setStreak]  = useLocalStorage('forge_streak', { current:0, longest:0, lastWorkoutDate:null });
+  const [nutritionLog,   setNutritionLog]   = useLocalStorage('forge_nutr_log',   {});
+  const [nutritionGoals, setNutritionGoals] = useLocalStorage('forge_nutr_goals', { calories:2000, protein:150, carbs:200, fat:65, goalType:'maintain', bodyweight:80, goalWeight:'' });
+  const [weightHistory,  setWeightHistory]  = useLocalStorage('forge_weight',     []);
 
   const [activeTab,      setActiveTab]     = useState('home');
   const [activeWorkout,  setActiveWorkout] = useState(null);
   const [workoutResult,  setWorkoutResult] = useState(null);
   const [newBadges,      setNewBadges]     = useState([]);
   const [generatingPlan, setGenerating]   = useState(false);
+  const [showNutrGoals,  setShowNutrGoals] = useState(false);
   const [planError,      setPlanError]    = useState(null);
+
+  /* ── Nutrition actions ── */
+  const handleAddFood = (date, entry) => {
+    setNutritionLog(prev => {
+      const day = prev[date] || { meals:[] };
+      return { ...prev, [date]: { ...day, meals:[...day.meals, entry] } };
+    });
+    // check nutrition badges
+    const newNutrLog = { ...nutritionLog };
+    const day = newNutrLog[date] || { meals:[] };
+    newNutrLog[date] = { ...day, meals:[...(day.meals||[]), entry] };
+    const newEarned = checkNutritionBadges(newNutrLog, weightHistory, nutritionGoals, badges);
+    if (Object.keys(newEarned).length > 0) setBadges(b=>({...b,...newEarned}));
+  };
+
+  const handleDeleteFood = (date, entryId) => {
+    setNutritionLog(prev => {
+      const day = prev[date] || { meals:[] };
+      return { ...prev, [date]: { ...day, meals: day.meals.filter(m=>m.id!==entryId) } };
+    });
+  };
+
+  const handleLogWeight = (date, weight) => {
+    setWeightHistory(prev => {
+      const filtered = prev.filter(w=>w.date!==date);
+      const updated = [...filtered, { date, weight }].sort((a,b)=>a.date.localeCompare(b.date));
+      return updated;
+    });
+    // check goal weight badge
+    const newEarned = checkNutritionBadges(nutritionLog, [...weightHistory.filter(w=>w.date!==date), {date,weight}], nutritionGoals, badges);
+    if (Object.keys(newEarned).length > 0) setBadges(b=>({...b,...newEarned}));
+  };
+
+  const handleSaveNutrGoals = (goals) => {
+    setNutritionGoals(goals);
+    setShowNutrGoals(false);
+  };
 
   const handleGeneratePlan = async (profileData) => {
     if (!profileData.apiKey?.trim()) {
@@ -1772,15 +2709,33 @@ function App() {
   }
 
   const renderTab = () => {
+    if (showNutrGoals) return (
+      <NutritionGoalsScreen
+        profile={profile}
+        nutritionGoals={nutritionGoals}
+        onSave={handleSaveNutrGoals}
+        onBack={()=>setShowNutrGoals(false)}/>
+    );
     switch (activeTab) {
       case 'home':     return <HomeScreen profile={profile} plan={plan} logs={logs} streak={streak} prs={prs}
                                 onStartWorkout={setActiveWorkout} onSetTab={setActiveTab}/>;
       case 'plan':     return <PlanScreen plan={plan} profile={profile}
                                 onRegenerate={() => handleGeneratePlan(profile)}/>;
       case 'log':      return <LogTab/>;
-      case 'progress': return <ProgressScreen logs={logs} prs={prs} badges={badges} profile={profile}/>;
+      case 'fuel':     return <FuelScreen
+                                nutritionLog={nutritionLog}
+                                nutritionGoals={nutritionGoals}
+                                weightHistory={weightHistory}
+                                profile={profile}
+                                onAddFood={handleAddFood}
+                                onDeleteFood={handleDeleteFood}
+                                onLogWeight={handleLogWeight}/>;
+      case 'progress': return <ProgressScreen logs={logs} prs={prs} badges={badges} profile={profile}
+                                nutritionLog={nutritionLog} nutritionGoals={nutritionGoals}
+                                weightHistory={weightHistory}/>;
       case 'profile':  return <ProfileScreen profile={profile} onSave={setProfile}
-                                onGeneratePlan={handleGeneratePlan} isExisting={true}/>;
+                                onGeneratePlan={handleGeneratePlan} isExisting={true}
+                                onNutritionGoals={()=>setShowNutrGoals(true)}/>;
       default: return null;
     }
   };
