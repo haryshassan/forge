@@ -7,11 +7,8 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="FORGE">
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <meta http-equiv="Pragma" content="no-cache">
-  <meta http-equiv="Expires" content="0">
   <meta name="description" content="AI-powered personalised gym tracker">
-  <title>FORGE v4 — AI Gym Tracker</title>
+  <title>FORGE — AI Gym Tracker</title>
   <link rel="manifest" href='data:application/manifest+json,%7B%22name%22%3A%22FORGE%22%2C%22short_name%22%3A%22FORGE%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%230D0D0F%22%2C%22theme_color%22%3A%22%230D0D0F%22%2C%22start_url%22%3A%22.%2F%22%7D'>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -132,8 +129,6 @@ const Flame         = _i(() => <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-
 const Minus         = _i(() => <line x1="5" y1="12" x2="19" y2="12"/>);
 const Search        = _i(() => <><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></>);
 const Scale         = _i(() => <><path d="M16 16l3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1z"/><path d="M2 16l3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1z"/><path d="M7 21H17"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></>);
-const Brain         = _i(() => <><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96-.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96-.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></>);
-const MessageSquare = _i(() => <><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></>);
 
 /* ═══════════════════════════════════════════════
    CONSTANTS
@@ -941,7 +936,6 @@ function BottomNav({ active, onTab }) {
   const tabs = [
     { id:'home',     icon:Home,          label:'HOME'  },
     { id:'plan',     icon:ClipboardList, label:'PLAN'  },
-    { id:'coach',    icon:Brain,         label:'COACH' },
     { id:'log',      icon:Plus,          label:'LOG',  cta:true },
     { id:'fuel',     icon:Flame,         label:'FUEL'  },
     { id:'progress', icon:BarChart2,     label:'STATS' },
@@ -958,15 +952,16 @@ function BottomNav({ active, onTab }) {
             className="flex flex-col items-center gap-0.5 transition-transform active:scale-90 select-none flex-1"
             style={{ minHeight: 48, justifyContent:'center' }}>
             {tab.cta ? (
-              <div className={`w-9 h-9 rounded-xl flex items-center justify-center -mt-4 shadow-lg transition-all bg-[#C8FF00]`}>
-                <Plus size={20} color="#0D0D0F" strokeWidth={2.5}/>
+              <div className={`w-11 h-11 rounded-xl flex items-center justify-center -mt-5 shadow-lg transition-all
+                ${active === 'log' ? 'bg-[#C8FF00] scale-110' : 'bg-[#C8FF00]'}`}>
+                <Plus size={24} color="#0D0D0F" strokeWidth={2.5}/>
               </div>
             ) : (
               <>
-                <tab.icon size={17}
+                <tab.icon size={20}
                   color={active === tab.id ? '#C8FF00' : '#8A8A8E'}
                   strokeWidth={active === tab.id ? 2.5 : 1.5}/>
-                <span className="font-display text-[8px] tracking-wider"
+                <span className="font-display text-[9px] tracking-wider"
                   style={{ color: active === tab.id ? '#C8FF00' : '#8A8A8E',
                            fontFamily:"'Bebas Neue',sans-serif" }}>
                   {tab.label}
@@ -3576,657 +3571,6 @@ function FuelScreen({ nutritionLog, nutritionGoals, weightHistory, onAddFood, on
 }
 
 /* ═══════════════════════════════════════════════
-   COACH — TYPEWRITER HOOK
-═══════════════════════════════════════════════ */
-function useTypewriter(text, speed=20) {
-  const [displayed, setDisplayed] = useState('');
-  const [done, setDone] = useState(false);
-  useEffect(() => {
-    setDisplayed(''); setDone(false);
-    if (!text) return;
-    let i = 0;
-    const t = setInterval(() => {
-      i++;
-      setDisplayed(text.slice(0, i));
-      if (i >= text.length) { clearInterval(t); setDone(true); }
-    }, speed);
-    return () => clearInterval(t);
-  }, [text, speed]);
-  return [displayed, done];
-}
-
-/* ═══════════════════════════════════════════════
-   COACH CHECK-IN FLOW
-═══════════════════════════════════════════════ */
-function CoachCheckInFlow({ type, profile, workoutResult, nutritionLog, nutritionGoals, apiKey, onDone }) {
-  const today = getTodayISO();
-  const [round, setRound]               = useState(0);
-  const [answers, setAnswers]           = useState([]);
-  const [visible, setVisible]           = useState(true);
-  const [coachResponse, setCoachResponse] = useState('');
-  const [loadingResponse, setLoadingResponse] = useState(false);
-  const [responseDisplayed, setResponseDisplayed] = useState('');
-  const [responseDone, setResponseDone] = useState(false);
-  const responseTW = useRef(null);
-
-  const name = profile?.name || 'Champ';
-
-  const WORKOUT_ROUNDS = [
-    {
-      msg: `Good work today, ${name}. Let's debrief. How did that session feel overall?`,
-      opts: [
-        { emoji:'💪', label:'Crushed it' },
-        { emoji:'😤', label:'Solid session' },
-        { emoji:'😐', label:'Average' },
-        { emoji:'😩', label:'Tough one' },
-      ]
-    },
-    {
-      msg: `Got it. What was the hardest part?`,
-      opts: [
-        { emoji:'🏋️', label:'Weight felt heavy' },
-        { emoji:'😮‍💨', label:'Cardio/conditioning' },
-        { emoji:'💥', label:'Specific exercise' },
-        { emoji:'😴', label:'Energy was low' },
-        { emoji:'✅', label:'Nothing — felt great' },
-      ]
-    },
-    {
-      msg: `Any pain or discomfort during the session?`,
-      opts: [
-        { emoji:'✅', label:'Felt fine' },
-        { emoji:'⚠️', label:'Mild tightness' },
-        { emoji:'🔴', label:'Some pain' },
-        { emoji:'💀', label:'Something\'s wrong' },
-      ]
-    },
-    {
-      msg: `How's your recovery been since last session?`,
-      opts: [
-        { emoji:'✅', label:'Fully recovered' },
-        { emoji:'😴', label:'Still a bit sore' },
-        { emoji:'🛌', label:'Very sore' },
-        { emoji:'🤷', label:'First session' },
-      ]
-    },
-  ];
-
-  const todayLog = getNutritionLog(nutritionLog, today);
-  const todayTotals = sumMacros(todayLog.meals || []);
-
-  const DAILY_ROUNDS = [
-    {
-      msg: `Hey ${name}! End of day check-in. How are your energy levels today?`,
-      opts: [
-        { emoji:'⚡', label:'High energy' },
-        { emoji:'😊', label:'Good' },
-        { emoji:'😐', label:'Average' },
-        { emoji:'😴', label:'Low energy' },
-        { emoji:'💀', label:'Exhausted' },
-      ]
-    },
-    {
-      msg: `How did your nutrition go today? You logged ${todayTotals.cal} of ${nutritionGoals?.calories || 2000} kcal.`,
-      opts: [
-        { emoji:'✅', label:'Hit my goals' },
-        { emoji:'🍕', label:'Slightly over' },
-        { emoji:'📉', label:'Under-eaten' },
-        { emoji:'🤷', label:'Didn\'t track' },
-      ]
-    },
-    {
-      msg: `How's your sleep been?`,
-      opts: [
-        { emoji:'😴', label:'8+ hours' },
-        { emoji:'🛌', label:'6–7 hours' },
-        { emoji:'😤', label:'5–6 hours' },
-        { emoji:'😩', label:'Under 5 hours' },
-      ]
-    },
-    {
-      msg: `Overall mood and motivation today?`,
-      opts: [
-        { emoji:'🔥', label:'Fired up' },
-        { emoji:'😊', label:'Good' },
-        { emoji:'😐', label:'Neutral' },
-        { emoji:'😞', label:'Low' },
-        { emoji:'🆘', label:'Struggling' },
-      ]
-    },
-  ];
-
-  const rounds = type === 'workout' ? WORKOUT_ROUNDS : DAILY_ROUNDS;
-  const currentRound = rounds[round];
-
-  const [msgDisplay] = useTypewriter(round < rounds.length ? currentRound.msg : '', 20);
-
-  const handleSelect = (opt) => {
-    const newAnswers = [...answers, opt.label];
-    setAnswers(newAnswers);
-    if (round + 1 < rounds.length) {
-      setVisible(false);
-      setTimeout(() => { setRound(r => r + 1); setVisible(true); }, 400);
-    } else {
-      // All rounds done — call Claude
-      setRound(rounds.length);
-      fetchCoachResponse(newAnswers);
-    }
-  };
-
-  const fetchCoachResponse = async (finalAnswers) => {
-    setLoadingResponse(true);
-    try {
-      let userMsg;
-      if (type === 'workout') {
-        const wr = workoutResult || {};
-        userMsg = `Athlete: ${name}, Goal: ${profile?.goal || 'General Fitness'}, Level: ${profile?.fitnessLevel || 'Intermediate'}.\nJust completed: ${wr.focus || 'workout'}, ${wr.duration || 0}min, ${Math.round(wr.totalVolume || 0)}kg volume.\nCheck-in answers: Overall=${finalAnswers[0]}, Hardest=${finalAnswers[1]}, Pain=${finalAnswers[2]}, Recovery=${finalAnswers[3]}.\nProvide a personalised post-workout coaching response with 1-2 specific recommendations for next session.`;
-      } else {
-        const todayWorkouts = 0; // simplified
-        userMsg = `Athlete: ${name}, Goal: ${profile?.goal || 'General Fitness'}.\nToday's stats: ${todayTotals.cal}/${nutritionGoals?.calories || 2000} kcal, ${todayTotals.pro}g protein, ${todayWorkouts} workout(s) completed.\nDaily check-in: Energy=${finalAnswers[0]}, Nutrition=${finalAnswers[1]}, Sleep=${finalAnswers[2]}, Mood=${finalAnswers[3]}.\nGive a personalised end-of-day coaching message covering: 1 nutrition insight, 1 recovery tip, 1 motivational note for tomorrow. Be specific to their actual data. Max 4 sentences.`;
-      }
-      const text = await callClaude(apiKey, [{ role:'user', content: userMsg }], 200);
-      setCoachResponse(text);
-      // typewriter
-      let i = 0;
-      setResponseDisplayed('');
-      setResponseDone(false);
-      const t = setInterval(() => {
-        i++;
-        setResponseDisplayed(text.slice(0, i));
-        if (i >= text.length) { clearInterval(t); setResponseDone(true); }
-      }, 18);
-      responseTW.current = t;
-    } catch(e) {
-      setCoachResponse("Great work today. Keep listening to your body and stay consistent — that's where the real gains come from.");
-      setResponseDisplayed("Great work today. Keep listening to your body and stay consistent — that's where the real gains come from.");
-      setResponseDone(true);
-    } finally {
-      setLoadingResponse(false);
-    }
-  };
-
-  useEffect(() => () => { if (responseTW.current) clearInterval(responseTW.current); }, []);
-
-  const CoachAvatar = () => (
-    <div style={{ width:52, height:52, borderRadius:'50%', background:'#C8FF00', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-      <Zap size={26} color="#0D0D0F" strokeWidth={2.5}/>
-    </div>
-  );
-
-  return (
-    <div style={{ position:'fixed', top:0, left:'50%', transform:'translateX(-50%)', width:'100%', maxWidth:430, height:'100%', background:'#0D0D0F', zIndex:10000, display:'flex', flexDirection:'column', overflowY:'auto' }}>
-      {/* Header */}
-      <div style={{ padding:'56px 20px 24px', display:'flex', flexDirection:'column', alignItems:'center', gap:12 }}>
-        <p style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:11, letterSpacing:'0.2em', color:'#8A8A8E' }}>COACH CHECK-IN</p>
-        <CoachAvatar/>
-      </div>
-
-      {/* Conversation */}
-      <div style={{ flex:1, padding:'0 20px 120px', display:'flex', flexDirection:'column', gap:16 }}>
-        {/* Past answers */}
-        {answers.map((ans, i) => (
-          <div key={i} style={{ opacity:1, animation:'fadeSlide 0.3s ease-out' }}>
-            {/* Coach question (muted) */}
-            <div style={{ display:'flex', alignItems:'flex-start', gap:10, marginBottom:8 }}>
-              <div style={{ width:28, height:28, borderRadius:'50%', background:'rgba(200,255,0,0.15)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, marginTop:2 }}>
-                <Zap size={14} color="#C8FF00" strokeWidth={2}/>
-              </div>
-              <div style={{ background:'rgba(200,255,0,0.08)', border:'1px solid rgba(200,255,0,0.15)', borderRadius:'18px 18px 18px 4px', padding:'10px 14px', maxWidth:'80%' }}>
-                <p style={{ color:'#8A8A8E', fontSize:13, lineHeight:1.5 }}>{rounds[i].msg}</p>
-              </div>
-            </div>
-            {/* User answer */}
-            <div style={{ display:'flex', justifyContent:'flex-end' }}>
-              <div style={{ background:'#1A1A1C', border:'1px solid #3A3A3C', borderRadius:'18px 18px 4px 18px', padding:'10px 16px' }}>
-                <p style={{ color:'#F5F5F0', fontSize:14, fontWeight:600 }}>{ans}</p>
-              </div>
-            </div>
-          </div>
-        ))}
-
-        {/* Current round */}
-        {round < rounds.length && (
-          <div style={{ opacity: visible ? 1 : 0, transition:'opacity 0.3s', animation:'fadeSlide 0.3s ease-out' }}>
-            <div style={{ display:'flex', alignItems:'flex-start', gap:10, marginBottom:16 }}>
-              <div style={{ width:28, height:28, borderRadius:'50%', background:'rgba(200,255,0,0.15)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, marginTop:2 }}>
-                <Zap size={14} color="#C8FF00" strokeWidth={2}/>
-              </div>
-              <div style={{ background:'rgba(200,255,0,0.08)', border:'1px solid rgba(200,255,0,0.2)', borderRadius:'18px 18px 18px 4px', padding:'12px 16px', maxWidth:'85%' }}>
-                <p style={{ color:'#F5F5F0', fontSize:14, lineHeight:1.6 }}>{msgDisplay}<span style={{ opacity: msgDisplay.length < currentRound.msg.length ? 1 : 0 }}>▋</span></p>
-              </div>
-            </div>
-            {/* Option cards */}
-            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-              {currentRound.opts.map(opt => (
-                <button key={opt.label} onClick={() => handleSelect(opt)}
-                  style={{ width:'100%', padding:'14px 18px', background:'#1A1A1C', border:'1.5px solid #3A3A3C', borderRadius:16, display:'flex', alignItems:'center', gap:12, cursor:'pointer', transition:'all 0.15s', textAlign:'left' }}
-                  onTouchStart={e => e.currentTarget.style.background='#252527'}
-                  onTouchEnd={e => e.currentTarget.style.background='#1A1A1C'}>
-                  <span style={{ fontSize:22 }}>{opt.emoji}</span>
-                  <span style={{ color:'#F5F5F0', fontSize:15, fontWeight:500 }}>{opt.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Coach response */}
-        {round >= rounds.length && (
-          <div style={{ animation:'fadeSlide 0.4s ease-out' }}>
-            <div style={{ display:'flex', alignItems:'flex-start', gap:10, marginBottom:16 }}>
-              <div style={{ width:28, height:28, borderRadius:'50%', background:'rgba(200,255,0,0.15)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, marginTop:2 }}>
-                <Zap size={14} color="#C8FF00" strokeWidth={2}/>
-              </div>
-              <div style={{ background:'rgba(200,255,0,0.1)', border:'1px solid rgba(200,255,0,0.25)', borderRadius:'18px 18px 18px 4px', padding:'14px 16px', flex:1 }}>
-                {loadingResponse ? (
-                  <div style={{ display:'flex', gap:6, alignItems:'center', padding:'4px 0' }}>
-                    {[0,1,2].map(i=>(
-                      <div key={i} style={{ width:6, height:6, borderRadius:'50%', background:'#C8FF00', animation:`dotPulse 1.2s ease-in-out ${i*0.2}s infinite` }}/>
-                    ))}
-                  </div>
-                ) : (
-                  <p style={{ color:'#F5F5F0', fontSize:14, lineHeight:1.7 }}>
-                    {responseDisplayed}<span style={{ opacity: responseDone ? 0 : 1 }}>▋</span>
-                  </p>
-                )}
-              </div>
-            </div>
-            {responseDone && (
-              <button onClick={() => onDone({ answers, coachResponse })}
-                style={{ width:'100%', padding:'16px', background:'#C8FF00', borderRadius:16, fontFamily:"'Bebas Neue',sans-serif", fontSize:20, letterSpacing:'0.1em', color:'#0D0D0F', border:'none', cursor:'pointer', marginTop:8 }}>
-                DONE
-              </button>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-/* ═══════════════════════════════════════════════
-   BODY MAP SVG — standalone sub-components
-═══════════════════════════════════════════════ */
-function BodyFront({ getFill, onTap }) {
-  const r = (id, el) => React.cloneElement(el, {
-    key:id, id, onClick:()=>onTap(id),
-    style:{ fill:getFill(id), transition:'fill 0.2s', cursor:'pointer' },
-  });
-  return (
-    <svg viewBox="0 0 200 420" width="100%" style={{ display:'block' }}>
-      <ellipse cx="100" cy="30" rx="18" ry="20" fill="#2A2A2C" stroke="#3A3A3C" strokeWidth="1"/>
-      <rect x="88" y="50" width="24" height="14" rx="4" fill="#252527"/>
-      <path d="M68 64 Q60 70 58 90 L58 160 Q58 168 66 170 L134 170 Q142 168 142 160 L142 90 Q140 70 132 64 Z" fill="#252527" stroke="#3A3A3C" strokeWidth="1"/>
-      {r('left-pec',          <ellipse cx="83"  cy="90"  rx="16" ry="14"/>)}
-      {r('right-pec',         <ellipse cx="117" cy="90"  rx="16" ry="14"/>)}
-      {r('left-front-delt',   <ellipse cx="56"  cy="78"  rx="12" ry="10"/>)}
-      {r('right-front-delt',  <ellipse cx="144" cy="78"  rx="12" ry="10"/>)}
-      {r('upper-abs',         <rect x="84" y="108" width="32" height="24" rx="8"/>)}
-      {r('lower-abs',         <rect x="84" y="136" width="32" height="26" rx="8"/>)}
-      {r('left-bicep',        <rect x="42"  y="90"  width="16" height="38" rx="8"/>)}
-      {r('right-bicep',       <rect x="142" y="90"  width="16" height="38" rx="8"/>)}
-      {r('left-forearm',      <rect x="38"  y="132" width="14" height="36" rx="7"/>)}
-      {r('right-forearm',     <rect x="148" y="132" width="14" height="36" rx="7"/>)}
-      {r('left-hip-flexor',   <ellipse cx="83"  cy="174" rx="18" ry="10"/>)}
-      {r('right-hip-flexor',  <ellipse cx="117" cy="174" rx="18" ry="10"/>)}
-      <rect x="88" y="168" width="24" height="12" rx="4" fill="#1A1A1C"/>
-      {r('left-quad',         <rect x="66"  y="186" width="28" height="76" rx="12"/>)}
-      {r('right-quad',        <rect x="106" y="186" width="28" height="76" rx="12"/>)}
-      {r('left-inner-thigh',  <ellipse cx="94"  cy="220" rx="9" ry="28"/>)}
-      {r('right-inner-thigh', <ellipse cx="106" cy="220" rx="9" ry="28"/>)}
-      <ellipse cx="80"  cy="270" rx="13" ry="9" fill="#252527" stroke="#3A3A3C" strokeWidth="1"/>
-      <ellipse cx="120" cy="270" rx="13" ry="9" fill="#252527" stroke="#3A3A3C" strokeWidth="1"/>
-      {r('left-shin',         <rect x="68"  y="282" width="24" height="62" rx="10"/>)}
-      {r('right-shin',        <rect x="108" y="282" width="24" height="62" rx="10"/>)}
-      <ellipse cx="80"  cy="352" rx="15" ry="8" fill="#252527" stroke="#3A3A3C" strokeWidth="1"/>
-      <ellipse cx="120" cy="352" rx="15" ry="8" fill="#252527" stroke="#3A3A3C" strokeWidth="1"/>
-      {r('neck', <ellipse cx="100" cy="57" rx="10" ry="6"/>)}
-    </svg>
-  );
-}
-
-function BodyBack({ getFill, onTap }) {
-  const r = (id, el) => React.cloneElement(el, {
-    key:id, id, onClick:()=>onTap(id),
-    style:{ fill:getFill(id), transition:'fill 0.2s', cursor:'pointer' },
-  });
-  return (
-    <svg viewBox="0 0 200 420" width="100%" style={{ display:'block' }}>
-      <ellipse cx="100" cy="30" rx="18" ry="20" fill="#2A2A2C" stroke="#3A3A3C" strokeWidth="1"/>
-      <rect x="88" y="50" width="24" height="14" rx="4" fill="#252527"/>
-      <path d="M68 64 Q60 70 58 90 L58 170 Q58 178 66 180 L134 180 Q142 178 142 170 L142 90 Q140 70 132 64 Z" fill="#252527" stroke="#3A3A3C" strokeWidth="1"/>
-      {r('left-trap',         <path d="M82 62 Q72 60 62 72 Q58 78 60 84 Q70 74 82 72 Z"/>)}
-      {r('right-trap',        <path d="M118 62 Q128 60 138 72 Q142 78 140 84 Q130 74 118 72 Z"/>)}
-      {r('left-rear-delt',    <ellipse cx="56"  cy="88"  rx="12" ry="10"/>)}
-      {r('right-rear-delt',   <ellipse cx="144" cy="88"  rx="12" ry="10"/>)}
-      {r('left-lat',          <path d="M66 80 Q58 100 60 130 L74 130 Q76 100 76 80 Z"/>)}
-      {r('right-lat',         <path d="M134 80 Q142 100 140 130 L126 130 Q124 100 124 80 Z"/>)}
-      {r('left-mid-back',     <rect x="70"  y="86" width="24" height="30" rx="6"/>)}
-      {r('right-mid-back',    <rect x="106" y="86" width="24" height="30" rx="6"/>)}
-      {r('lower-back',        <rect x="80"  y="140" width="40" height="30" rx="8"/>)}
-      <rect x="42"  y="90"  width="16" height="38" rx="8" fill="#252527" stroke="#3A3A3C" strokeWidth="1"/>
-      <rect x="142" y="90"  width="16" height="38" rx="8" fill="#252527" stroke="#3A3A3C" strokeWidth="1"/>
-      <rect x="38"  y="132" width="14" height="36" rx="7" fill="#252527" stroke="#3A3A3C" strokeWidth="1"/>
-      <rect x="148" y="132" width="14" height="36" rx="7" fill="#252527" stroke="#3A3A3C" strokeWidth="1"/>
-      {r('left-glute',        <ellipse cx="83"  cy="192" rx="20" ry="18"/>)}
-      {r('right-glute',       <ellipse cx="117" cy="192" rx="20" ry="18"/>)}
-      {r('left-piriformis',   <ellipse cx="90"  cy="208" rx="10" ry="8"/>)}
-      {r('right-piriformis',  <ellipse cx="110" cy="208" rx="10" ry="8"/>)}
-      {r('left-hamstring',    <rect x="66"  y="212" width="28" height="66" rx="12"/>)}
-      {r('right-hamstring',   <rect x="106" y="212" width="28" height="66" rx="12"/>)}
-      <ellipse cx="80"  cy="284" rx="13" ry="9" fill="#252527" stroke="#3A3A3C" strokeWidth="1"/>
-      <ellipse cx="120" cy="284" rx="13" ry="9" fill="#252527" stroke="#3A3A3C" strokeWidth="1"/>
-      {r('left-calf',         <rect x="68"  y="296" width="24" height="58" rx="10"/>)}
-      {r('right-calf',        <rect x="108" y="296" width="24" height="58" rx="10"/>)}
-      <ellipse cx="80"  cy="362" rx="15" ry="8" fill="#252527" stroke="#3A3A3C" strokeWidth="1"/>
-      <ellipse cx="120" cy="362" rx="15" ry="8" fill="#252527" stroke="#3A3A3C" strokeWidth="1"/>
-    </svg>
-  );
-}
-
-function BodyMap({ soreness, onToggle }) {
-  const [view, setView] = useState('front');
-
-  const getFill = (id) => {
-    const s = soreness[id];
-    if (s === 'significant') return '#FF453A';
-    if (s === 'mild') return '#FF9F0A';
-    return '#2C2C2E';
-  };
-
-  const MUSCLE_LABELS = {
-    'left-pec':'Left Pec','right-pec':'Right Pec',
-    'left-front-delt':'Left Front Delt','right-front-delt':'Right Front Delt',
-    'left-bicep':'Left Bicep','right-bicep':'Right Bicep',
-    'left-forearm':'Left Forearm','right-forearm':'Right Forearm',
-    'upper-abs':'Upper Abs','lower-abs':'Lower Abs',
-    'left-hip-flexor':'Left Hip Flexor','right-hip-flexor':'Right Hip Flexor',
-    'left-quad':'Left Quad','right-quad':'Right Quad',
-    'left-inner-thigh':'Left Inner Thigh','right-inner-thigh':'Right Inner Thigh',
-    'left-shin':'Left Shin','right-shin':'Right Shin',
-    'neck':'Neck',
-    'left-trap':'Left Trap','right-trap':'Right Trap',
-    'left-rear-delt':'Left Rear Delt','right-rear-delt':'Right Rear Delt',
-    'left-lat':'Left Lat','right-lat':'Right Lat',
-    'left-mid-back':'Left Mid Back','right-mid-back':'Right Mid Back',
-    'lower-back':'Lower Back',
-    'left-glute':'Left Glute','right-glute':'Right Glute',
-    'left-hamstring':'Left Hamstring','right-hamstring':'Right Hamstring',
-    'left-calf':'Left Calf','right-calf':'Right Calf',
-    'left-piriformis':'Left Piriformis','right-piriformis':'Right Piriformis',
-  };
-
-  const selected = Object.entries(soreness);
-
-  return (
-    <div>
-      {/* Front/Back toggle */}
-      <div style={{ display:'flex', gap:8, marginBottom:16, background:'#1A1A1C', padding:4, borderRadius:12 }}>
-        {['front','back'].map(v => (
-          <button key={v} onClick={() => setView(v)}
-            style={{ flex:1, padding:'8px 0', borderRadius:8, border:'none', cursor:'pointer', fontFamily:"'Bebas Neue',sans-serif", fontSize:14, letterSpacing:'0.1em', transition:'all 0.2s',
-              background: view===v ? '#C8FF00' : 'transparent',
-              color: view===v ? '#0D0D0F' : '#8A8A8E' }}>
-            {v.toUpperCase()}
-          </button>
-        ))}
-      </div>
-
-      {/* Body SVG */}
-      <div style={{ background:'#0D0D0F', borderRadius:16, padding:'12px 24px', marginBottom:16, maxHeight:380, overflow:'hidden' }}>
-        {view === 'front'
-          ? <BodyFront getFill={getFill} onTap={onToggle}/>
-          : <BodyBack  getFill={getFill} onTap={onToggle}/>}
-      </div>
-
-      {/* Legend */}
-      <div style={{ display:'flex', gap:16, justifyContent:'center', marginBottom:16 }}>
-        {[['#2C2C2E','None'],['#FF9F0A','Mild'],['#FF453A','Significant']].map(([c,l]) => (
-          <div key={l} style={{ display:'flex', alignItems:'center', gap:6 }}>
-            <div style={{ width:12, height:12, borderRadius:3, background:c }}/>
-            <span style={{ color:'#8A8A8E', fontSize:12 }}>{l}</span>
-          </div>
-        ))}
-      </div>
-
-      {/* Selected muscles list */}
-      {selected.length > 0 && (
-        <div style={{ display:'flex', flexWrap:'wrap', gap:8, marginBottom:16 }}>
-          {selected.map(([id, level]) => (
-            <div key={id} onClick={() => onToggle(id)}
-              style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 12px', borderRadius:20, background: level==='significant' ? 'rgba(255,69,58,0.15)' : 'rgba(255,159,10,0.15)', border:`1px solid ${level==='significant' ? '#FF453A' : '#FF9F0A'}`, cursor:'pointer' }}>
-              <div style={{ width:8, height:8, borderRadius:'50%', background: level==='significant' ? '#FF453A' : '#FF9F0A' }}/>
-              <span style={{ color:'#F5F5F0', fontSize:12, fontWeight:500 }}>{MUSCLE_LABELS[id] || id}</span>
-              <span style={{ color:'#8A8A8E', fontSize:10 }}>{level}</span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ═══════════════════════════════════════════════
-   COACH SCREEN
-═══════════════════════════════════════════════ */
-function CoachScreen({ profile, coachCheckins, sorenessLog, onSaveSoreness, onStartDailyCheckin, logs, nutritionLog, nutritionGoals }) {
-  const today = getTodayISO();
-  const todayCheckin = coachCheckins[today] || {};
-  const [soreness, setSoreness] = useState({});
-  const [sorenessLoading, setSorenessLoading] = useState(false);
-  const [sorenessResponse, setSorenessResponse] = useState(todayCheckin.sorenessAdvice || '');
-  const [expandedMsg, setExpandedMsg] = useState(null);
-
-  const toggleMuscle = (id) => {
-    setSoreness(prev => {
-      const cur = prev[id];
-      if (!cur) return { ...prev, [id]: 'mild' };
-      if (cur === 'mild') return { ...prev, [id]: 'significant' };
-      const next = { ...prev }; delete next[id]; return next;
-    });
-  };
-
-  const fetchSorenessAdvice = async () => {
-    const apiKey = profile?.apiKey;
-    if (!apiKey) return;
-    const selectedList = Object.entries(soreness).map(([k,v]) => `${k} (${v})`).join(', ');
-    const recentFocuses = logs.slice(-2).map(l => l.focus).join(', ') || 'None';
-    setSorenessLoading(true);
-    try {
-      const text = await callClaude(apiKey, [{
-        role:'user',
-        content:`Athlete: ${profile?.name || 'Athlete'}, ${profile?.fitnessLevel || 'Intermediate'}, Goal: ${profile?.goal || 'General Fitness'}.\nSore/tight areas: ${selectedList}.\nRecent training: ${recentFocuses}.\nProvide: 1) Likely cause, 2) 2-3 specific mobility/rehab exercises with sets/reps/duration, 3) Whether to train or rest the affected area today. Max 150 words.`
-      }], 350);
-      setSorenessResponse(text);
-      onSaveSoreness(today, { muscles: Object.entries(soreness).map(([name,level])=>({name,level})), coachAdvice: text, timestamp: new Date().toISOString() });
-    } catch(e) {
-      setSorenessResponse('Could not load advice. Please check your API key and try again.');
-    } finally {
-      setSorenessLoading(false);
-    }
-  };
-
-  // Recent coach messages (last 5, newest first)
-  const recentMsgs = Object.entries(coachCheckins)
-    .sort((a,b) => b[0].localeCompare(a[0]))
-    .slice(0,5)
-    .flatMap(([date, data]) => {
-      const items = [];
-      if (data.workout) items.push({ date, type:'workout', focus: data.workout.focus, response: data.workout.coachResponse, answers: data.workout.answers });
-      if (data.daily)   items.push({ date, type:'daily',   focus:'Daily Check-In',    response: data.daily.coachResponse,   answers: data.daily.answers });
-      return items;
-    }).slice(0,5);
-
-  const workoutDoneToday = !!todayCheckin.workout;
-  const dailyDoneToday   = !!todayCheckin.daily;
-
-  const fmtDate = (iso) => {
-    const d = new Date(iso + 'T12:00:00');
-    return d.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' });
-  };
-
-  return (
-    <div className="h-full overflow-y-auto pb-28">
-      {/* Header */}
-      <div className="px-5 pt-14 pb-4">
-        <div className="flex items-center gap-3 mb-1">
-          <div style={{ width:40, height:40, borderRadius:'50%', background:'#C8FF00', display:'flex', alignItems:'center', justifyContent:'center' }}>
-            <Zap size={20} color="#0D0D0F" strokeWidth={2.5}/>
-          </div>
-          <h1 className="font-display text-5xl text-[#F5F5F0]" style={{ fontFamily:"'Bebas Neue',sans-serif" }}>COACH</h1>
-        </div>
-        <p className="text-[#8A8A8E] text-sm">Your AI training partner</p>
-      </div>
-
-      {/* Section 1 — Today's Check-ins */}
-      <div className="px-5 mb-6">
-        <p className="text-[#8A8A8E] text-xs uppercase tracking-widest mb-3">Today's Check-Ins</p>
-        <div className="grid grid-cols-2 gap-3">
-          {/* Workout check-in */}
-          <div className="bg-[#1A1A1C] rounded-2xl p-4 border border-[#252527]">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-lg">🏋️</span>
-              <p className="font-display text-sm text-[#F5F5F0]" style={{ fontFamily:"'Bebas Neue',sans-serif" }}>WORKOUT</p>
-            </div>
-            {workoutDoneToday ? (
-              <>
-                <div className="flex items-center gap-1.5 mb-2">
-                  <div style={{ width:16, height:16, borderRadius:'50%', background:'rgba(200,255,0,0.2)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                    <Check size={10} color="#C8FF00" strokeWidth={3}/>
-                  </div>
-                  <span className="text-[#C8FF00] text-xs font-semibold">Complete</span>
-                </div>
-                <p className="text-[#8A8A8E] text-xs leading-relaxed" style={{ display:'-webkit-box', WebkitLineClamp:3, WebkitBoxOrient:'vertical', overflow:'hidden' }}>
-                  {todayCheckin.workout.coachResponse}
-                </p>
-              </>
-            ) : (
-              <>
-                <p className="text-[#8A8A8E] text-xs mb-3 leading-relaxed">Log a session<br/>to get feedback</p>
-                <p className="text-[#3A3A3C] text-xs">Complete a workout first</p>
-              </>
-            )}
-          </div>
-
-          {/* Daily check-in */}
-          <div className="bg-[#1A1A1C] rounded-2xl p-4 border border-[#252527]">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-lg">🌙</span>
-              <p className="font-display text-sm text-[#F5F5F0]" style={{ fontFamily:"'Bebas Neue',sans-serif" }}>DAILY</p>
-            </div>
-            {dailyDoneToday ? (
-              <>
-                <div className="flex items-center gap-1.5 mb-2">
-                  <div style={{ width:16, height:16, borderRadius:'50%', background:'rgba(200,255,0,0.2)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                    <Check size={10} color="#C8FF00" strokeWidth={3}/>
-                  </div>
-                  <span className="text-[#C8FF00] text-xs font-semibold">Complete</span>
-                </div>
-                <p className="text-[#8A8A8E] text-xs leading-relaxed" style={{ display:'-webkit-box', WebkitLineClamp:3, WebkitBoxOrient:'vertical', overflow:'hidden' }}>
-                  {todayCheckin.daily.coachResponse}
-                </p>
-              </>
-            ) : (
-              <>
-                <p className="text-[#8A8A8E] text-xs mb-3 leading-relaxed">How's your day<br/>going?</p>
-                <button onClick={onStartDailyCheckin}
-                  className="w-full py-2 rounded-xl bg-[#C8FF00] text-[#0D0D0F] active:scale-95 transition-all"
-                  style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:11, letterSpacing:'0.08em' }}>
-                  START →
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Section 2 — Recent Coach Messages */}
-      {recentMsgs.length > 0 && (
-        <div className="px-5 mb-6">
-          <p className="text-[#8A8A8E] text-xs uppercase tracking-widest mb-3">Recent Coach Messages</p>
-          <div className="space-y-2">
-            {recentMsgs.map((item, i) => (
-              <div key={i} className="bg-[#1A1A1C] rounded-2xl p-4 border border-[#252527]"
-                onClick={() => setExpandedMsg(expandedMsg === i ? null : i)}>
-                <div className="flex items-start justify-between gap-3 mb-2">
-                  <div>
-                    <span className="text-[#C8FF00] text-xs font-semibold">{fmtDate(item.date)}</span>
-                    <span className="text-[#8A8A8E] text-xs ml-2">{item.type === 'workout' ? `🏋️ ${item.focus}` : '🌙 Daily'}</span>
-                  </div>
-                  <div style={{ display:'flex', gap:4 }}>
-                    {(item.answers || []).slice(0,4).map((a,j) => {
-                      const emojiMap = {'Crushed it':'💪','Solid session':'😤','Average':'😐','Tough one':'😩','Felt fine':'✅','High energy':'⚡','Good':'😊','Low energy':'😴','Fully recovered':'✅'};
-                      return <span key={j} style={{ fontSize:12 }}>{emojiMap[a] || '•'}</span>;
-                    })}
-                  </div>
-                </div>
-                <p className="text-[#8A8A8E] text-xs leading-relaxed"
-                  style={expandedMsg !== i ? { display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical', overflow:'hidden' } : {}}>
-                  {item.response}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Section 3 — Body Soreness Map */}
-      <div className="px-5 mb-6">
-        <p className="text-[#8A8A8E] text-xs uppercase tracking-widest mb-1">Body Map</p>
-        <p className="text-[#3A3A3C] text-xs mb-3">Tap a region once for mild soreness, twice for significant</p>
-        <div className="bg-[#1A1A1C] rounded-2xl p-4 border border-[#252527]">
-          <BodyMap soreness={soreness} onToggle={toggleMuscle}/>
-
-          <button
-            onClick={fetchSorenessAdvice}
-            disabled={Object.keys(soreness).length === 0 || sorenessLoading}
-            className="w-full py-4 rounded-2xl active:scale-95 transition-all mt-2"
-            style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:18, letterSpacing:'0.1em',
-              background: Object.keys(soreness).length > 0 ? '#C8FF00' : '#252527',
-              color: Object.keys(soreness).length > 0 ? '#0D0D0F' : '#8A8A8E',
-              border:'none', cursor: Object.keys(soreness).length > 0 ? 'pointer' : 'default' }}>
-            {sorenessLoading ? 'GETTING ADVICE…' : 'GET COACH ADVICE'}
-          </button>
-
-          {sorenessResponse && !sorenessLoading && (
-            <div className="mt-4 bg-[#0D0D0F] rounded-xl p-4 border border-[rgba(200,255,0,0.15)]">
-              <div className="flex items-center gap-2 mb-3">
-                <div style={{ width:24, height:24, borderRadius:'50%', background:'rgba(200,255,0,0.15)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                  <Zap size={12} color="#C8FF00" strokeWidth={2}/>
-                </div>
-                <span className="text-[#C8FF00] text-xs font-display tracking-widest" style={{ fontFamily:"'Bebas Neue',sans-serif" }}>COACH ADVICE</span>
-              </div>
-              <p className="text-[#F5F5F0] text-sm leading-relaxed">{sorenessResponse}</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Section 4 — Coach History */}
-      {Object.keys(coachCheckins).length > 0 && (
-        <div className="px-5 mb-6">
-          <p className="text-[#8A8A8E] text-xs uppercase tracking-widest mb-3">Check-In History</p>
-          <div className="space-y-2">
-            {Object.entries(coachCheckins)
-              .sort((a,b) => b[0].localeCompare(a[0]))
-              .slice(0,10)
-              .map(([date, data]) => (
-                <div key={date} className="bg-[#1A1A1C] rounded-2xl px-4 py-3 border border-[#252527] flex items-center justify-between">
-                  <span className="text-[#8A8A8E] text-sm">{fmtDate(date)}</span>
-                  <div style={{ display:'flex', gap:8 }}>
-                    {data.workout && <span style={{ fontSize:18 }}>🏋️</span>}
-                    {data.daily   && <span style={{ fontSize:18 }}>🌙</span>}
-                  </div>
-                </div>
-              ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ═══════════════════════════════════════════════
    APP ROOT
 ═══════════════════════════════════════════════ */
 function App() {
@@ -4244,8 +3588,6 @@ function App() {
   const [nutritionGoals, setNutritionGoals] = useLocalStorage('forge_nutr_goals', { calories:2000, protein:150, carbs:200, fat:65, goalType:'maintain', bodyweight:80, goalWeight:'' });
   const [weightHistory,  setWeightHistory]  = useLocalStorage('forge_weight',     []);
   const [cardioLog,      setCardioLog]      = useLocalStorage('forge_cardio_log', {});
-  const [coachCheckins,  setCoachCheckins]  = useLocalStorage('forge_coach_checkins', {});
-  const [sorenessLog,    setSorenessLog]    = useLocalStorage('forge_soreness_log', {});
 
   const [activeTab,      setActiveTab]     = useState('home');
   const [activeWorkout,  setActiveWorkout] = useState(null);
@@ -4254,8 +3596,6 @@ function App() {
   const [generatingPlan, setGenerating]   = useState(false);
   const [showNutrGoals,  setShowNutrGoals] = useState(false);
   const [planError,      setPlanError]    = useState(null);
-  const [pendingCheckin, setPendingCheckin] = useState(null); // { result } after celebration
-  const [showDailyCheckin, setShowDailyCheckin] = useState(false);
 
   /* ── Nutrition actions ── */
   const handleAddFood = (date, entry) => {
@@ -4369,39 +3709,9 @@ function App() {
         return copy;
       });
     }
-    // Trigger post-workout check-in before going home
-    setPendingCheckin(workoutResult);
     setWorkoutResult(null);
     setNewBadges([]);
-  };
-
-  const handleWorkoutCheckinDone = ({ answers, coachResponse }) => {
-    const today = getTodayISO();
-    setCoachCheckins(prev => ({
-      ...prev,
-      [today]: {
-        ...(prev[today] || {}),
-        workout: { focus: pendingCheckin?.focus || '', answers, coachResponse, timestamp: new Date().toISOString() }
-      }
-    }));
-    setPendingCheckin(null);
     setActiveTab('home');
-  };
-
-  const handleDailyCheckinDone = ({ answers, coachResponse }) => {
-    const today = getTodayISO();
-    setCoachCheckins(prev => ({
-      ...prev,
-      [today]: {
-        ...(prev[today] || {}),
-        daily: { answers, coachResponse, timestamp: new Date().toISOString() }
-      }
-    }));
-    setShowDailyCheckin(false);
-  };
-
-  const handleSaveSoreness = (date, data) => {
-    setSorenessLog(prev => ({ ...prev, [date]: data }));
   };
 
   const LogTab = () => (
@@ -4492,10 +3802,6 @@ function App() {
                                 onStartWorkout={setActiveWorkout} onSetTab={setActiveTab}/>;
       case 'plan':     return <PlanScreen plan={plan} profile={profile}
                                 onRegenerate={() => handleGeneratePlan(profile)}/>;
-      case 'coach':    return <CoachScreen profile={profile} coachCheckins={coachCheckins}
-                                sorenessLog={sorenessLog} onSaveSoreness={handleSaveSoreness}
-                                onStartDailyCheckin={() => setShowDailyCheckin(true)}
-                                logs={logs} nutritionLog={nutritionLog} nutritionGoals={nutritionGoals}/>;
       case 'log':      return <LogTab/>;
       case 'fuel':     return <FuelScreen
                                 nutritionLog={nutritionLog}
@@ -4537,28 +3843,6 @@ function App() {
             newBadges={newBadges}
             onDone={handleCelebrationDone}
             profile={profile}/>
-        )}
-
-        {pendingCheckin && (
-          <CoachCheckInFlow
-            type="workout"
-            profile={profile}
-            workoutResult={pendingCheckin}
-            nutritionLog={nutritionLog}
-            nutritionGoals={nutritionGoals}
-            apiKey={profile?.apiKey}
-            onDone={handleWorkoutCheckinDone}/>
-        )}
-
-        {showDailyCheckin && (
-          <CoachCheckInFlow
-            type="daily"
-            profile={profile}
-            workoutResult={null}
-            nutritionLog={nutritionLog}
-            nutritionGoals={nutritionGoals}
-            apiKey={profile?.apiKey}
-            onDone={handleDailyCheckinDone}/>
         )}
 
         <div className="h-full overflow-hidden">{renderTab()}</div>
