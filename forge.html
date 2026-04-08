@@ -7,6 +7,9 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="FORGE">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <meta name="description" content="AI-powered personalised gym tracker">
   <title>FORGE — AI Gym Tracker</title>
   <link rel="manifest" href='data:application/manifest+json,%7B%22name%22%3A%22FORGE%22%2C%22short_name%22%3A%22FORGE%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%230D0D0F%22%2C%22theme_color%22%3A%22%230D0D0F%22%2C%22start_url%22%3A%22.%2F%22%7D'>
@@ -3842,10 +3845,86 @@ function CoachCheckInFlow({ type, profile, workoutResult, nutritionLog, nutritio
 }
 
 /* ═══════════════════════════════════════════════
-   BODY MAP SVG
+   BODY MAP SVG — standalone sub-components
 ═══════════════════════════════════════════════ */
+function BodyFront({ getFill, onTap }) {
+  const r = (id, el) => React.cloneElement(el, {
+    key:id, id, onClick:()=>onTap(id),
+    style:{ fill:getFill(id), transition:'fill 0.2s', cursor:'pointer' },
+  });
+  return (
+    <svg viewBox="0 0 200 420" width="100%" style={{ display:'block' }}>
+      <ellipse cx="100" cy="30" rx="18" ry="20" fill="#2A2A2C" stroke="#3A3A3C" strokeWidth="1"/>
+      <rect x="88" y="50" width="24" height="14" rx="4" fill="#252527"/>
+      <path d="M68 64 Q60 70 58 90 L58 160 Q58 168 66 170 L134 170 Q142 168 142 160 L142 90 Q140 70 132 64 Z" fill="#252527" stroke="#3A3A3C" strokeWidth="1"/>
+      {r('left-pec',          <ellipse cx="83"  cy="90"  rx="16" ry="14"/>)}
+      {r('right-pec',         <ellipse cx="117" cy="90"  rx="16" ry="14"/>)}
+      {r('left-front-delt',   <ellipse cx="56"  cy="78"  rx="12" ry="10"/>)}
+      {r('right-front-delt',  <ellipse cx="144" cy="78"  rx="12" ry="10"/>)}
+      {r('upper-abs',         <rect x="84" y="108" width="32" height="24" rx="8"/>)}
+      {r('lower-abs',         <rect x="84" y="136" width="32" height="26" rx="8"/>)}
+      {r('left-bicep',        <rect x="42"  y="90"  width="16" height="38" rx="8"/>)}
+      {r('right-bicep',       <rect x="142" y="90"  width="16" height="38" rx="8"/>)}
+      {r('left-forearm',      <rect x="38"  y="132" width="14" height="36" rx="7"/>)}
+      {r('right-forearm',     <rect x="148" y="132" width="14" height="36" rx="7"/>)}
+      {r('left-hip-flexor',   <ellipse cx="83"  cy="174" rx="18" ry="10"/>)}
+      {r('right-hip-flexor',  <ellipse cx="117" cy="174" rx="18" ry="10"/>)}
+      <rect x="88" y="168" width="24" height="12" rx="4" fill="#1A1A1C"/>
+      {r('left-quad',         <rect x="66"  y="186" width="28" height="76" rx="12"/>)}
+      {r('right-quad',        <rect x="106" y="186" width="28" height="76" rx="12"/>)}
+      {r('left-inner-thigh',  <ellipse cx="94"  cy="220" rx="9" ry="28"/>)}
+      {r('right-inner-thigh', <ellipse cx="106" cy="220" rx="9" ry="28"/>)}
+      <ellipse cx="80"  cy="270" rx="13" ry="9" fill="#252527" stroke="#3A3A3C" strokeWidth="1"/>
+      <ellipse cx="120" cy="270" rx="13" ry="9" fill="#252527" stroke="#3A3A3C" strokeWidth="1"/>
+      {r('left-shin',         <rect x="68"  y="282" width="24" height="62" rx="10"/>)}
+      {r('right-shin',        <rect x="108" y="282" width="24" height="62" rx="10"/>)}
+      <ellipse cx="80"  cy="352" rx="15" ry="8" fill="#252527" stroke="#3A3A3C" strokeWidth="1"/>
+      <ellipse cx="120" cy="352" rx="15" ry="8" fill="#252527" stroke="#3A3A3C" strokeWidth="1"/>
+      {r('neck', <ellipse cx="100" cy="57" rx="10" ry="6"/>)}
+    </svg>
+  );
+}
+
+function BodyBack({ getFill, onTap }) {
+  const r = (id, el) => React.cloneElement(el, {
+    key:id, id, onClick:()=>onTap(id),
+    style:{ fill:getFill(id), transition:'fill 0.2s', cursor:'pointer' },
+  });
+  return (
+    <svg viewBox="0 0 200 420" width="100%" style={{ display:'block' }}>
+      <ellipse cx="100" cy="30" rx="18" ry="20" fill="#2A2A2C" stroke="#3A3A3C" strokeWidth="1"/>
+      <rect x="88" y="50" width="24" height="14" rx="4" fill="#252527"/>
+      <path d="M68 64 Q60 70 58 90 L58 170 Q58 178 66 180 L134 180 Q142 178 142 170 L142 90 Q140 70 132 64 Z" fill="#252527" stroke="#3A3A3C" strokeWidth="1"/>
+      {r('left-trap',         <path d="M82 62 Q72 60 62 72 Q58 78 60 84 Q70 74 82 72 Z"/>)}
+      {r('right-trap',        <path d="M118 62 Q128 60 138 72 Q142 78 140 84 Q130 74 118 72 Z"/>)}
+      {r('left-rear-delt',    <ellipse cx="56"  cy="88"  rx="12" ry="10"/>)}
+      {r('right-rear-delt',   <ellipse cx="144" cy="88"  rx="12" ry="10"/>)}
+      {r('left-lat',          <path d="M66 80 Q58 100 60 130 L74 130 Q76 100 76 80 Z"/>)}
+      {r('right-lat',         <path d="M134 80 Q142 100 140 130 L126 130 Q124 100 124 80 Z"/>)}
+      {r('left-mid-back',     <rect x="70"  y="86" width="24" height="30" rx="6"/>)}
+      {r('right-mid-back',    <rect x="106" y="86" width="24" height="30" rx="6"/>)}
+      {r('lower-back',        <rect x="80"  y="140" width="40" height="30" rx="8"/>)}
+      <rect x="42"  y="90"  width="16" height="38" rx="8" fill="#252527" stroke="#3A3A3C" strokeWidth="1"/>
+      <rect x="142" y="90"  width="16" height="38" rx="8" fill="#252527" stroke="#3A3A3C" strokeWidth="1"/>
+      <rect x="38"  y="132" width="14" height="36" rx="7" fill="#252527" stroke="#3A3A3C" strokeWidth="1"/>
+      <rect x="148" y="132" width="14" height="36" rx="7" fill="#252527" stroke="#3A3A3C" strokeWidth="1"/>
+      {r('left-glute',        <ellipse cx="83"  cy="192" rx="20" ry="18"/>)}
+      {r('right-glute',       <ellipse cx="117" cy="192" rx="20" ry="18"/>)}
+      {r('left-piriformis',   <ellipse cx="90"  cy="208" rx="10" ry="8"/>)}
+      {r('right-piriformis',  <ellipse cx="110" cy="208" rx="10" ry="8"/>)}
+      {r('left-hamstring',    <rect x="66"  y="212" width="28" height="66" rx="12"/>)}
+      {r('right-hamstring',   <rect x="106" y="212" width="28" height="66" rx="12"/>)}
+      <ellipse cx="80"  cy="284" rx="13" ry="9" fill="#252527" stroke="#3A3A3C" strokeWidth="1"/>
+      <ellipse cx="120" cy="284" rx="13" ry="9" fill="#252527" stroke="#3A3A3C" strokeWidth="1"/>
+      {r('left-calf',         <rect x="68"  y="296" width="24" height="58" rx="10"/>)}
+      {r('right-calf',        <rect x="108" y="296" width="24" height="58" rx="10"/>)}
+      <ellipse cx="80"  cy="362" rx="15" ry="8" fill="#252527" stroke="#3A3A3C" strokeWidth="1"/>
+      <ellipse cx="120" cy="362" rx="15" ry="8" fill="#252527" stroke="#3A3A3C" strokeWidth="1"/>
+    </svg>
+  );
+}
+
 function BodyMap({ soreness, onToggle }) {
-  // soreness: { 'left-quad': 'mild' | 'significant', ... }
   const [view, setView] = useState('front');
 
   const getFill = (id) => {
@@ -3854,136 +3933,6 @@ function BodyMap({ soreness, onToggle }) {
     if (s === 'mild') return '#FF9F0A';
     return '#2C2C2E';
   };
-
-  const handleTap = (id) => { onToggle(id); };
-
-  const reg = (id, el) => React.cloneElement(el, {
-    key: id, id, onClick: () => handleTap(id),
-    style: { fill: getFill(id), transition:'fill 0.2s', cursor:'pointer', opacity:1 },
-    onTouchStart: function(e){ e.currentTarget.style.opacity='0.7'; },
-    onTouchEnd:   function(e){ e.currentTarget.style.opacity='1'; },
-  });
-
-  const FrontSVG = () => (
-    <svg viewBox="0 0 200 420" width="100%" style={{ display:'block' }}>
-      {/* Body outline */}
-      <ellipse cx="100" cy="30" rx="18" ry="20" fill="#2A2A2C" stroke="#3A3A3C" strokeWidth="1"/> {/* head */}
-      <rect x="88" y="50" width="24" height="14" rx="4" fill="#252527"/> {/* neck */}
-
-      {/* Torso */}
-      <path d="M68 64 Q60 70 58 90 L58 160 Q58 168 66 170 L134 170 Q142 168 142 160 L142 90 Q140 70 132 64 Z" fill="#252527" stroke="#3A3A3C" strokeWidth="1"/>
-
-      {/* Chest */}
-      {reg('left-pec',   <ellipse cx="83"  cy="90"  rx="16" ry="14"/>)}
-      {reg('right-pec',  <ellipse cx="117" cy="90"  rx="16" ry="14"/>)}
-
-      {/* Shoulders */}
-      {reg('left-front-delt',  <ellipse cx="56"  cy="78"  rx="12" ry="10"/>)}
-      {reg('right-front-delt', <ellipse cx="144" cy="78"  rx="12" ry="10"/>)}
-
-      {/* Abs */}
-      {reg('upper-abs', <rect x="84" y="108" width="32" height="24" rx="8"/>)}
-      {reg('lower-abs', <rect x="84" y="136" width="32" height="26" rx="8"/>)}
-
-      {/* Upper arms / biceps */}
-      {reg('left-bicep',  <rect x="42" y="90"  width="16" height="38" rx="8"/>)}
-      {reg('right-bicep', <rect x="142" y="90" width="16" height="38" rx="8"/>)}
-
-      {/* Forearms */}
-      {reg('left-forearm',  <rect x="38" y="132" width="14" height="36" rx="7"/>)}
-      {reg('right-forearm', <rect x="148" y="132" width="14" height="36" rx="7"/>)}
-
-      {/* Hips/Hip Flexors */}
-      {reg('left-hip-flexor',  <ellipse cx="83"  cy="174" rx="18" ry="10"/>)}
-      {reg('right-hip-flexor', <ellipse cx="117" cy="174" rx="18" ry="10"/>)}
-
-      {/* Pelvis gap */}
-      <rect x="88" y="168" width="24" height="12" rx="4" fill="#1A1A1C"/>
-
-      {/* Quads */}
-      {reg('left-quad',  <rect x="66" y="186" width="28" height="76" rx="12"/>)}
-      {reg('right-quad', <rect x="106" y="186" width="28" height="76" rx="12"/>)}
-
-      {/* Inner thigh */}
-      {reg('left-inner-thigh',  <ellipse cx="94"  cy="220" rx="9" ry="28"/>)}
-      {reg('right-inner-thigh', <ellipse cx="106" cy="220" rx="9" ry="28"/>)}
-
-      {/* Knees */}
-      <ellipse cx="80"  cy="270" rx="13" ry="9" fill="#252527" stroke="#3A3A3C" strokeWidth="1"/>
-      <ellipse cx="120" cy="270" rx="13" ry="9" fill="#252527" stroke="#3A3A3C" strokeWidth="1"/>
-
-      {/* Shins */}
-      {reg('left-shin',  <rect x="68" y="282" width="24" height="62" rx="10"/>)}
-      {reg('right-shin', <rect x="108" y="282" width="24" height="62" rx="10"/>)}
-
-      {/* Feet */}
-      <ellipse cx="80"  cy="352" rx="15" ry="8" fill="#252527" stroke="#3A3A3C" strokeWidth="1"/>
-      <ellipse cx="120" cy="352" rx="15" ry="8" fill="#252527" stroke="#3A3A3C" strokeWidth="1"/>
-
-      {/* Neck label */}
-      {reg('neck', <ellipse cx="100" cy="57" rx="10" ry="6"/>)}
-    </svg>
-  );
-
-  const BackSVG = () => (
-    <svg viewBox="0 0 200 420" width="100%" style={{ display:'block' }}>
-      {/* Head */}
-      <ellipse cx="100" cy="30" rx="18" ry="20" fill="#2A2A2C" stroke="#3A3A3C" strokeWidth="1"/>
-      <rect x="88" y="50" width="24" height="14" rx="4" fill="#252527"/>
-
-      {/* Upper back torso */}
-      <path d="M68 64 Q60 70 58 90 L58 170 Q58 178 66 180 L134 180 Q142 178 142 170 L142 90 Q140 70 132 64 Z" fill="#252527" stroke="#3A3A3C" strokeWidth="1"/>
-
-      {/* Traps */}
-      {reg('left-trap',  <path d="M82 62 Q72 60 62 72 Q58 78 60 84 Q70 74 82 72 Z"/>)}
-      {reg('right-trap', <path d="M118 62 Q128 60 138 72 Q142 78 140 84 Q130 74 118 72 Z"/>)}
-
-      {/* Rear delts */}
-      {reg('left-rear-delt',  <ellipse cx="56"  cy="88"  rx="12" ry="10"/>)}
-      {reg('right-rear-delt', <ellipse cx="144" cy="88"  rx="12" ry="10"/>)}
-
-      {/* Lats */}
-      {reg('left-lat',  <path d="M66 80 Q58 100 60 130 L74 130 Q76 100 76 80 Z"/>)}
-      {reg('right-lat', <path d="M134 80 Q142 100 140 130 L126 130 Q124 100 124 80 Z"/>)}
-
-      {/* Mid back / rhomboids */}
-      {reg('left-mid-back',  <rect x="70" y="86" width="24" height="30" rx="6"/>)}
-      {reg('right-mid-back', <rect x="106" y="86" width="24" height="30" rx="6"/>)}
-
-      {/* Lower back */}
-      {reg('lower-back', <rect x="80" y="140" width="40" height="30" rx="8"/>)}
-
-      {/* Upper arms */}
-      <rect x="42"  y="90" width="16" height="38" rx="8" fill="#252527" stroke="#3A3A3C" strokeWidth="1"/>
-      <rect x="142" y="90" width="16" height="38" rx="8" fill="#252527" stroke="#3A3A3C" strokeWidth="1"/>
-      <rect x="38"  y="132" width="14" height="36" rx="7" fill="#252527" stroke="#3A3A3C" strokeWidth="1"/>
-      <rect x="148" y="132" width="14" height="36" rx="7" fill="#252527" stroke="#3A3A3C" strokeWidth="1"/>
-
-      {/* Glutes */}
-      {reg('left-glute',  <ellipse cx="83"  cy="192" rx="20" ry="18"/>)}
-      {reg('right-glute', <ellipse cx="117" cy="192" rx="20" ry="18"/>)}
-
-      {/* Piriformis */}
-      {reg('left-piriformis',  <ellipse cx="90"  cy="208" rx="10" ry="8"/>)}
-      {reg('right-piriformis', <ellipse cx="110" cy="208" rx="10" ry="8"/>)}
-
-      {/* Hamstrings */}
-      {reg('left-hamstring',  <rect x="66" y="212" width="28" height="66" rx="12"/>)}
-      {reg('right-hamstring', <rect x="106" y="212" width="28" height="66" rx="12"/>)}
-
-      {/* Knees */}
-      <ellipse cx="80"  cy="284" rx="13" ry="9" fill="#252527" stroke="#3A3A3C" strokeWidth="1"/>
-      <ellipse cx="120" cy="284" rx="13" ry="9" fill="#252527" stroke="#3A3A3C" strokeWidth="1"/>
-
-      {/* Calves */}
-      {reg('left-calf',  <rect x="68" y="296" width="24" height="58" rx="10"/>)}
-      {reg('right-calf', <rect x="108" y="296" width="24" height="58" rx="10"/>)}
-
-      {/* Feet */}
-      <ellipse cx="80"  cy="362" rx="15" ry="8" fill="#252527" stroke="#3A3A3C" strokeWidth="1"/>
-      <ellipse cx="120" cy="362" rx="15" ry="8" fill="#252527" stroke="#3A3A3C" strokeWidth="1"/>
-    </svg>
-  );
 
   const MUSCLE_LABELS = {
     'left-pec':'Left Pec','right-pec':'Right Pec',
@@ -4025,7 +3974,9 @@ function BodyMap({ soreness, onToggle }) {
 
       {/* Body SVG */}
       <div style={{ background:'#0D0D0F', borderRadius:16, padding:'12px 24px', marginBottom:16, maxHeight:380, overflow:'hidden' }}>
-        {view === 'front' ? <FrontSVG/> : <BackSVG/>}
+        {view === 'front'
+          ? <BodyFront getFill={getFill} onTap={onToggle}/>
+          : <BodyBack  getFill={getFill} onTap={onToggle}/>}
       </div>
 
       {/* Legend */}
@@ -4042,7 +3993,7 @@ function BodyMap({ soreness, onToggle }) {
       {selected.length > 0 && (
         <div style={{ display:'flex', flexWrap:'wrap', gap:8, marginBottom:16 }}>
           {selected.map(([id, level]) => (
-            <div key={id} onClick={() => handleTap(id)}
+            <div key={id} onClick={() => onToggle(id)}
               style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 12px', borderRadius:20, background: level==='significant' ? 'rgba(255,69,58,0.15)' : 'rgba(255,159,10,0.15)', border:`1px solid ${level==='significant' ? '#FF453A' : '#FF9F0A'}`, cursor:'pointer' }}>
               <div style={{ width:8, height:8, borderRadius:'50%', background: level==='significant' ? '#FF453A' : '#FF9F0A' }}/>
               <span style={{ color:'#F5F5F0', fontSize:12, fontWeight:500 }}>{MUSCLE_LABELS[id] || id}</span>
