@@ -129,6 +129,7 @@ const Flame         = _i(() => <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-
 const Minus         = _i(() => <line x1="5" y1="12" x2="19" y2="12"/>);
 const Search        = _i(() => <><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></>);
 const Scale         = _i(() => <><path d="M16 16l3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1z"/><path d="M2 16l3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1z"/><path d="M7 21H17"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></>);
+const Bot           = _i(() => <><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" y1="16" x2="8" y2="16"/><line x1="16" y1="16" x2="16" y2="16"/></>);
 
 /* ═══════════════════════════════════════════════
    CONSTANTS
@@ -936,6 +937,7 @@ function BottomNav({ active, onTab }) {
   const tabs = [
     { id:'home',     icon:Home,          label:'HOME'  },
     { id:'plan',     icon:ClipboardList, label:'PLAN'  },
+    { id:'coach',    icon:Bot,           label:'COACH' },
     { id:'log',      icon:Plus,          label:'LOG',  cta:true },
     { id:'fuel',     icon:Flame,         label:'FUEL'  },
     { id:'progress', icon:BarChart2,     label:'STATS' },
@@ -952,16 +954,15 @@ function BottomNav({ active, onTab }) {
             className="flex flex-col items-center gap-0.5 transition-transform active:scale-90 select-none flex-1"
             style={{ minHeight: 48, justifyContent:'center' }}>
             {tab.cta ? (
-              <div className={`w-11 h-11 rounded-xl flex items-center justify-center -mt-5 shadow-lg transition-all
-                ${active === 'log' ? 'bg-[#C8FF00] scale-110' : 'bg-[#C8FF00]'}`}>
-                <Plus size={24} color="#0D0D0F" strokeWidth={2.5}/>
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center -mt-4 shadow-lg bg-[#C8FF00]">
+                <Plus size={20} color="#0D0D0F" strokeWidth={2.5}/>
               </div>
             ) : (
               <>
-                <tab.icon size={20}
+                <tab.icon size={17}
                   color={active === tab.id ? '#C8FF00' : '#8A8A8E'}
                   strokeWidth={active === tab.id ? 2.5 : 1.5}/>
-                <span className="font-display text-[9px] tracking-wider"
+                <span className="font-display text-[8px] tracking-wider"
                   style={{ color: active === tab.id ? '#C8FF00' : '#8A8A8E',
                            fontFamily:"'Bebas Neue',sans-serif" }}>
                   {tab.label}
@@ -3571,6 +3572,399 @@ function FuelScreen({ nutritionLog, nutritionGoals, weightHistory, onAddFood, on
 }
 
 /* ═══════════════════════════════════════════════
+   COACH — CHECK-IN FLOW
+═══════════════════════════════════════════════ */
+const COACH_ROUNDS = {
+  workout: [
+    { msg: 'How did that session feel overall?', opts: ['💪 Crushed it','😤 Solid session','😐 Average','😩 Tough one'] },
+    { msg: 'What was the hardest part?',         opts: ['🏋️ Weight felt heavy','😮 Cardio/conditioning','💥 Specific exercise','😴 Energy was low','✅ Nothing — felt great'] },
+    { msg: 'Any pain or discomfort?',            opts: ['✅ Felt fine','⚠️ Mild tightness','🔴 Some pain','💀 Something\'s wrong'] },
+    { msg: 'How\'s your recovery been?',         opts: ['✅ Fully recovered','😴 Still a bit sore','🛌 Very sore','🤷 First session'] },
+  ],
+  daily: [
+    { msg: 'How are your energy levels today?',   opts: ['⚡ High energy','😊 Good','😐 Average','😴 Low energy','💀 Exhausted'] },
+    { msg: 'How did your nutrition go today?',    opts: ['✅ Hit my goals','🍕 Slightly over','📉 Under-eaten','🤷 Didn\'t track'] },
+    { msg: 'How\'s your sleep been?',             opts: ['😴 8+ hours','🛌 6-7 hours','😤 5-6 hours','😩 Under 5 hours'] },
+    { msg: 'Overall mood and motivation?',        opts: ['🔥 Fired up','😊 Good','😐 Neutral','😞 Low','🆘 Struggling'] },
+  ],
+};
+
+function CoachCheckin({ type, profile, workoutResult, nutritionLog, nutritionGoals, apiKey, onDone }) {
+  const [step, setStep]       = useState(0);
+  const [answers, setAnswers] = useState([]);
+  const [response, setResponse] = useState('');
+  const [loading, setLoading]   = useState(false);
+  const [done, setDone]         = useState(false);
+  const rounds = COACH_ROUNDS[type];
+  const name   = profile.name || 'Champ';
+
+  const pick = (opt) => {
+    const next = [...answers, opt];
+    setAnswers(next);
+    if (step + 1 < rounds.length) {
+      setStep(step + 1);
+    } else {
+      callApi(next);
+    }
+  };
+
+  const callApi = async (ans) => {
+    setLoading(true);
+    try {
+      var msg;
+      if (type === 'workout') {
+        var wr = workoutResult || {};
+        msg = 'Athlete: ' + name + ', Goal: ' + (profile.goal||'General Fitness') + ', Level: ' + (profile.fitnessLevel||'Intermediate') + '.\n' +
+          'Just completed: ' + (wr.focus||'workout') + ', ' + (wr.duration||0) + 'min, ' + Math.round(wr.totalVolume||0) + 'kg volume.\n' +
+          'Check-in: Feel=' + ans[0] + ', Hard=' + ans[1] + ', Pain=' + ans[2] + ', Recovery=' + ans[3] + '.\n' +
+          'Give a personalised 2-3 sentence post-workout coaching response with 1 specific recommendation for next session.';
+      } else {
+        var today = getTodayISO();
+        var log   = getNutritionLog(nutritionLog, today);
+        var tots  = sumMacros(log.meals || []);
+        msg = 'Athlete: ' + name + ', Goal: ' + (profile.goal||'General Fitness') + '.\n' +
+          'Today: ' + tots.cal + '/' + ((nutritionGoals||{}).calories||2000) + ' kcal, ' + tots.pro + 'g protein.\n' +
+          'Daily check-in: Energy=' + ans[0] + ', Nutrition=' + ans[1] + ', Sleep=' + ans[2] + ', Mood=' + ans[3] + '.\n' +
+          'Give a personalised 3-4 sentence end-of-day coaching message: 1 nutrition insight, 1 recovery tip, 1 motivational note for tomorrow.';
+      }
+      var text = await callClaude(apiKey, [{ role:'user', content:msg }], 200);
+      setResponse(text);
+    } catch(e) {
+      setResponse('Great effort today. Stay consistent and keep pushing — every session counts towards your goal.');
+    }
+    setLoading(false);
+    setDone(true);
+  };
+
+  var cur = rounds[step];
+
+  return (
+    <div style={{ position:'fixed', top:0, left:'50%', transform:'translateX(-50%)', width:'100%', maxWidth:430, height:'100%', background:'#0D0D0F', zIndex:10000, display:'flex', flexDirection:'column', overflowY:'auto' }}>
+      <div style={{ padding:'52px 20px 20px', textAlign:'center' }}>
+        <p style={{ color:'#8A8A8E', fontSize:11, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:'0.2em', marginBottom:12 }}>COACH CHECK-IN</p>
+        <div style={{ width:52, height:52, borderRadius:'50%', background:'#C8FF00', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto' }}>
+          <Zap size={26} color="#0D0D0F" strokeWidth={2.5}/>
+        </div>
+      </div>
+
+      <div style={{ flex:1, padding:'0 20px 120px' }}>
+        {answers.map((ans, i) => (
+          <div key={i} style={{ marginBottom:16 }}>
+            <div style={{ display:'flex', gap:10, marginBottom:8 }}>
+              <div style={{ width:26, height:26, borderRadius:'50%', background:'rgba(200,255,0,0.15)', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                <Zap size={13} color="#C8FF00" strokeWidth={2}/>
+              </div>
+              <div style={{ background:'rgba(200,255,0,0.08)', border:'1px solid rgba(200,255,0,0.15)', borderRadius:'16px 16px 16px 4px', padding:'10px 14px' }}>
+                <p style={{ color:'#8A8A8E', fontSize:13, margin:0 }}>{rounds[i].msg}</p>
+              </div>
+            </div>
+            <div style={{ display:'flex', justifyContent:'flex-end' }}>
+              <div style={{ background:'#1A1A1C', border:'1px solid #3A3A3C', borderRadius:'16px 16px 4px 16px', padding:'10px 16px' }}>
+                <p style={{ color:'#F5F5F0', fontSize:14, fontWeight:600, margin:0 }}>{ans}</p>
+              </div>
+            </div>
+          </div>
+        ))}
+
+        {!done && step < rounds.length && (
+          <div style={{ marginBottom:16 }}>
+            <div style={{ display:'flex', gap:10, marginBottom:16 }}>
+              <div style={{ width:26, height:26, borderRadius:'50%', background:'rgba(200,255,0,0.15)', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                <Zap size={13} color="#C8FF00" strokeWidth={2}/>
+              </div>
+              <div style={{ background:'rgba(200,255,0,0.1)', border:'1px solid rgba(200,255,0,0.2)', borderRadius:'16px 16px 16px 4px', padding:'12px 16px' }}>
+                <p style={{ color:'#F5F5F0', fontSize:14, margin:0 }}>{cur.msg}</p>
+              </div>
+            </div>
+            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+              {cur.opts.map(function(opt) {
+                return (
+                  <button key={opt} onClick={function(){ pick(opt); }}
+                    style={{ width:'100%', padding:'14px 18px', background:'#1A1A1C', border:'1.5px solid #3A3A3C', borderRadius:14, display:'flex', alignItems:'center', gap:10, cursor:'pointer', textAlign:'left' }}>
+                    <span style={{ color:'#F5F5F0', fontSize:15 }}>{opt}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {done && (
+          <div>
+            <div style={{ display:'flex', gap:10, marginBottom:20 }}>
+              <div style={{ width:26, height:26, borderRadius:'50%', background:'rgba(200,255,0,0.15)', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                <Zap size={13} color="#C8FF00" strokeWidth={2}/>
+              </div>
+              <div style={{ background:'rgba(200,255,0,0.1)', border:'1px solid rgba(200,255,0,0.25)', borderRadius:'16px 16px 16px 4px', padding:'14px 16px', flex:1 }}>
+                {loading ? (
+                  <div style={{ display:'flex', gap:6 }}>
+                    {[0,1,2].map(function(i){ return <div key={i} style={{ width:6, height:6, borderRadius:'50%', background:'#C8FF00', animation:'dotPulse 1.2s ease-in-out ' + (i*0.2) + 's infinite' }}/>; })}
+                  </div>
+                ) : (
+                  <p style={{ color:'#F5F5F0', fontSize:14, lineHeight:1.7, margin:0 }}>{response}</p>
+                )}
+              </div>
+            </div>
+            {!loading && (
+              <button onClick={function(){ onDone({ answers:answers, coachResponse:response }); }}
+                style={{ width:'100%', padding:16, background:'#C8FF00', borderRadius:16, fontFamily:"'Bebas Neue',sans-serif", fontSize:20, letterSpacing:'0.1em', color:'#0D0D0F', border:'none', cursor:'pointer' }}>
+                DONE
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   COACH — BODY MAP
+═══════════════════════════════════════════════ */
+var FRONT_REGIONS = [
+  { id:'neck',              label:'Neck',             el:'ellipse', props:{ cx:100, cy:57, rx:10, ry:6 } },
+  { id:'left-pec',          label:'Left Pec',         el:'ellipse', props:{ cx:83, cy:90, rx:16, ry:14 } },
+  { id:'right-pec',         label:'Right Pec',        el:'ellipse', props:{ cx:117, cy:90, rx:16, ry:14 } },
+  { id:'left-front-delt',   label:'Left Shoulder',    el:'ellipse', props:{ cx:57, cy:78, rx:12, ry:10 } },
+  { id:'right-front-delt',  label:'Right Shoulder',   el:'ellipse', props:{ cx:143, cy:78, rx:12, ry:10 } },
+  { id:'upper-abs',         label:'Upper Abs',        el:'rect',    props:{ x:84, y:108, width:32, height:22, rx:8 } },
+  { id:'lower-abs',         label:'Lower Abs',        el:'rect',    props:{ x:84, y:134, width:32, height:24, rx:8 } },
+  { id:'left-bicep',        label:'Left Bicep',       el:'rect',    props:{ x:43, y:92, width:14, height:36, rx:7 } },
+  { id:'right-bicep',       label:'Right Bicep',      el:'rect',    props:{ x:143, y:92, width:14, height:36, rx:7 } },
+  { id:'left-forearm',      label:'Left Forearm',     el:'rect',    props:{ x:39, y:132, width:13, height:34, rx:6 } },
+  { id:'right-forearm',     label:'Right Forearm',    el:'rect',    props:{ x:148, y:132, width:13, height:34, rx:6 } },
+  { id:'left-quad',         label:'Left Quad',        el:'rect',    props:{ x:67, y:188, width:26, height:72, rx:11 } },
+  { id:'right-quad',        label:'Right Quad',       el:'rect',    props:{ x:107, y:188, width:26, height:72, rx:11 } },
+  { id:'left-shin',         label:'Left Shin',        el:'rect',    props:{ x:69, y:280, width:22, height:58, rx:9 } },
+  { id:'right-shin',        label:'Right Shin',       el:'rect',    props:{ x:109, y:280, width:22, height:58, rx:9 } },
+];
+var BACK_REGIONS = [
+  { id:'left-trap',         label:'Left Trap',        el:'ellipse', props:{ cx:82, cy:74, rx:14, ry:10 } },
+  { id:'right-trap',        label:'Right Trap',       el:'ellipse', props:{ cx:118, cy:74, rx:14, ry:10 } },
+  { id:'left-rear-delt',    label:'Left Rear Delt',   el:'ellipse', props:{ cx:57, cy:88, rx:12, ry:10 } },
+  { id:'right-rear-delt',   label:'Right Rear Delt',  el:'ellipse', props:{ cx:143, cy:88, rx:12, ry:10 } },
+  { id:'left-lat',          label:'Left Lat',         el:'rect',    props:{ x:59, y:92, width:18, height:42, rx:8 } },
+  { id:'right-lat',         label:'Right Lat',        el:'rect',    props:{ x:123, y:92, width:18, height:42, rx:8 } },
+  { id:'lower-back',        label:'Lower Back',       el:'rect',    props:{ x:82, y:138, width:36, height:28, rx:8 } },
+  { id:'left-glute',        label:'Left Glute',       el:'ellipse', props:{ cx:84, cy:192, rx:19, ry:17 } },
+  { id:'right-glute',       label:'Right Glute',      el:'ellipse', props:{ cx:116, cy:192, rx:19, ry:17 } },
+  { id:'left-hamstring',    label:'Left Hamstring',   el:'rect',    props:{ x:67, y:212, width:26, height:62, rx:11 } },
+  { id:'right-hamstring',   label:'Right Hamstring',  el:'rect',    props:{ x:107, y:212, width:26, height:62, rx:11 } },
+  { id:'left-calf',         label:'Left Calf',        el:'rect',    props:{ x:69, y:280, width:22, height:56, rx:9 } },
+  { id:'right-calf',        label:'Right Calf',       el:'rect',    props:{ x:109, y:280, width:22, height:56, rx:9 } },
+];
+
+function BodyRegion({ id, el, props, fill, onTap }) {
+  var handleClick = function() { onTap(id); };
+  var style = { fill:fill, transition:'fill 0.2s', cursor:'pointer' };
+  if (el === 'ellipse') return <ellipse onClick={handleClick} style={style} cx={props.cx} cy={props.cy} rx={props.rx} ry={props.ry}/>;
+  return <rect onClick={handleClick} style={style} x={props.x} y={props.y} width={props.width} height={props.height} rx={props.rx}/>;
+}
+
+function BodyMap({ soreness, onToggle }) {
+  const [view, setView] = useState('front');
+  var regions = view === 'front' ? FRONT_REGIONS : BACK_REGIONS;
+  var getFill = function(id) {
+    if (soreness[id] === 'significant') return '#FF453A';
+    if (soreness[id] === 'mild') return '#FF9F0A';
+    return '#2C2C2E';
+  };
+  var selected = Object.keys(soreness);
+  var allLabels = {};
+  FRONT_REGIONS.concat(BACK_REGIONS).forEach(function(r){ allLabels[r.id] = r.label; });
+
+  return (
+    <div>
+      <div style={{ display:'flex', gap:8, marginBottom:12, background:'#252527', padding:4, borderRadius:12 }}>
+        {['front','back'].map(function(v) {
+          return (
+            <button key={v} onClick={function(){ setView(v); }}
+              style={{ flex:1, padding:'7px 0', borderRadius:8, border:'none', cursor:'pointer', fontFamily:"'Bebas Neue',sans-serif", fontSize:13, letterSpacing:'0.1em', background:view===v?'#C8FF00':'transparent', color:view===v?'#0D0D0F':'#8A8A8E' }}>
+              {v === 'front' ? 'FRONT' : 'BACK'}
+            </button>
+          );
+        })}
+      </div>
+      <div style={{ background:'#0D0D0F', borderRadius:14, padding:'8px 20px', marginBottom:12 }}>
+        <svg viewBox="0 0 200 380" width="100%" style={{ display:'block' }}>
+          <ellipse cx="100" cy="28" rx="17" ry="19" fill="#2A2A2C" stroke="#3A3A3C" strokeWidth="1"/>
+          <rect x="89" y="47" width="22" height="13" rx="4" fill="#252527"/>
+          <path d="M70 62 Q62 68 60 88 L60 164 Q60 172 68 174 L132 174 Q140 172 140 164 L140 88 Q138 68 130 62 Z" fill="#252527" stroke="#3A3A3C" strokeWidth="1"/>
+          <ellipse cx="80" cy="268" rx="12" ry="8" fill="#252527" stroke="#3A3A3C" strokeWidth="1"/>
+          <ellipse cx="120" cy="268" rx="12" ry="8" fill="#252527" stroke="#3A3A3C" strokeWidth="1"/>
+          <ellipse cx="80" cy="348" rx="14" ry="7" fill="#252527" stroke="#3A3A3C" strokeWidth="1"/>
+          <ellipse cx="120" cy="348" rx="14" ry="7" fill="#252527" stroke="#3A3A3C" strokeWidth="1"/>
+          {regions.map(function(reg) {
+            return <BodyRegion key={reg.id} id={reg.id} el={reg.el} props={reg.props} fill={getFill(reg.id)} onTap={onToggle}/>;
+          })}
+        </svg>
+      </div>
+      <div style={{ display:'flex', gap:14, justifyContent:'center', marginBottom:12 }}>
+        {[['#2C2C2E','None'],['#FF9F0A','Mild'],['#FF453A','Significant']].map(function(pair) {
+          return (
+            <div key={pair[1]} style={{ display:'flex', alignItems:'center', gap:5 }}>
+              <div style={{ width:10, height:10, borderRadius:2, background:pair[0] }}/>
+              <span style={{ color:'#8A8A8E', fontSize:11 }}>{pair[1]}</span>
+            </div>
+          );
+        })}
+      </div>
+      {selected.length > 0 && (
+        <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:12 }}>
+          {selected.map(function(id) {
+            var lvl = soreness[id];
+            return (
+              <div key={id} onClick={function(){ onToggle(id); }}
+                style={{ display:'flex', alignItems:'center', gap:5, padding:'5px 10px', borderRadius:20, background:lvl==='significant'?'rgba(255,69,58,0.15)':'rgba(255,159,10,0.15)', border:'1px solid ' + (lvl==='significant'?'#FF453A':'#FF9F0A'), cursor:'pointer' }}>
+                <div style={{ width:7, height:7, borderRadius:'50%', background:lvl==='significant'?'#FF453A':'#FF9F0A' }}/>
+                <span style={{ color:'#F5F5F0', fontSize:11, fontWeight:500 }}>{allLabels[id]||id}</span>
+                <span style={{ color:'#8A8A8E', fontSize:10 }}>{lvl}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   COACH SCREEN
+═══════════════════════════════════════════════ */
+function CoachScreen({ profile, coachCheckins, onSaveSoreness, onStartDailyCheckin, logs, sorenessLog }) {
+  var today = getTodayISO();
+  var todayCI = coachCheckins[today] || {};
+  const [soreness, setSoreness]           = useState({});
+  const [sorenessAdvice, setSorenessAdvice] = useState('');
+  const [sorenessLoading, setSorenessLoading] = useState(false);
+  const [expanded, setExpanded]           = useState(null);
+
+  var toggle = function(id) {
+    setSoreness(function(prev) {
+      var cur = prev[id];
+      var next = Object.assign({}, prev);
+      if (!cur) { next[id] = 'mild'; return next; }
+      if (cur === 'mild') { next[id] = 'significant'; return next; }
+      delete next[id]; return next;
+    });
+  };
+
+  var fetchAdvice = async function() {
+    var key = profile.apiKey;
+    if (!key) return;
+    var list = Object.keys(soreness).map(function(k){ return k + ' (' + soreness[k] + ')'; }).join(', ');
+    var recent = logs.slice(-2).map(function(l){ return l.focus; }).join(', ') || 'None';
+    setSorenessLoading(true);
+    try {
+      var text = await callClaude(key, [{ role:'user', content:'Athlete: ' + (profile.name||'Athlete') + ', ' + (profile.fitnessLevel||'Intermediate') + ', Goal: ' + (profile.goal||'General Fitness') + '.\nSore/tight areas: ' + list + '.\nRecent training: ' + recent + '.\nProvide: 1) Likely cause, 2) 2-3 specific mobility/rehab exercises with sets/reps/duration, 3) Train or rest the affected area today. Max 120 words.' }], 300);
+      setSorenessAdvice(text);
+      onSaveSoreness(today, { muscles:Object.keys(soreness).map(function(k){ return { name:k, level:soreness[k] }; }), coachAdvice:text, timestamp:new Date().toISOString() });
+    } catch(e) {
+      setSorenessAdvice('Could not load advice. Check your API key and try again.');
+    }
+    setSorenessLoading(false);
+  };
+
+  var history = Object.entries(coachCheckins).sort(function(a,b){ return b[0].localeCompare(a[0]); }).slice(0,5);
+  var fmtDate = function(iso) {
+    var d = new Date(iso + 'T12:00:00');
+    return d.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' });
+  };
+
+  return (
+    <div className="h-full overflow-y-auto pb-28">
+      <div className="px-5 pt-14 pb-4">
+        <div className="flex items-center gap-3 mb-1">
+          <div style={{ width:40, height:40, borderRadius:'50%', background:'#C8FF00', display:'flex', alignItems:'center', justifyContent:'center' }}>
+            <Zap size={20} color="#0D0D0F" strokeWidth={2.5}/>
+          </div>
+          <h1 className="font-display text-5xl text-[#F5F5F0]" style={{ fontFamily:"'Bebas Neue',sans-serif" }}>COACH</h1>
+        </div>
+        <p className="text-[#8A8A8E] text-sm">Your AI training partner</p>
+      </div>
+
+      <div className="px-5 mb-6">
+        <p className="text-[#8A8A8E] text-xs uppercase tracking-widest mb-3">Today's Check-Ins</p>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-[#1A1A1C] rounded-2xl p-4 border border-[#252527]">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-lg">🏋️</span>
+              <p className="text-sm font-semibold text-[#F5F5F0]">WORKOUT</p>
+            </div>
+            {todayCI.workout ? (
+              <div>
+                <p className="text-[#C8FF00] text-xs font-semibold mb-1">✓ Complete</p>
+                <p className="text-[#8A8A8E] text-xs leading-relaxed" style={{ display:'-webkit-box', WebkitLineClamp:3, WebkitBoxOrient:'vertical', overflow:'hidden' }}>{todayCI.workout.coachResponse}</p>
+              </div>
+            ) : (
+              <p className="text-[#3A3A3C] text-xs leading-relaxed">Complete a workout first to unlock your post-session coaching</p>
+            )}
+          </div>
+          <div className="bg-[#1A1A1C] rounded-2xl p-4 border border-[#252527]">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-lg">🌙</span>
+              <p className="text-sm font-semibold text-[#F5F5F0]">DAILY</p>
+            </div>
+            {todayCI.daily ? (
+              <div>
+                <p className="text-[#C8FF00] text-xs font-semibold mb-1">✓ Complete</p>
+                <p className="text-[#8A8A8E] text-xs leading-relaxed" style={{ display:'-webkit-box', WebkitLineClamp:3, WebkitBoxOrient:'vertical', overflow:'hidden' }}>{todayCI.daily.coachResponse}</p>
+              </div>
+            ) : (
+              <div>
+                <p className="text-[#8A8A8E] text-xs mb-3">How's your day going?</p>
+                <button onClick={onStartDailyCheckin} className="w-full py-2 rounded-xl bg-[#C8FF00] text-[#0D0D0F] text-xs font-bold active:scale-95">START →</button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {history.length > 0 && (
+        <div className="px-5 mb-6">
+          <p className="text-[#8A8A8E] text-xs uppercase tracking-widest mb-3">Recent Check-Ins</p>
+          <div className="space-y-2">
+            {history.map(function(entry) {
+              var date = entry[0]; var data = entry[1];
+              return (
+                <div key={date} className="bg-[#1A1A1C] rounded-2xl p-4 border border-[#252527]" onClick={function(){ setExpanded(expanded===date?null:date); }}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[#C8FF00] text-xs font-semibold">{fmtDate(date)}</span>
+                    <span style={{ fontSize:16 }}>{data.workout?'🏋️':''}{data.daily?'🌙':''}</span>
+                  </div>
+                  {data.workout && (
+                    <p className="text-[#8A8A8E] text-xs leading-relaxed" style={expanded!==date?{ display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical', overflow:'hidden' }:{}}>{data.workout.coachResponse}</p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      <div className="px-5 mb-6">
+        <p className="text-[#8A8A8E] text-xs uppercase tracking-widest mb-1">Body Map — Where are you sore?</p>
+        <p className="text-[#3A3A3C] text-xs mb-3">Tap once = mild · Tap twice = significant · Tap again = clear</p>
+        <div className="bg-[#1A1A1C] rounded-2xl p-4 border border-[#252527]">
+          <BodyMap soreness={soreness} onToggle={toggle}/>
+          <button onClick={fetchAdvice} disabled={Object.keys(soreness).length===0||sorenessLoading}
+            className="w-full py-4 rounded-2xl active:scale-95 transition-all mt-2"
+            style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:17, letterSpacing:'0.1em', background:Object.keys(soreness).length>0?'#C8FF00':'#252527', color:Object.keys(soreness).length>0?'#0D0D0F':'#8A8A8E', border:'none', cursor:Object.keys(soreness).length>0?'pointer':'default' }}>
+            {sorenessLoading ? 'GETTING ADVICE...' : 'GET COACH ADVICE'}
+          </button>
+          {sorenessAdvice && !sorenessLoading && (
+            <div className="mt-4 p-4 rounded-xl bg-[#0D0D0F] border border-[rgba(200,255,0,0.15)]">
+              <p className="text-[#C8FF00] text-xs font-semibold mb-2">COACH ADVICE</p>
+              <p className="text-[#F5F5F0] text-sm leading-relaxed">{sorenessAdvice}</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
    APP ROOT
 ═══════════════════════════════════════════════ */
 function App() {
@@ -3588,8 +3982,12 @@ function App() {
   const [nutritionGoals, setNutritionGoals] = useLocalStorage('forge_nutr_goals', { calories:2000, protein:150, carbs:200, fat:65, goalType:'maintain', bodyweight:80, goalWeight:'' });
   const [weightHistory,  setWeightHistory]  = useLocalStorage('forge_weight',     []);
   const [cardioLog,      setCardioLog]      = useLocalStorage('forge_cardio_log', {});
+  const [coachCheckins,  setCoachCheckins]  = useLocalStorage('forge_coach_checkins', {});
+  const [sorenessLog,    setSorenessLog]    = useLocalStorage('forge_soreness_log', {});
 
   const [activeTab,      setActiveTab]     = useState('home');
+  const [pendingCheckin,   setPendingCheckin]   = useState(null);
+  const [showDailyCheckin, setShowDailyCheckin] = useState(false);
   const [activeWorkout,  setActiveWorkout] = useState(null);
   const [workoutResult,  setWorkoutResult] = useState(null);
   const [newBadges,      setNewBadges]     = useState([]);
@@ -3709,9 +4107,30 @@ function App() {
         return copy;
       });
     }
+    setPendingCheckin(workoutResult);
     setWorkoutResult(null);
     setNewBadges([]);
+  };
+
+  const handleWorkoutCheckinDone = ({ answers, coachResponse }) => {
+    var today = getTodayISO();
+    setCoachCheckins(function(prev) {
+      return Object.assign({}, prev, { [today]: Object.assign({}, prev[today]||{}, { workout:{ focus:(pendingCheckin||{}).focus||'', answers:answers, coachResponse:coachResponse, timestamp:new Date().toISOString() } }) });
+    });
+    setPendingCheckin(null);
     setActiveTab('home');
+  };
+
+  const handleDailyCheckinDone = ({ answers, coachResponse }) => {
+    var today = getTodayISO();
+    setCoachCheckins(function(prev) {
+      return Object.assign({}, prev, { [today]: Object.assign({}, prev[today]||{}, { daily:{ answers:answers, coachResponse:coachResponse, timestamp:new Date().toISOString() } }) });
+    });
+    setShowDailyCheckin(false);
+  };
+
+  const handleSaveSoreness = (date, data) => {
+    setSorenessLog(function(prev){ return Object.assign({}, prev, { [date]:data }); });
   };
 
   const LogTab = () => (
@@ -3800,6 +4219,9 @@ function App() {
     switch (activeTab) {
       case 'home':     return <HomeScreen profile={profile} plan={plan} logs={logs} streak={streak} prs={prs}
                                 onStartWorkout={setActiveWorkout} onSetTab={setActiveTab}/>;
+      case 'coach':    return <CoachScreen profile={profile} coachCheckins={coachCheckins} sorenessLog={sorenessLog}
+                                onSaveSoreness={handleSaveSoreness} onStartDailyCheckin={() => setShowDailyCheckin(true)}
+                                logs={logs}/>;
       case 'plan':     return <PlanScreen plan={plan} profile={profile}
                                 onRegenerate={() => handleGeneratePlan(profile)}/>;
       case 'log':      return <LogTab/>;
@@ -3843,6 +4265,18 @@ function App() {
             newBadges={newBadges}
             onDone={handleCelebrationDone}
             profile={profile}/>
+        )}
+
+        {pendingCheckin && (
+          <CoachCheckin type="workout" profile={profile} workoutResult={pendingCheckin}
+            nutritionLog={nutritionLog} nutritionGoals={nutritionGoals}
+            apiKey={profile.apiKey} onDone={handleWorkoutCheckinDone}/>
+        )}
+
+        {showDailyCheckin && (
+          <CoachCheckin type="daily" profile={profile} workoutResult={null}
+            nutritionLog={nutritionLog} nutritionGoals={nutritionGoals}
+            apiKey={profile.apiKey} onDone={handleDailyCheckinDone}/>
         )}
 
         <div className="h-full overflow-hidden">{renderTab()}</div>
