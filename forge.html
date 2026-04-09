@@ -976,21 +976,307 @@ function BadgeToast({ badge, onDismiss }) {
 }
 
 /* ═══════════════════════════════════════════════
+   COACH CHECK-IN
+═══════════════════════════════════════════════ */
+function CoachCheckIn({ profile, workoutResult, nutritionLog, nutritionGoals, onDone }) {
+  const ROUNDS = [
+    {
+      question: (name) => `Good work today, ${name}. How did that session feel overall?`,
+      options: [
+        { emoji:'💪', label:'Crushed it' },
+        { emoji:'😤', label:'Solid session' },
+        { emoji:'😐', label:'Average' },
+        { emoji:'😩', label:'Tough one' },
+      ]
+    },
+    {
+      question: () => `Got it. What was the hardest part?`,
+      options: [
+        { emoji:'🏋️', label:'Weight felt heavy' },
+        { emoji:'😮‍💨', label:'Low energy' },
+        { emoji:'💥', label:'Specific exercise' },
+        { emoji:'😴', label:'Motivation low' },
+        { emoji:'✅', label:'Nothing — felt great' },
+      ]
+    },
+    {
+      question: () => `Any pain or discomfort during the session?`,
+      options: [
+        { emoji:'✅', label:'Felt fine' },
+        { emoji:'⚠️', label:'Mild tightness' },
+        { emoji:'🔴', label:'Some pain' },
+        { emoji:'💀', label:'Something is wrong' },
+      ]
+    },
+    {
+      question: () => `How is your recovery since last session?`,
+      options: [
+        { emoji:'✅', label:'Fully recovered' },
+        { emoji:'😴', label:'Still a bit sore' },
+        { emoji:'🛌', label:'Very sore' },
+        { emoji:'🤷', label:'First session' },
+      ]
+    },
+  ];
+
+  const [round, setRound] = useState(0);
+  const [answers, setAnswers] = useState([]);
+  const [visible, setVisible] = useState(true);
+  const [coachResponse, setCoachResponse] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const handleSelect = async (option) => {
+    const newAnswers = [...answers, option.label];
+    setAnswers(newAnswers);
+    if (round < ROUNDS.length - 1) {
+      setVisible(false);
+      setTimeout(() => { setRound(r => r + 1); setVisible(true); }, 350);
+    } else {
+      setLoading(true);
+      try {
+        const focus = workoutResult?.focus || 'training session';
+        const volume = workoutResult?.totalVolume ? `${Math.round(workoutResult.totalVolume)}kg volume` : '';
+        const duration = workoutResult?.duration ? `${workoutResult.duration} min` : '';
+        const prompt = `Athlete: ${profile.name}, Goal: ${profile.goal}, Level: ${profile.fitnessLevel}.
+Just completed: ${focus}, ${duration}${volume ? ', ' + volume : ''}.
+Check-in answers:
+- Overall feel: ${newAnswers[0]}
+- Hardest part: ${newAnswers[1]}
+- Pain/discomfort: ${newAnswers[2]}
+- Recovery: ${newAnswers[3]}
+Give a personalised post-workout coaching response in 3-4 sentences.
+Be specific to their workout and answers. Give 1-2 actionable recommendations for next session.
+Do not use bullet points. Write as a coach speaking directly to the athlete.`;
+        const res = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': profile.apiKey || '',
+            'anthropic-version': '2023-06-01',
+            'anthropic-dangerous-direct-browser-access': 'true',
+          },
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-20250514',
+            max_tokens: 200,
+            system: 'You are FORGE Coach, an expert personal trainer. Give concise, specific, motivating coaching advice. Never be generic. Always reference their specific workout data.',
+            messages: [{ role: 'user', content: prompt }]
+          })
+        });
+        const data = await res.json();
+        const text = data?.content?.[0]?.text || null;
+        setCoachResponse(text);
+      } catch(e) {
+        setError('Could not reach coach. Check your API key in Profile.');
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  const currentRound = ROUNDS[round];
+
+  return (
+    <div style={{ position:'fixed', top:0, left:'50%', transform:'translateX(-50%)',
+      width:'100%', maxWidth:430, height:'100%', zIndex:9999,
+      background:'#0D0D0F', display:'flex', flexDirection:'column',
+      overflowY:'auto' }}>
+
+      {/* Header */}
+      <div className="flex-shrink-0 px-5 pt-14 pb-6 flex items-center gap-3">
+        <div className="w-12 h-12 rounded-full bg-[#C8FF00] flex items-center justify-center flex-shrink-0">
+          <Zap size={22} color="#0D0D0F"/>
+        </div>
+        <div>
+          <p className="text-[#8A8A8E] text-xs uppercase tracking-widest">AI Coach</p>
+          <p className="font-display text-2xl text-[#F5F5F0]"
+            style={{ fontFamily:"'Bebas Neue',sans-serif" }}>POST-WORKOUT CHECK-IN</p>
+        </div>
+      </div>
+
+      <div className="flex-1 px-5 flex flex-col">
+
+        {/* Coach response state */}
+        {(loading || coachResponse || error) ? (
+          <div className="flex-1 flex flex-col justify-center">
+            {loading && (
+              <div className="bg-[#1A1A1C] rounded-3xl p-6 border border-[#252527]">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-8 h-8 rounded-full bg-[#C8FF00] flex items-center justify-center flex-shrink-0">
+                    <Zap size={14} color="#0D0D0F"/>
+                  </div>
+                  <p className="text-[#8A8A8E] text-sm">Coach is thinking...</p>
+                </div>
+                <div className="flex gap-2">
+                  {[0,1,2].map(i => (
+                    <div key={i} className="w-2 h-2 rounded-full bg-[#C8FF00]"
+                      style={{ animation:`dotPulse 1.2s ${i*0.2}s ease-in-out infinite`, opacity:0.4 }}/>
+                  ))}
+                </div>
+              </div>
+            )}
+            {coachResponse && (
+              <div>
+                <div className="bg-[rgba(200,255,0,0.06)] rounded-3xl p-6 border border-[rgba(200,255,0,0.15)] mb-4">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-8 h-8 rounded-full bg-[#C8FF00] flex items-center justify-center flex-shrink-0">
+                      <Zap size={14} color="#0D0D0F"/>
+                    </div>
+                    <p className="text-[#C8FF00] text-xs font-display tracking-widest"
+                      style={{ fontFamily:"'Bebas Neue',sans-serif" }}>COACH SAYS</p>
+                  </div>
+                  <p className="text-[#F5F5F0] text-sm leading-relaxed">{coachResponse}</p>
+                </div>
+                <div className="flex flex-wrap gap-2 mb-6">
+                  {answers.map((a,i) => (
+                    <span key={i} className="text-xs px-3 py-1.5 rounded-full bg-[#1A1A1C] text-[#8A8A8E] border border-[#252527]">
+                      {a}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {error && (
+              <div className="bg-[rgba(255,69,58,0.08)] rounded-2xl p-4 border border-[rgba(255,69,58,0.2)] mb-4">
+                <p className="text-[#FF453A] text-sm">{error}</p>
+              </div>
+            )}
+            {(coachResponse || error) && (
+              <button onClick={() => onDone({ answers, coachResponse, focus: workoutResult?.focus })}
+                className="w-full py-4 rounded-2xl bg-[#C8FF00] text-[#0D0D0F] font-display text-xl tracking-wider active:scale-95 transition-all"
+                style={{ fontFamily:"'Bebas Neue',sans-serif" }}>
+                BACK TO HOME
+              </button>
+            )}
+          </div>
+        ) : (
+          /* Question rounds */
+          <div className="flex-1 flex flex-col justify-center"
+            style={{ opacity: visible ? 1 : 0, transition:'opacity 0.3s ease' }}>
+
+            {/* Progress dots */}
+            <div className="flex gap-2 mb-8 justify-center">
+              {ROUNDS.map((_,i) => (
+                <div key={i} className="h-1.5 rounded-full transition-all duration-300"
+                  style={{ width: i === round ? 24 : 8,
+                    background: i < round ? '#C8FF00' : i === round ? '#C8FF00' : '#252527' }}/>
+              ))}
+            </div>
+
+            {/* Coach question bubble */}
+            <div className="bg-[#1A1A1C] rounded-3xl rounded-tl-sm p-5 border border-[#252527] mb-6">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-7 h-7 rounded-full bg-[#C8FF00] flex items-center justify-center flex-shrink-0">
+                  <Zap size={12} color="#0D0D0F"/>
+                </div>
+                <p className="text-[#C8FF00] text-xs font-display tracking-widest"
+                  style={{ fontFamily:"'Bebas Neue',sans-serif" }}>FORGE COACH</p>
+              </div>
+              <p className="text-[#F5F5F0] text-lg leading-snug font-semibold">
+                {currentRound.question(profile.name || 'Athlete')}
+              </p>
+            </div>
+
+            {/* Answer options */}
+            <div className="space-y-3">
+              {currentRound.options.map((opt, i) => (
+                <button key={i} onClick={() => handleSelect(opt)}
+                  className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl bg-[#1A1A1C] border border-[#252527] active:scale-95 active:border-[#C8FF00] transition-all text-left">
+                  <span className="text-2xl flex-shrink-0">{opt.emoji}</span>
+                  <span className="text-[#F5F5F0] font-semibold text-base">{opt.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
    COACH SCREEN
 ═══════════════════════════════════════════════ */
-function CoachScreen() {
+function CoachScreen({ coachCheckins, profile }) {
+  const today = new Date().toISOString().split('T')[0];
+  const todayCheckin = coachCheckins[today];
+  const allCheckins = Object.entries(coachCheckins)
+    .sort((a,b) => b[0].localeCompare(a[0]))
+    .slice(0, 5);
+
   return (
-    <div className="flex flex-col items-center justify-center h-full gap-4 px-6">
-      <Activity size={48} color="#C8FF00" strokeWidth={1.5}/>
-      <h1 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:32, color:'#F5F5F7', letterSpacing:2 }}>
-        AI COACH
-      </h1>
-      <p style={{ color:'#8A8A8E', textAlign:'center', fontSize:14, lineHeight:1.6 }}>
-        Your personalised AI coach is coming soon.{'\n'}Post-workout check-ins, recovery advice, and daily guidance — all powered by Claude.
-      </p>
-      <div style={{ marginTop:8, padding:'10px 24px', borderRadius:12, background:'#1A1A1C', border:'1px solid #2A2A2C' }}>
-        <span style={{ fontFamily:"'Bebas Neue',sans-serif", color:'#C8FF00', letterSpacing:2, fontSize:16 }}>COMING SOON</span>
+    <div className="h-full overflow-y-auto pb-28">
+      <div className="px-5 pt-14 pb-4">
+        <div className="flex items-center gap-3 mb-1">
+          <div className="w-10 h-10 rounded-full bg-[#C8FF00] flex items-center justify-center flex-shrink-0">
+            <Zap size={20} color="#0D0D0F"/>
+          </div>
+          <h1 className="font-display text-5xl text-[#F5F5F0]"
+            style={{ fontFamily:"'Bebas Neue',sans-serif" }}>COACH</h1>
+        </div>
+        <p className="text-[#8A8A8E] text-sm">Your AI training coach</p>
       </div>
+
+      {/* Today's workout check-in status */}
+      <div className="px-5 mb-4">
+        <p className="text-[#8A8A8E] text-xs uppercase tracking-widest mb-3">Today's Check-in</p>
+        {todayCheckin?.workout ? (
+          <div className="bg-[rgba(200,255,0,0.06)] rounded-2xl p-5 border border-[rgba(200,255,0,0.15)]">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-[#C8FF00] font-display text-sm tracking-widest"
+                style={{ fontFamily:"'Bebas Neue',sans-serif" }}>✓ WORKOUT CHECK-IN DONE</span>
+            </div>
+            <p className="text-[#F5F5F0] text-sm leading-relaxed">{todayCheckin.workout.coachResponse}</p>
+          </div>
+        ) : (
+          <div className="bg-[#1A1A1C] rounded-2xl p-5 border border-[#252527]">
+            <p className="text-[#8A8A8E] text-sm">Complete a workout to trigger your post-workout coach check-in.</p>
+          </div>
+        )}
+      </div>
+
+      {/* Recent coach messages */}
+      {allCheckins.length > 0 && (
+        <div className="px-5 mb-4">
+          <p className="text-[#8A8A8E] text-xs uppercase tracking-widest mb-3">Recent Coach Messages</p>
+          <div className="space-y-3">
+            {allCheckins.map(([date, checkin]) => (
+              checkin.workout && (
+                <div key={date} className="bg-[#1A1A1C] rounded-2xl p-4 border border-[#252527]">
+                  <p className="text-[#C8FF00] text-xs font-display tracking-widest mb-2"
+                    style={{ fontFamily:"'Bebas Neue',sans-serif" }}>
+                    {new Date(date).toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})}
+                    {checkin.workout.focus ? ` · ${checkin.workout.focus}` : ''}
+                  </p>
+                  <p className="text-[#8A8A8E] text-sm leading-relaxed line-clamp-2">
+                    {checkin.workout.coachResponse}
+                  </p>
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {(checkin.workout.answers||[]).map((a,i) => (
+                      <span key={i} className="text-[10px] px-2 py-0.5 rounded-full bg-[#252527] text-[#8A8A8E] border border-[#3A3A3C]">
+                        {a}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )
+            ))}
+          </div>
+        </div>
+      )}
+
+      {allCheckins.length === 0 && (
+        <div className="px-5">
+          <div className="bg-[#1A1A1C] rounded-3xl p-8 border border-[#252527] flex flex-col items-center text-center">
+            <div className="text-5xl mb-4">⚡</div>
+            <p className="font-display text-2xl text-[#C8FF00] mb-2"
+              style={{ fontFamily:"'Bebas Neue',sans-serif" }}>NO CHECK-INS YET</p>
+            <p className="text-[#8A8A8E] text-sm leading-relaxed">
+              Complete a workout and your coach will check in with you automatically.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -3696,6 +3982,7 @@ function App() {
   const [nutritionGoals, setNutritionGoals] = useLocalStorage('forge_nutr_goals', { calories:2000, protein:150, carbs:200, fat:65, goalType:'maintain', bodyweight:80, goalWeight:'' });
   const [weightHistory,  setWeightHistory]  = useLocalStorage('forge_weight',     []);
   const [cardioLog,      setCardioLog]      = useLocalStorage('forge_cardio_log', {});
+  const [coachCheckins,  setCoachCheckins]  = useLocalStorage('forge_coach_checkins', {});
 
   const [activeTab,      setActiveTab]     = useState('home');
   const [activeWorkout,  setActiveWorkout] = useState(null);
@@ -3704,6 +3991,7 @@ function App() {
   const [generatingPlan, setGenerating]   = useState(false);
   const [showNutrGoals,  setShowNutrGoals] = useState(false);
   const [planError,      setPlanError]    = useState(null);
+  const [showCoachCheckin, setShowCoachCheckin] = useState(false);
 
   /* ── Nutrition actions ── */
   const handleAddFood = (date, entry) => {
@@ -3819,7 +4107,7 @@ function App() {
     }
     setWorkoutResult(null);
     setNewBadges([]);
-    setActiveTab('home');
+    setShowCoachCheckin(true);
   };
 
   const LogTab = () => (
@@ -3911,7 +4199,7 @@ function App() {
       case 'plan':     return <PlanScreen plan={plan} profile={profile}
                                 onRegenerate={() => handleGeneratePlan(profile)}
                                 onUpdatePlan={setPlan}/>;
-      case 'coach':    return <CoachScreen/>;
+      case 'coach':    return <CoachScreen coachCheckins={coachCheckins} profile={profile}/>;
       case 'log':      return <LogTab/>;
       case 'fuel':     return <FuelScreen
                                 nutritionLog={nutritionLog}
@@ -3942,6 +4230,35 @@ function App() {
           onClose={() => setActiveWorkout(null)}
           logs={logs}
           prs={prs}/>,
+        document.body
+      )}
+
+      {showCoachCheckin && createPortal(
+        <CoachCheckIn
+          profile={profile}
+          workoutResult={logs[logs.length - 1]}
+          nutritionLog={nutritionLog}
+          nutritionGoals={nutritionGoals}
+          onDone={(data) => {
+            if (data?.coachResponse) {
+              const today = new Date().toISOString().split('T')[0];
+              setCoachCheckins(prev => ({
+                ...prev,
+                [today]: {
+                  ...prev[today],
+                  workout: {
+                    focus: data.focus,
+                    answers: data.answers,
+                    coachResponse: data.coachResponse,
+                    timestamp: new Date().toISOString()
+                  }
+                }
+              }));
+            }
+            setShowCoachCheckin(false);
+            setActiveTab('home');
+          }}
+        />,
         document.body
       )}
 
