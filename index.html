@@ -1266,7 +1266,7 @@ function CoachScreen({ coachCheckins, profile }) {
       )}
 
       {allCheckins.length === 0 && (
-        <div className="px-5">
+        <div className="px-5 mb-4">
           <div className="bg-[#1A1A1C] rounded-3xl p-8 border border-[#252527] flex flex-col items-center text-center">
             <div className="text-5xl mb-4">⚡</div>
             <p className="font-display text-2xl text-[#C8FF00] mb-2"
@@ -1277,6 +1277,275 @@ function CoachScreen({ coachCheckins, profile }) {
           </div>
         </div>
       )}
+
+      <BodyMap profile={profile}/>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   BODY MAP
+═══════════════════════════════════════════════ */
+function BodyMap({ profile }) {
+  const [view, setView] = useState('front');
+  const [soreness, setSoreness] = useState({});
+  const [coachAdvice, setCoachAdvice] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const toggleSoreness = (muscleId) => {
+    setSoreness(prev => {
+      const current = prev[muscleId] || 0;
+      const next = (current + 1) % 3;
+      if (next === 0) {
+        const updated = { ...prev };
+        delete updated[muscleId];
+        return updated;
+      }
+      return { ...prev, [muscleId]: next };
+    });
+  };
+
+  const getFill = (muscleId) => {
+    const level = soreness[muscleId] || 0;
+    if (level === 1) return '#FF9F0A';
+    if (level === 2) return '#FF453A';
+    return '#2A2A2C';
+  };
+
+  const selectedMuscles = Object.entries(soreness).map(([id, level]) => ({
+    name: id.replace(/-/g,' ').replace(/\b\w/g, c => c.toUpperCase()),
+    level: level === 1 ? 'mild' : 'significant',
+    id,
+  }));
+
+  const handleGetAdvice = async () => {
+    if (!profile.apiKey) {
+      setError('Add your API key in Profile to get coach advice.');
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    setCoachAdvice(null);
+    try {
+      const muscleList = selectedMuscles
+        .map(m => `${m.name} (${m.level})`)
+        .join(', ');
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': profile.apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 300,
+          system: 'You are FORGE Coach, a sports medicine and rehabilitation expert. Give practical, safe, actionable advice. Keep response under 120 words. Structure your response in exactly 3 short paragraphs labelled: LIKELY CAUSE: / REHAB PROTOCOL: / TRAIN OR REST:',
+          messages: [{
+            role: 'user',
+            content: `Athlete: ${profile.name}, ${profile.fitnessLevel}, Goal: ${profile.goal}.
+Sore or tight areas: ${muscleList}.
+Provide: 1) Likely cause 2) 2-3 specific mobility or rehab exercises with sets and reps 3) Whether to train or rest today.`
+          }]
+        })
+      });
+      const data = await res.json();
+      setCoachAdvice(data?.content?.[0]?.text || null);
+    } catch(e) {
+      setError('Could not reach coach. Check your API key.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const FRONT_MUSCLES = [
+    { id:'left-pec',        label:'Left Pec',        shape:'ellipse', cx:72,  cy:108, rx:16, ry:13 },
+    { id:'right-pec',       label:'Right Pec',       shape:'ellipse', cx:108, cy:108, rx:16, ry:13 },
+    { id:'left-shoulder',   label:'Left Shoulder',   shape:'ellipse', cx:52,  cy:95,  rx:11, ry:10 },
+    { id:'right-shoulder',  label:'Right Shoulder',  shape:'ellipse', cx:128, cy:95,  rx:11, ry:10 },
+    { id:'left-bicep',      label:'Left Bicep',      shape:'rect',    x:38,   y:108,  w:18,  h:30, r:8 },
+    { id:'right-bicep',     label:'Right Bicep',     shape:'rect',    x:124,  y:108,  w:18,  h:30, r:8 },
+    { id:'left-forearm',    label:'Left Forearm',    shape:'rect',    x:40,   y:141,  w:14,  h:26, r:6 },
+    { id:'right-forearm',   label:'Right Forearm',   shape:'rect',    x:126,  y:141,  w:14,  h:26, r:6 },
+    { id:'upper-abs',       label:'Upper Abs',       shape:'rect',    x:78,   y:124,  w:24,  h:16, r:4 },
+    { id:'lower-abs',       label:'Lower Abs',       shape:'rect',    x:78,   y:143,  w:24,  h:16, r:4 },
+    { id:'left-quad',       label:'Left Quad',       shape:'rect',    x:68,   y:200,  w:22,  h:52, r:9 },
+    { id:'right-quad',      label:'Right Quad',      shape:'rect',    x:94,   y:200,  w:22,  h:52, r:9 },
+    { id:'left-shin',       label:'Left Shin',       shape:'rect',    x:70,   y:256,  w:18,  h:38, r:6 },
+    { id:'right-shin',      label:'Right Shin',      shape:'rect',    x:96,   y:256,  w:18,  h:38, r:6 },
+    { id:'left-hip-flexor', label:'Left Hip Flexor', shape:'ellipse', cx:76,  cy:195, rx:10, ry:7  },
+    { id:'right-hip-flexor',label:'Right Hip Flexor',shape:'ellipse', cx:104, cy:195, rx:10, ry:7  },
+    { id:'neck',            label:'Neck',            shape:'rect',    x:84,   y:70,   w:12,  h:14, r:4 },
+  ];
+
+  const BACK_MUSCLES = [
+    { id:'left-trap',       label:'Left Trap',       shape:'ellipse', cx:76,  cy:95,  rx:14, ry:11 },
+    { id:'right-trap',      label:'Right Trap',      shape:'ellipse', cx:104, cy:95,  rx:14, ry:11 },
+    { id:'left-rear-delt',  label:'Left Rear Delt',  shape:'ellipse', cx:54,  cy:97,  rx:11, ry:9  },
+    { id:'right-rear-delt', label:'Right Rear Delt', shape:'ellipse', cx:126, cy:97,  rx:11, ry:9  },
+    { id:'left-lat',        label:'Left Lat',        shape:'rect',    x:54,   y:108,  w:22,  h:44, r:8 },
+    { id:'right-lat',       label:'Right Lat',       shape:'rect',    x:104,  y:108,  w:22,  h:44, r:8 },
+    { id:'lower-back',      label:'Lower Back',      shape:'rect',    x:76,   y:148,  w:28,  h:22, r:6 },
+    { id:'left-glute',      label:'Left Glute',      shape:'ellipse', cx:78,  cy:192, rx:16, ry:14 },
+    { id:'right-glute',     label:'Right Glute',     shape:'ellipse', cx:102, cy:192, rx:16, ry:14 },
+    { id:'left-hamstring',  label:'Left Hamstring',  shape:'rect',    x:66,   y:206,  w:22,  h:48, r:9 },
+    { id:'right-hamstring', label:'Right Hamstring', shape:'rect',    x:92,   y:206,  w:22,  h:48, r:9 },
+    { id:'left-calf',       label:'Left Calf',       shape:'rect',    x:68,   y:258,  w:18,  h:36, r:7 },
+    { id:'right-calf',      label:'Right Calf',      shape:'rect',    x:94,   y:258,  w:18,  h:36, r:7 },
+    { id:'left-rhomboid',   label:'Left Rhomboid',   shape:'rect',    x:72,   y:110,  w:14,  h:18, r:4 },
+    { id:'right-rhomboid',  label:'Right Rhomboid',  shape:'rect',    x:94,   y:110,  w:14,  h:18, r:4 },
+  ];
+
+  const muscles = view === 'front' ? FRONT_MUSCLES : BACK_MUSCLES;
+
+  const renderShape = (m) => {
+    const fill = getFill(m.id);
+    const style = { cursor:'pointer', transition:'fill 0.2s', opacity: soreness[m.id] ? 1 : 0.7 };
+    const onClick = () => toggleSoreness(m.id);
+    if (m.shape === 'ellipse') {
+      return <ellipse key={m.id} cx={m.cx} cy={m.cy} rx={m.rx} ry={m.ry}
+        fill={fill} style={style} onClick={onClick}/>;
+    }
+    return <rect key={m.id} x={m.x} y={m.y} width={m.w} height={m.h} rx={m.r}
+      fill={fill} style={style} onClick={onClick}/>;
+  };
+
+  return (
+    <div className="px-5 mb-6">
+      <p className="text-[#8A8A8E] text-xs uppercase tracking-widest mb-3">Body Map</p>
+      <div className="bg-[#1A1A1C] rounded-3xl border border-[#252527] overflow-hidden">
+
+        {/* Front / Back toggle */}
+        <div className="flex items-center justify-between px-5 pt-5 pb-3">
+          <p className="font-display text-lg text-[#F5F5F0]"
+            style={{ fontFamily:"'Bebas Neue',sans-serif" }}>WHERE ARE YOU SORE?</p>
+          <div className="flex gap-2 bg-[#252527] p-1 rounded-xl">
+            <button onClick={() => setView('front')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all
+                ${view==='front' ? 'bg-[#C8FF00] text-[#0D0D0F]' : 'text-[#8A8A8E]'}`}>
+              FRONT
+            </button>
+            <button onClick={() => setView('back')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all
+                ${view==='back' ? 'bg-[#C8FF00] text-[#0D0D0F]' : 'text-[#8A8A8E]'}`}>
+              BACK
+            </button>
+          </div>
+        </div>
+
+        {/* Tap instruction */}
+        <p className="text-[#8A8A8E] text-xs text-center mb-2">
+          Tap once = mild · Tap twice = significant · Tap again = clear
+        </p>
+
+        {/* SVG Body */}
+        <div className="flex justify-center py-2 px-4"
+          style={{ background:'#0D0D0F', margin:'0 16px', borderRadius:12 }}>
+          <svg viewBox="0 0 180 310" width="160" height="280"
+            xmlns="http://www.w3.org/2000/svg" style={{ display:'block' }}>
+            {/* Body outline */}
+            <ellipse cx="90" cy="38" rx="20" ry="22" fill="#3A3A3C"/>
+            <rect x="70" y="58" width="12" height="14" rx="4" fill="#3A3A3C"/>
+            <rect x="58" y="72" width="64" height="82" rx="10" fill="#252527"/>
+            <rect x="36" y="76" width="22" height="10" rx="5" fill="#252527"/>
+            <rect x="122" y="76" width="22" height="10" rx="5" fill="#252527"/>
+            <rect x="60" y="154" width="60" height="24" rx="8" fill="#252527"/>
+            <rect x="60" y="296" width="22" height="10" rx="5" fill="#3A3A3C"/>
+            <rect x="98" y="296" width="22" height="10" rx="5" fill="#3A3A3C"/>
+            {muscles.map(renderShape)}
+          </svg>
+        </div>
+
+        {/* Legend */}
+        <div className="flex gap-4 justify-center py-3">
+          {[
+            { color:'#2A2A2C', border:'1px solid #3A3A3C', label:'None' },
+            { color:'#FF9F0A', label:'Mild' },
+            { color:'#FF453A', label:'Significant' },
+          ].map(l => (
+            <div key={l.label} className="flex items-center gap-1.5">
+              <div style={{ width:10, height:10, borderRadius:2,
+                background:l.color, border:l.border||'none' }}/>
+              <span className="text-[#8A8A8E] text-xs">{l.label}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Selected muscles list */}
+        {selectedMuscles.length > 0 && (
+          <div className="px-5 pb-3 flex flex-wrap gap-2">
+            {selectedMuscles.map(m => (
+              <span key={m.id}
+                className="text-xs px-3 py-1.5 rounded-full font-semibold"
+                style={{
+                  background: m.level==='mild' ? 'rgba(255,159,10,0.15)' : 'rgba(255,69,58,0.15)',
+                  color: m.level==='mild' ? '#FF9F0A' : '#FF453A',
+                }}>
+                {m.name} · {m.level}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Get advice button */}
+        <div className="px-5 pb-5">
+          <button
+            onClick={handleGetAdvice}
+            disabled={selectedMuscles.length === 0 || loading}
+            className={`w-full py-4 rounded-2xl font-display text-xl tracking-wider transition-all active:scale-95
+              ${selectedMuscles.length > 0 && !loading
+                ? 'bg-[#C8FF00] text-[#0D0D0F]'
+                : 'bg-[#252527] text-[#8A8A8E]'}`}
+            style={{ fontFamily:"'Bebas Neue',sans-serif" }}>
+            {loading ? 'GETTING ADVICE...' : '⚡ GET COACH ADVICE'}
+          </button>
+        </div>
+
+        {/* Loading dots */}
+        {loading && (
+          <div className="px-5 pb-5 flex gap-2 justify-center">
+            {[0,1,2].map(i => (
+              <div key={i} className="w-2 h-2 rounded-full bg-[#C8FF00]"
+                style={{ animation:`dotPulse 1.2s ${i*0.2}s ease-in-out infinite`, opacity:0.4 }}/>
+            ))}
+          </div>
+        )}
+
+        {/* Error */}
+        {error && (
+          <div className="mx-5 mb-5 bg-[rgba(255,69,58,0.08)] rounded-2xl p-4 border border-[rgba(255,69,58,0.2)]">
+            <p className="text-[#FF453A] text-sm">{error}</p>
+          </div>
+        )}
+
+        {/* Coach advice */}
+        {coachAdvice && (
+          <div className="mx-5 mb-5">
+            {['LIKELY CAUSE','REHAB PROTOCOL','TRAIN OR REST'].map((section, i) => {
+              const regex = new RegExp(`${section}:([\\s\\S]*?)(?=LIKELY CAUSE:|REHAB PROTOCOL:|TRAIN OR REST:|$)`, 'i');
+              const match = coachAdvice.match(regex);
+              const content = match ? match[1].trim() : null;
+              if (!content) return null;
+              return (
+                <div key={i} className="bg-[#252527] rounded-2xl p-4 border border-[#3A3A3C] mb-2">
+                  <p className="text-[#C8FF00] text-[10px] font-display tracking-widest mb-1.5"
+                    style={{ fontFamily:"'Bebas Neue',sans-serif" }}>{section}</p>
+                  <p className="text-[#F5F5F0] text-sm leading-relaxed">{content}</p>
+                </div>
+              );
+            })}
+            {!coachAdvice.match(/LIKELY CAUSE:/i) && (
+              <div className="bg-[#252527] rounded-2xl p-4 border border-[#3A3A3C]">
+                <p className="text-[#C8FF00] text-[10px] font-display tracking-widest mb-1.5"
+                  style={{ fontFamily:"'Bebas Neue',sans-serif" }}>COACH ADVICE</p>
+                <p className="text-[#F5F5F0] text-sm leading-relaxed">{coachAdvice}</p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -3983,6 +4252,7 @@ function App() {
   const [weightHistory,  setWeightHistory]  = useLocalStorage('forge_weight',     []);
   const [cardioLog,      setCardioLog]      = useLocalStorage('forge_cardio_log', {});
   const [coachCheckins,  setCoachCheckins]  = useLocalStorage('forge_coach_checkins', {});
+  const [sorenessLog,    setSorenessLog]    = useLocalStorage('forge_soreness_log', {});
 
   const [activeTab,      setActiveTab]     = useState('home');
   const [activeWorkout,  setActiveWorkout] = useState(null);
@@ -4199,7 +4469,7 @@ function App() {
       case 'plan':     return <PlanScreen plan={plan} profile={profile}
                                 onRegenerate={() => handleGeneratePlan(profile)}
                                 onUpdatePlan={setPlan}/>;
-      case 'coach':    return <CoachScreen coachCheckins={coachCheckins} profile={profile}/>;
+      case 'coach':    return <CoachScreen coachCheckins={coachCheckins} profile={profile} sorenessLog={sorenessLog}/>;
       case 'log':      return <LogTab/>;
       case 'fuel':     return <FuelScreen
                                 nutritionLog={nutritionLog}
