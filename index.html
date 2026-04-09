@@ -976,12 +976,33 @@ function BadgeToast({ badge, onDismiss }) {
 }
 
 /* ═══════════════════════════════════════════════
+   COACH SCREEN
+═══════════════════════════════════════════════ */
+function CoachScreen() {
+  return (
+    <div className="flex flex-col items-center justify-center h-full gap-4 px-6">
+      <Activity size={48} color="#C8FF00" strokeWidth={1.5}/>
+      <h1 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:32, color:'#F5F5F7', letterSpacing:2 }}>
+        AI COACH
+      </h1>
+      <p style={{ color:'#8A8A8E', textAlign:'center', fontSize:14, lineHeight:1.6 }}>
+        Your personalised AI coach is coming soon.{'\n'}Post-workout check-ins, recovery advice, and daily guidance — all powered by Claude.
+      </p>
+      <div style={{ marginTop:8, padding:'10px 24px', borderRadius:12, background:'#1A1A1C', border:'1px solid #2A2A2C' }}>
+        <span style={{ fontFamily:"'Bebas Neue',sans-serif", color:'#C8FF00', letterSpacing:2, fontSize:16 }}>COMING SOON</span>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
    BOTTOM NAV
 ═══════════════════════════════════════════════ */
 function BottomNav({ active, onTab }) {
   const tabs = [
     { id:'home',     icon:Home,          label:'HOME'  },
     { id:'plan',     icon:ClipboardList, label:'PLAN'  },
+    { id:'coach',    icon:Activity,      label:'COACH' },
     { id:'log',      icon:Plus,          label:'LOG',  cta:true },
     { id:'fuel',     icon:Flame,         label:'FUEL'  },
     { id:'progress', icon:BarChart2,     label:'STATS' },
@@ -1004,7 +1025,7 @@ function BottomNav({ active, onTab }) {
               </div>
             ) : (
               <>
-                <tab.icon size={20}
+                <tab.icon size={18}
                   color={active === tab.id ? '#C8FF00' : '#8A8A8E'}
                   strokeWidth={active === tab.id ? 2.5 : 1.5}/>
                 <span className="font-display text-[9px] tracking-wider"
@@ -3890,6 +3911,7 @@ function App() {
       case 'plan':     return <PlanScreen plan={plan} profile={profile}
                                 onRegenerate={() => handleGeneratePlan(profile)}
                                 onUpdatePlan={setPlan}/>;
+      case 'coach':    return <CoachScreen/>;
       case 'log':      return <LogTab/>;
       case 'fuel':     return <FuelScreen
                                 nutritionLog={nutritionLog}
