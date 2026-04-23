@@ -1195,86 +1195,650 @@ Do not use bullet points. Write as a coach speaking directly to the athlete.`;
 }
 
 /* ═══════════════════════════════════════════════
-   COACH SCREEN
+   NIGHTLY CHECK-IN
 ═══════════════════════════════════════════════ */
-function CoachScreen({ coachCheckins, profile }) {
+function NightlyCheckin({ profile, logs, nutritionLog, nutritionGoals,
+  weightHistory, cardioLog, coachJournal, onSave, onClose }) {
+
+  const NIGHTLY_ROUNDS = [
+    {
+      id: 'energy',
+      question: (name) => `How are your energy levels today, ${name}?`,
+      options: [
+        { emoji:'⚡', label:'High energy — feeling great' },
+        { emoji:'😊', label:'Good — solid day' },
+        { emoji:'😐', label:'Average — manageable' },
+        { emoji:'😴', label:'Low — quite tired' },
+        { emoji:'💀', label:'Exhausted — running on empty' },
+      ]
+    },
+    {
+      id: 'sleep',
+      question: () => `How did you sleep last night?`,
+      options: [
+        { emoji:'😴', label:'8+ hours — slept great' },
+        { emoji:'🛌', label:'6-7 hours — decent' },
+        { emoji:'😤', label:'5-6 hours — not enough' },
+        { emoji:'😩', label:'Under 5 hours — terrible' },
+        { emoji:'🔄', label:'Broken sleep — kept waking up' },
+      ]
+    },
+    {
+      id: 'stress',
+      question: () => `How was your stress and headspace today?`,
+      options: [
+        { emoji:'😌', label:'Calm — great headspace' },
+        { emoji:'🙂', label:'Fine — nothing major' },
+        { emoji:'😬', label:'A bit stressed' },
+        { emoji:'😰', label:'High stress — tough day' },
+        { emoji:'🆘', label:'Overwhelmed — really struggling' },
+      ]
+    },
+    {
+      id: 'nutrition_feel',
+      question: () => `How did your nutrition feel today?`,
+      options: [
+        { emoji:'✅', label:'On point — ate well' },
+        { emoji:'🍕', label:'Slightly off — had some slip-ups' },
+        { emoji:'📉', label:'Under-ate — not enough fuel' },
+        { emoji:'😅', label:'Overate — went overboard' },
+        { emoji:'🤷', label:'Did not track today' },
+      ]
+    },
+    {
+      id: 'soreness',
+      question: () => `Any soreness or tightness from training?`,
+      options: [
+        { emoji:'✅', label:'Feeling fresh — no issues' },
+        { emoji:'💪', label:'Normal DOMS — good sore' },
+        { emoji:'😬', label:'Quite sore in specific areas' },
+        { emoji:'🔴', label:'Something feels off — concerned' },
+        { emoji:'🏖️', label:'Rest day — no training today' },
+      ]
+    },
+    {
+      id: 'motivation',
+      question: () => `How is your motivation and drive right now?`,
+      options: [
+        { emoji:'🔥', label:'Fired up — bring on tomorrow' },
+        { emoji:'😊', label:'Good — staying consistent' },
+        { emoji:'😐', label:'Neutral — going through the motions' },
+        { emoji:'😞', label:'Low — struggling to stay consistent' },
+        { emoji:'🆘', label:'Very low — feeling like quitting' },
+      ]
+    },
+  ];
+
+  const [round, setRound] = useState(0);
+  const [answers, setAnswers] = useState({});
+  const [visible, setVisible] = useState(true);
+  const [coachResponse, setCoachResponse] = useState(null);
+  const [loading, setLoading] = useState(false);
+
   const today = new Date().toISOString().split('T')[0];
-  const todayCheckin = coachCheckins[today];
-  const allCheckins = Object.entries(coachCheckins)
-    .sort((a,b) => b[0].localeCompare(a[0]))
-    .slice(0, 5);
+  const todayLogs = logs.filter(l => l.date === today);
+  const todayNutr = nutritionLog[today] || { meals: [] };
+  const todayCardio = cardioLog[today] || [];
+  const totalCal = todayNutr.meals.reduce((s,m) => s+(m.macros?.cal||0), 0);
+  const totalPro = todayNutr.meals.reduce((s,m) => s+(m.macros?.pro||0), 0);
+  const calorieGoal = nutritionGoals?.calories || 2000;
+  const proteinGoal = nutritionGoals?.protein || 150;
+  const latestWeight = weightHistory.length > 0
+    ? weightHistory[weightHistory.length-1].weight : null;
+
+  const handleSelect = async (option) => {
+    const currentQ = NIGHTLY_ROUNDS[round];
+    const newAnswers = { ...answers, [currentQ.id]: option.label };
+
+    if (round < NIGHTLY_ROUNDS.length - 1) {
+      setAnswers(newAnswers);
+      setVisible(false);
+      setTimeout(() => { setRound(r => r + 1); setVisible(true); }, 300);
+    } else {
+      setAnswers(newAnswers);
+      setLoading(true);
+      try {
+        const workoutSummary = todayLogs.length > 0
+          ? todayLogs.map(l =>
+            `${l.focus} — ${l.duration}min, ${Math.round(l.totalVolume||0)}kg volume`
+            ).join(', ')
+          : 'No workout today';
+        const cardioSummary = todayCardio.length > 0
+          ? todayCardio.map(c => `${c.name} ${c.duration}min`).join(', ')
+          : 'No cardio';
+
+        const journalEntries = Object.entries(coachJournal)
+          .sort((a,b) => b[0].localeCompare(a[0]))
+          .slice(0, 5)
+          .map(([date, entry]) =>
+            `${date}: energy=${entry.nightly?.answers?.energy||'?'}, sleep=${entry.nightly?.answers?.sleep||'?'}, motivation=${entry.nightly?.answers?.motivation||'?'}`
+          ).join('\n');
+
+        const prompt =
+`ATHLETE PROFILE:
+Name: ${profile.name}
+Level: ${profile.fitnessLevel}
+Goal: ${profile.goal}
+Current bodyweight: ${latestWeight ? latestWeight+'kg' : 'not logged'}
+
+TODAY'S DATA:
+Date: ${today}
+Workout: ${workoutSummary}
+Cardio: ${cardioSummary}
+Calories: ${totalCal} of ${calorieGoal} goal
+Protein: ${totalPro}g of ${proteinGoal}g goal
+
+TONIGHT'S CHECK-IN ANSWERS:
+Energy: ${newAnswers.energy}
+Sleep last night: ${newAnswers.sleep}
+Stress/headspace: ${newAnswers.stress}
+Nutrition feel: ${newAnswers.nutrition_feel}
+Soreness: ${newAnswers.soreness}
+Motivation: ${newAnswers.motivation}
+
+RECENT JOURNAL (last 5 days):
+${journalEntries || 'First check-in'}
+
+Write a personalised end-of-day coach message covering:
+1. One specific observation about today's data (nutrition gap, great training effort, sleep concern etc.) — be specific to numbers
+2. One recovery or preparation tip for tomorrow based on their soreness and energy answers
+3. One motivational note tailored to their current motivation level
+4. If motivation is low or they are struggling, acknowledge it genuinely — do not be fake or overly positive
+5. End with what to focus on tomorrow (one specific thing)
+
+Keep it to 4-5 sentences total. Speak directly to them.
+Be like a good personal trainer who knows them well.
+Do NOT use bullet points. Write in flowing sentences.`;
+
+        const res = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': profile.apiKey || '',
+            'anthropic-version': '2023-06-01',
+            'anthropic-dangerous-direct-browser-access': 'true',
+          },
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-20250514',
+            max_tokens: 250,
+            system: `You are FORGE Coach — a personal trainer who knows this athlete well. You track everything about them: their workouts, nutrition, sleep, stress, and motivation. You speak directly, honestly, and caringly. You are not a chatbot — you are their coach. Never use bullet points. Reference their actual data. Be human.`,
+            messages: [{ role: 'user', content: prompt }]
+          })
+        });
+        const data = await res.json();
+        const text = data?.content?.[0]?.text || null;
+        setCoachResponse(text);
+
+        const journalEntry = {
+          answers: newAnswers,
+          coachResponse: text,
+          data: {
+            workout: workoutSummary,
+            calories: totalCal,
+            protein: totalPro,
+            weight: latestWeight,
+          },
+          timestamp: new Date().toISOString(),
+        };
+        onSave(today, journalEntry);
+      } catch(e) {
+        setCoachResponse("Couldn't reach your coach right now. Check your API key in Profile.");
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  const currentRound = NIGHTLY_ROUNDS[round];
+  const allAnswered = coachResponse !== null;
 
   return (
-    <div className="h-full overflow-y-auto pb-28">
-      <div className="px-5 pt-14 pb-4">
-        <div className="flex items-center gap-3 mb-1">
-          <div className="w-10 h-10 rounded-full bg-[#C8FF00] flex items-center justify-center flex-shrink-0">
-            <Zap size={20} color="#0D0D0F"/>
-          </div>
-          <h1 className="font-display text-5xl text-[#F5F5F0]"
-            style={{ fontFamily:"'Bebas Neue',sans-serif" }}>COACH</h1>
+    <div style={{
+      position:'fixed', top:0, left:'50%', transform:'translateX(-50%)',
+      width:'100%', maxWidth:430, height:'100%', zIndex:9999,
+      background:'#0D0D0F', display:'flex', flexDirection:'column',
+      overflowY:'auto'
+    }}>
+      {/* Header */}
+      <div style={{ padding:'56px 20px 16px', display:'flex', alignItems:'center', gap:12 }}>
+        <div style={{ width:44, height:44, borderRadius:'50%', background:'#C8FF00',
+          display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+          <span style={{ fontSize:20 }}>🌙</span>
         </div>
-        <p className="text-[#8A8A8E] text-sm">Your AI training coach</p>
+        <div>
+          <p style={{ color:'#8A8A8E', fontSize:10, letterSpacing:2,
+            fontFamily:"'Bebas Neue',sans-serif", margin:0 }}>NIGHTLY CHECK-IN</p>
+          <p style={{ color:'#F5F5F0', fontSize:20,
+            fontFamily:"'Bebas Neue',sans-serif", margin:0, letterSpacing:1 }}>
+            END OF DAY DEBRIEF
+          </p>
+        </div>
+        <button onClick={onClose}
+          style={{ marginLeft:'auto', background:'#1A1A1C', border:'1px solid #252527',
+            borderRadius:10, width:36, height:36, display:'flex', alignItems:'center',
+            justifyContent:'center', cursor:'pointer', flexShrink:0 }}>
+          <span style={{ color:'#8A8A8E', fontSize:16 }}>✕</span>
+        </button>
       </div>
 
-      {/* Today's workout check-in status */}
-      <div className="px-5 mb-4">
-        <p className="text-[#8A8A8E] text-xs uppercase tracking-widest mb-3">Today's Check-in</p>
-        {todayCheckin?.workout ? (
-          <div className="bg-[rgba(200,255,0,0.06)] rounded-2xl p-5 border border-[rgba(200,255,0,0.15)]">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-[#C8FF00] font-display text-sm tracking-widest"
-                style={{ fontFamily:"'Bebas Neue',sans-serif" }}>✓ WORKOUT CHECK-IN DONE</span>
-            </div>
-            <p className="text-[#F5F5F0] text-sm leading-relaxed">{todayCheckin.workout.coachResponse}</p>
+      <div style={{ flex:1, padding:'0 20px 20px', display:'flex', flexDirection:'column', justifyContent:'center' }}>
+        {(loading || allAnswered) ? (
+          <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+            {loading && (
+              <div style={{ background:'#1A1A1C', borderRadius:20, padding:24,
+                border:'1px solid #252527' }}>
+                <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:12 }}>
+                  <div style={{ width:32, height:32, borderRadius:'50%', background:'#C8FF00',
+                    display:'flex', alignItems:'center', justifyContent:'center' }}>
+                    <span style={{ fontSize:14 }}>⚡</span>
+                  </div>
+                  <p style={{ color:'#8A8A8E', fontSize:13, margin:0 }}>
+                    Your coach is reviewing your day...
+                  </p>
+                </div>
+                <div style={{ display:'flex', gap:8 }}>
+                  {[0,1,2].map(i => (
+                    <div key={i} style={{ width:8, height:8, borderRadius:'50%',
+                      background:'#C8FF00',
+                      animation:`dotPulse 1.2s ${i*0.2}s ease-in-out infinite`,
+                      opacity:0.4 }}/>
+                  ))}
+                </div>
+              </div>
+            )}
+            {coachResponse && (
+              <>
+                <div style={{ background:'rgba(200,255,0,0.06)', borderRadius:20, padding:20,
+                  border:'1px solid rgba(200,255,0,0.15)' }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:12 }}>
+                    <div style={{ width:28, height:28, borderRadius:'50%', background:'#C8FF00',
+                      display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                      <span style={{ fontSize:12 }}>⚡</span>
+                    </div>
+                    <p style={{ color:'#C8FF00', fontSize:10,
+                      fontFamily:"'Bebas Neue',sans-serif",
+                      letterSpacing:2, margin:0 }}>YOUR COACH</p>
+                  </div>
+                  <p style={{ color:'#F5F5F0', fontSize:15, lineHeight:1.7, margin:0 }}>
+                    {coachResponse}
+                  </p>
+                </div>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8 }}>
+                  {[
+                    { label:'CALORIES', value:`${totalCal}`, sub:`of ${calorieGoal}` },
+                    { label:'PROTEIN',  value:`${totalPro}g`, sub:`of ${proteinGoal}g` },
+                    { label:'SESSIONS', value:`${todayLogs.length}`, sub:'today' },
+                  ].map(s => (
+                    <div key={s.label} style={{ background:'#1A1A1C', borderRadius:14,
+                      padding:'12px 10px', textAlign:'center', border:'1px solid #252527' }}>
+                      <p style={{ color:'#8A8A8E', fontSize:9, letterSpacing:1.5,
+                        fontFamily:"'Bebas Neue',sans-serif", margin:'0 0 4px' }}>{s.label}</p>
+                      <p style={{ color:'#C8FF00', fontSize:20,
+                        fontFamily:"'Bebas Neue',sans-serif", margin:'0 0 2px' }}>{s.value}</p>
+                      <p style={{ color:'#8A8A8E', fontSize:10, margin:0 }}>{s.sub}</p>
+                    </div>
+                  ))}
+                </div>
+                <button onClick={onClose}
+                  style={{ width:'100%', padding:16, borderRadius:16,
+                    background:'#C8FF00', color:'#0D0D0F', border:'none',
+                    fontFamily:"'Bebas Neue',sans-serif", fontSize:20,
+                    letterSpacing:2, cursor:'pointer' }}>
+                  GOODNIGHT 🌙
+                </button>
+              </>
+            )}
           </div>
         ) : (
-          <div className="bg-[#1A1A1C] rounded-2xl p-5 border border-[#252527]">
-            <p className="text-[#8A8A8E] text-sm">Complete a workout to trigger your post-workout coach check-in.</p>
+          <div style={{ opacity: visible ? 1 : 0, transition:'opacity 0.3s ease' }}>
+            {/* Progress dots */}
+            <div style={{ display:'flex', gap:6, justifyContent:'center', marginBottom:32 }}>
+              {NIGHTLY_ROUNDS.map((_,i) => (
+                <div key={i} style={{
+                  height:4, borderRadius:2, transition:'all 0.3s',
+                  width: i === round ? 24 : 8,
+                  background: i <= round ? '#C8FF00' : '#252527'
+                }}/>
+              ))}
+            </div>
+            {/* Coach message bubble */}
+            <div style={{ background:'#1A1A1C', borderRadius:'20px 20px 20px 4px',
+              padding:20, border:'1px solid #252527', marginBottom:20 }}>
+              <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:10 }}>
+                <div style={{ width:26, height:26, borderRadius:'50%', background:'#C8FF00',
+                  display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                  <span style={{ fontSize:11 }}>⚡</span>
+                </div>
+                <p style={{ color:'#C8FF00', fontSize:10,
+                  fontFamily:"'Bebas Neue',sans-serif",
+                  letterSpacing:2, margin:0 }}>FORGE COACH</p>
+              </div>
+              <p style={{ color:'#F5F5F0', fontSize:18, fontWeight:700, margin:0, lineHeight:1.4 }}>
+                {currentRound.question(profile.name || 'Athlete')}
+              </p>
+            </div>
+            {/* Answer options */}
+            <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+              {currentRound.options.map((opt, i) => (
+                <button key={i} onClick={() => handleSelect(opt)}
+                  style={{
+                    display:'flex', alignItems:'center', gap:14,
+                    padding:'14px 18px', borderRadius:16,
+                    background:'#1A1A1C', border:'1px solid #252527',
+                    cursor:'pointer', textAlign:'left', width:'100%',
+                  }}>
+                  <span style={{ fontSize:22, flexShrink:0 }}>{opt.emoji}</span>
+                  <span style={{ color:'#F5F5F0', fontSize:15, fontWeight:600 }}>
+                    {opt.label}
+                  </span>
+                </button>
+              ))}
+            </div>
           </div>
         )}
       </div>
+    </div>
+  );
+}
 
-      {/* Recent coach messages */}
-      {allCheckins.length > 0 && (
-        <div className="px-5 mb-4">
-          <p className="text-[#8A8A8E] text-xs uppercase tracking-widest mb-3">Recent Coach Messages</p>
-          <div className="space-y-3">
-            {allCheckins.map(([date, checkin]) => (
-              checkin.workout && (
-                <div key={date} className="bg-[#1A1A1C] rounded-2xl p-4 border border-[#252527]">
-                  <p className="text-[#C8FF00] text-xs font-display tracking-widest mb-2"
-                    style={{ fontFamily:"'Bebas Neue',sans-serif" }}>
-                    {new Date(date).toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})}
-                    {checkin.workout.focus ? ` · ${checkin.workout.focus}` : ''}
-                  </p>
-                  <p className="text-[#8A8A8E] text-sm leading-relaxed line-clamp-2">
-                    {checkin.workout.coachResponse}
-                  </p>
-                  <div className="flex flex-wrap gap-1.5 mt-2">
-                    {(checkin.workout.answers||[]).map((a,i) => (
-                      <span key={i} className="text-[10px] px-2 py-0.5 rounded-full bg-[#252527] text-[#8A8A8E] border border-[#3A3A3C]">
-                        {a}
-                      </span>
-                    ))}
+/* ═══════════════════════════════════════════════
+   FOLLOW-UP SORENESS CARD
+═══════════════════════════════════════════════ */
+function FollowUpCard({ profile, yesterdayEntry, coachJournal, onSave, onDismiss }) {
+  const [answer, setAnswer] = useState(null);
+  const [coachNote, setCoachNote] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const options = [
+    { emoji:'✅', label:'Much better — sorted itself out' },
+    { emoji:'😊', label:'A bit better — improving' },
+    { emoji:'😐', label:'About the same' },
+    { emoji:'😬', label:'Worse than yesterday' },
+    { emoji:'🔴', label:'Significantly worse — concerned' },
+  ];
+
+  const handleAnswer = async (opt) => {
+    setAnswer(opt.label);
+    setLoading(true);
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': profile.apiKey || '',
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 100,
+          system: 'You are FORGE Coach. Give a brief 1-2 sentence follow-up response based on how the athlete feels today compared to yesterday. Be direct and practical.',
+          messages: [{
+            role: 'user',
+            content: `${profile.name} reported soreness yesterday: "${yesterdayEntry?.answers?.soreness}". Today they say: "${opt.label}". Give a brief follow-up coaching note.`
+          }]
+        })
+      });
+      const data = await res.json();
+      const note = data?.content?.[0]?.text || null;
+      setCoachNote(note);
+      const todayISO = new Date().toISOString().split('T')[0];
+      onSave(todayISO, { followUp: { answer: opt.label, coachNote: note } });
+    } catch(e) {
+      setCoachNote('Keep listening to your body today.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div style={{ margin:'0 20px 16px', background:'rgba(200,255,0,0.05)',
+      borderRadius:20, padding:20, border:'1px solid rgba(200,255,0,0.15)' }}>
+      <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:12 }}>
+        <span style={{ fontSize:16 }}>⚡</span>
+        <p style={{ color:'#C8FF00', fontSize:10,
+          fontFamily:"'Bebas Neue',sans-serif",
+          letterSpacing:2, margin:0 }}>COACH FOLLOW-UP</p>
+      </div>
+      <p style={{ color:'#F5F5F0', fontSize:16, fontWeight:600, margin:'0 0 16px' }}>
+        Yesterday you reported soreness. How are you feeling today?
+      </p>
+      {!answer ? (
+        <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+          {options.map((opt,i) => (
+            <button key={i} onClick={() => handleAnswer(opt)}
+              style={{ display:'flex', alignItems:'center', gap:12,
+                padding:'12px 16px', borderRadius:14,
+                background:'#1A1A1C', border:'1px solid #252527',
+                cursor:'pointer', textAlign:'left', width:'100%' }}>
+              <span style={{ fontSize:18 }}>{opt.emoji}</span>
+              <span style={{ color:'#F5F5F0', fontSize:14, fontWeight:500 }}>
+                {opt.label}
+              </span>
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div>
+          {loading && (
+            <p style={{ color:'#8A8A8E', fontSize:13 }}>Coach is responding...</p>
+          )}
+          {coachNote && (
+            <p style={{ color:'#F5F5F0', fontSize:14, lineHeight:1.6,
+              margin:'0 0 12px' }}>{coachNote}</p>
+          )}
+          <button onClick={onDismiss}
+            style={{ background:'none', border:'none', color:'#8A8A8E',
+              fontSize:13, cursor:'pointer', padding:0 }}>
+            Dismiss ✕
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   COACH SCREEN
+═══════════════════════════════════════════════ */
+function CoachScreen({ profile, logs, coachCheckins, coachJournal,
+  nutritionLog, nutritionGoals, weightHistory, cardioLog,
+  onStartNightly, showFollowUp, onSaveJournal, onDismissFollowUp }) {
+
+  const today = new Date().toISOString().split('T')[0];
+  const todayJournal = coachJournal[today];
+  const todayCheckin = coachCheckins[today];
+  const nightlyDone = !!todayJournal?.nightly;
+  const workoutDone = !!todayCheckin?.workout;
+
+  const allJournalDates = Object.keys(coachJournal)
+    .sort((a,b) => b.localeCompare(a))
+    .slice(0, 7);
+
+  return (
+    <div className="h-full overflow-y-auto pb-28">
+      {/* Header */}
+      <div style={{ padding:'56px 20px 16px' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:4 }}>
+          <div style={{ width:40, height:40, borderRadius:'50%', background:'#C8FF00',
+            display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+            <span style={{ fontSize:18 }}>⚡</span>
+          </div>
+          <div>
+            <p style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:48,
+              color:'#F5F5F0', margin:0, lineHeight:1 }}>COACH</p>
+          </div>
+        </div>
+        <p style={{ color:'#8A8A8E', fontSize:13, margin:0 }}>
+          Your personal trainer — tracking everything
+        </p>
+      </div>
+
+      {/* Follow-up card */}
+      {showFollowUp && (
+        <FollowUpCard
+          profile={profile}
+          yesterdayEntry={(() => {
+            const y = new Date();
+            y.setDate(y.getDate()-1);
+            return coachJournal[y.toISOString().split('T')[0]];
+          })()}
+          coachJournal={coachJournal}
+          onSave={onSaveJournal}
+          onDismiss={onDismissFollowUp}
+        />
+      )}
+
+      {/* Today's check-in status */}
+      <div style={{ padding:'0 20px 16px' }}>
+        <p style={{ color:'#8A8A8E', fontSize:10, letterSpacing:2,
+          fontFamily:"'Bebas Neue',sans-serif", margin:'0 0 10px' }}>
+          TODAY'S CHECK-INS
+        </p>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+          {/* Workout check-in */}
+          <div style={{ background: workoutDone ? 'rgba(200,255,0,0.06)' : '#1A1A1C',
+            borderRadius:18, padding:16,
+            border: workoutDone ? '1px solid rgba(200,255,0,0.2)' : '1px solid #252527' }}>
+            <span style={{ fontSize:20, display:'block', marginBottom:8 }}>🏋️</span>
+            <p style={{ color:'#8A8A8E', fontSize:10, letterSpacing:1,
+              fontFamily:"'Bebas Neue',sans-serif", margin:'0 0 4px' }}>WORKOUT</p>
+            {workoutDone ? (
+              <>
+                <p style={{ color:'#C8FF00', fontSize:11, fontWeight:700, margin:'0 0 6px' }}>
+                  ✓ DONE
+                </p>
+                <p style={{ color:'#8A8A8E', fontSize:11, margin:0, lineHeight:1.4 }}>
+                  {todayCheckin.workout.coachResponse?.slice(0,60)}...
+                </p>
+              </>
+            ) : (
+              <p style={{ color:'#8A8A8E', fontSize:12, margin:0 }}>
+                Complete a workout to trigger
+              </p>
+            )}
+          </div>
+
+          {/* Nightly check-in */}
+          <div style={{ background: nightlyDone ? 'rgba(200,255,0,0.06)' : '#1A1A1C',
+            borderRadius:18, padding:16,
+            border: nightlyDone ? '1px solid rgba(200,255,0,0.2)' : '1px solid rgba(200,255,0,0.3)',
+            cursor: nightlyDone ? 'default' : 'pointer' }}
+            onClick={() => !nightlyDone && onStartNightly()}>
+            <span style={{ fontSize:20, display:'block', marginBottom:8 }}>🌙</span>
+            <p style={{ color:'#8A8A8E', fontSize:10, letterSpacing:1,
+              fontFamily:"'Bebas Neue',sans-serif", margin:'0 0 4px' }}>NIGHTLY</p>
+            {nightlyDone ? (
+              <>
+                <p style={{ color:'#C8FF00', fontSize:11, fontWeight:700, margin:'0 0 6px' }}>
+                  ✓ DONE
+                </p>
+                <p style={{ color:'#8A8A8E', fontSize:11, margin:0, lineHeight:1.4 }}>
+                  {todayJournal.nightly?.coachResponse?.slice(0,60)}...
+                </p>
+              </>
+            ) : (
+              <>
+                <p style={{ color:'#C8FF00', fontSize:12, fontWeight:700, margin:'0 0 4px' }}>
+                  CHECK IN NOW →
+                </p>
+                <p style={{ color:'#8A8A8E', fontSize:11, margin:0 }}>
+                  End of day debrief
+                </p>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Coach Journal — last 7 days */}
+      {allJournalDates.length > 0 && (
+        <div style={{ padding:'0 20px 16px' }}>
+          <p style={{ color:'#8A8A8E', fontSize:10, letterSpacing:2,
+            fontFamily:"'Bebas Neue',sans-serif", margin:'0 0 10px' }}>
+            COACH JOURNAL — LAST 7 DAYS
+          </p>
+          <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+            {allJournalDates.map(date => {
+              const entry = coachJournal[date];
+              const d = new Date(date);
+              const label = d.toLocaleDateString('en-GB',
+                { weekday:'short', day:'numeric', month:'short' });
+              const isToday = date === today;
+              return (
+                <div key={date} style={{
+                  background:'#1A1A1C', borderRadius:18, padding:16,
+                  border: isToday ? '1px solid rgba(200,255,0,0.2)' : '1px solid #252527',
+                }}>
+                  <div style={{ display:'flex', alignItems:'center',
+                    justifyContent:'space-between', marginBottom:8 }}>
+                    <p style={{ color: isToday ? '#C8FF00' : '#8A8A8E',
+                      fontSize:10, fontFamily:"'Bebas Neue',sans-serif",
+                      letterSpacing:2, margin:0 }}>
+                      {isToday ? 'TODAY' : label}
+                    </p>
+                    <div style={{ display:'flex', gap:6 }}>
+                      {entry.nightly?.answers && (
+                        <>
+                          {entry.nightly.answers.energy?.includes('High') &&
+                            <span style={{ fontSize:14 }}>⚡</span>}
+                          {entry.nightly.answers.energy?.includes('Low') &&
+                            <span style={{ fontSize:14 }}>😴</span>}
+                          {entry.nightly.answers.energy?.includes('Exhausted') &&
+                            <span style={{ fontSize:14 }}>💀</span>}
+                          {entry.nightly.answers.motivation?.includes('Fired') &&
+                            <span style={{ fontSize:14 }}>🔥</span>}
+                          {entry.nightly.answers.motivation?.includes('low') &&
+                            <span style={{ fontSize:14 }}>😞</span>}
+                          {entry.nightly.answers.soreness?.includes('off') &&
+                            <span style={{ fontSize:14 }}>🔴</span>}
+                        </>
+                      )}
+                    </div>
                   </div>
+                  {entry.nightly?.coachResponse && (
+                    <p style={{ color:'#F5F5F0', fontSize:13, lineHeight:1.6,
+                      margin:'0 0 8px' }}>
+                      "{entry.nightly.coachResponse}"
+                    </p>
+                  )}
+                  {entry.nightly?.data && (
+                    <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+                      {entry.nightly.data.calories > 0 && (
+                        <span style={{ fontSize:11, color:'#8A8A8E',
+                          background:'#252527', padding:'3px 8px',
+                          borderRadius:20, border:'1px solid #3A3A3C' }}>
+                          🍽 {entry.nightly.data.calories} kcal
+                        </span>
+                      )}
+                      {entry.nightly.data.workout &&
+                        entry.nightly.data.workout !== 'No workout today' && (
+                        <span style={{ fontSize:11, color:'#8A8A8E',
+                          background:'#252527', padding:'3px 8px',
+                          borderRadius:20, border:'1px solid #3A3A3C' }}>
+                          🏋️ {entry.nightly.data.workout.split('—')[0].trim()}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
-              )
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
 
-      {allCheckins.length === 0 && (
-        <div className="px-5 mb-4">
-          <div className="bg-[#1A1A1C] rounded-3xl p-8 border border-[#252527] flex flex-col items-center text-center">
-            <div className="text-5xl mb-4">⚡</div>
-            <p className="font-display text-2xl text-[#C8FF00] mb-2"
-              style={{ fontFamily:"'Bebas Neue',sans-serif" }}>NO CHECK-INS YET</p>
-            <p className="text-[#8A8A8E] text-sm leading-relaxed">
-              Complete a workout and your coach will check in with you automatically.
-            </p>
-          </div>
+      {allJournalDates.length === 0 && !workoutDone && (
+        <div style={{ margin:'0 20px', background:'#1A1A1C', borderRadius:24,
+          padding:32, border:'1px solid #252527', textAlign:'center' }}>
+          <span style={{ fontSize:48, display:'block', marginBottom:12 }}>⚡</span>
+          <p style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:24,
+            color:'#C8FF00', margin:'0 0 8px' }}>YOUR COACH IS READY</p>
+          <p style={{ color:'#8A8A8E', fontSize:14, margin:0, lineHeight:1.6 }}>
+            Complete a workout or tap the nightly check-in to start building
+            your coaching journal. Your coach tracks everything — workouts,
+            nutrition, sleep, stress, and recovery.
+          </p>
         </div>
       )}
 
@@ -1355,40 +1919,30 @@ function BodyMap({ profile }) {
 
       const recentWorkouts = (profile.recentFocus || []).slice(0, 3).join(', ') || 'recent training';
 
-      const prompt = `You are FORGE Coach, a sports medicine and physiotherapy expert.
+      const prompt = `ATHLETE: ${profile.name}, ${profile.fitnessLevel}, Goal: ${profile.goal}
 
-ATHLETE PROFILE:
-- Name: ${profile.name}
-- Level: ${profile.fitnessLevel}
-- Goal: ${profile.goal}
-- Recent training: ${recentWorkouts}
-
-PAIN ASSESSMENT DATA:
+PAIN ASSESSMENT:
 ${muscleAssessments}
 
-Based on this clinical assessment data:
+Based on these symptoms, respond with these exact sections:
 
-1. TISSUE DIAGNOSIS: Identify the most likely tissue involved (muscle belly, muscle-tendon junction, tendon, nerve, joint) and explain your reasoning based on the symptoms described. Be specific.
+WHAT THIS COULD BE:
+Based on what they described, suggest 1-2 possible explanations using phrases like "this could potentially be..." or "it may suggest...". Do not diagnose. Mention muscle soreness, possible tightness, or potential tendon irritation as possibilities. Keep it 2-3 sentences.
 
-2. SEVERITY CLASSIFICATION: Classify as one of: DOMS / Mild strain (Grade 1) / Moderate strain (Grade 2) / Tendinopathy / Possible nerve irritation / RED FLAG (stop training, see a physiotherapist urgently)
+LIKELY TRIGGER:
+What training patterns or movements may have contributed to this, given their goal and level. Reference their specific muscle and recent training context. 2 sentences.
 
-3. LIKELY CAUSE: Given their training (${profile.goal}, ${profile.fitnessLevel} level), what specific exercises or movement patterns likely caused this?
+PRE-WORKOUT PREP:
+Give 2-3 specific mobility drills, stretches, or activation exercises to do BEFORE their next session to prepare this area. Include hold times or reps. Frame as prevention, not treatment.
 
-4. REHAB PROTOCOL: Give 2-3 specific exercises with sets, reps, and frequency. Name each exercise. Include what to AVOID.
+THINGS TO AVOID:
+2-3 specific movements or loading patterns to be cautious of in their next session. Brief and practical.
 
-5. TRAINING MODIFICATION: Can they train today? What to skip, what to modify, what is safe to continue.
+SHOULD THEY TRAIN:
+One clear sentence: safe to train with modification / train but avoid X / rest recommended / see a professional first.
 
-6. RECOVERY TIMELINE: Realistic timeframe for resolution.
-
-If ANY red flags are present (severe pain 8+/10, swelling+bruising, pain at rest, sudden onset during exercise, weakness/giving way), lead with a clear warning to stop training and see a physiotherapist.
-
-Format your response with these exact section headers:
-TISSUE DIAGNOSIS:
-SEVERITY:
-LIKELY CAUSE:
-REHAB PROTOCOL:
-TRAINING TODAY:
-RECOVERY TIMELINE:`;
+COACH NOTE:
+One short motivating sentence personalised to them.`;
 
       const res = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
@@ -1401,7 +1955,7 @@ RECOVERY TIMELINE:`;
         body: JSON.stringify({
           model: 'claude-sonnet-4-20250514',
           max_tokens: 600,
-          system: 'You are FORGE Coach, a sports medicine expert. Give specific, evidence-based, actionable advice. Always prioritise athlete safety. Never be vague. Reference their specific assessment answers.',
+          system: "You are FORGE Coach, a personal trainer and movement specialist — NOT a doctor or physiotherapist. Never diagnose. Always say 'this could potentially be' or 'this may suggest' or 'based on what you\\'ve described, it sounds like it could be'. Always recommend seeing a professional for anything serious. Keep responses practical, warm, and coach-like. Never clinical.",
           messages: [{ role: 'user', content: prompt }]
         })
       });
@@ -1844,34 +2398,30 @@ RECOVERY TIMELINE:`;
         {coachAdvice && (
           <div style={{ margin:'0 16px 20px' }}>
             {[
-              { key:'TISSUE DIAGNOSIS', color:'#60A5FA', emoji:'🔬' },
-              { key:'SEVERITY',         color:'#C8FF00', emoji:'📊' },
-              { key:'LIKELY CAUSE',     color:'#FBBF24', emoji:'🎯' },
-              { key:'REHAB PROTOCOL',   color:'#34D399', emoji:'💊' },
-              { key:'TRAINING TODAY',   color:'#FB923C', emoji:'🏋️' },
-              { key:'RECOVERY TIMELINE',color:'#A78BFA', emoji:'📅' },
+              { key:'WHAT THIS COULD BE', color:'#60A5FA', emoji:'🤔' },
+              { key:'LIKELY TRIGGER',     color:'#FBBF24', emoji:'🎯' },
+              { key:'PRE-WORKOUT PREP',   color:'#C8FF00', emoji:'🧘' },
+              { key:'THINGS TO AVOID',    color:'#FB923C', emoji:'⚠️' },
+              { key:'SHOULD THEY TRAIN',  color:'#34D399', emoji:'🏋️' },
+              { key:'COACH NOTE',         color:'#A78BFA', emoji:'⚡' },
             ].map(section => {
               const regex = new RegExp(
-                `${section.key}:([\\s\\S]*?)(?=TISSUE DIAGNOSIS:|SEVERITY:|LIKELY CAUSE:|REHAB PROTOCOL:|TRAINING TODAY:|RECOVERY TIMELINE:|$)`,
+                `${section.key}:([\\s\\S]*?)(?=WHAT THIS COULD BE:|LIKELY TRIGGER:|PRE-WORKOUT PREP:|THINGS TO AVOID:|SHOULD THEY TRAIN:|COACH NOTE:|$)`,
                 'i'
               );
               const match = coachAdvice.match(regex);
               const content = match ? match[1].trim() : null;
               if (!content) return null;
-              const isRedFlag = content.toLowerCase().includes('physiotherapist') &&
-                (content.toLowerCase().includes('urgent') || content.toLowerCase().includes('stop'));
               return (
                 <div key={section.key}
                   style={{
-                    background: isRedFlag ? 'rgba(255,69,58,0.1)' : '#252527',
-                    borderRadius:16, padding:'14px 16px',
-                    border: isRedFlag ? '1px solid rgba(255,69,58,0.4)' : '1px solid #3A3A3C',
-                    marginBottom:10,
+                    background:'#252527', borderRadius:16, padding:'14px 16px',
+                    border:'1px solid #3A3A3C', marginBottom:10,
                   }}>
                   <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
-                    <span style={{ fontSize:14 }}>{isRedFlag ? '🚨' : section.emoji}</span>
+                    <span style={{ fontSize:14 }}>{section.emoji}</span>
                     <p style={{
-                      color: isRedFlag ? '#FF453A' : section.color,
+                      color: section.color,
                       fontSize:10, fontFamily:"'Bebas Neue',sans-serif",
                       letterSpacing:2, margin:0,
                     }}>{section.key}</p>
@@ -4616,6 +5166,8 @@ function App() {
   const [cardioLog,      setCardioLog]      = useLocalStorage('forge_cardio_log', {});
   const [coachCheckins,  setCoachCheckins]  = useLocalStorage('forge_coach_checkins', {});
   const [sorenessLog,    setSorenessLog]    = useLocalStorage('forge_soreness_log', {});
+  const [coachJournal,   setCoachJournal]   = useLocalStorage('forge_coach_journal', {});
+  const [lastNightlyCheckin, setLastNightlyCheckin] = useLocalStorage('forge_last_nightly', null);
 
   const [activeTab,      setActiveTab]     = useState('home');
   const [activeWorkout,  setActiveWorkout] = useState(null);
@@ -4625,6 +5177,8 @@ function App() {
   const [showNutrGoals,  setShowNutrGoals] = useState(false);
   const [planError,      setPlanError]    = useState(null);
   const [showCoachCheckin, setShowCoachCheckin] = useState(false);
+  const [showNightlyCheckin, setShowNightlyCheckin] = useState(false);
+  const [showFollowUp, setShowFollowUp] = useState(false);
 
   /* ── Nutrition actions ── */
   const handleAddFood = (date, entry) => {
@@ -4662,6 +5216,31 @@ function App() {
     setNutritionGoals(goals);
     setShowNutrGoals(false);
   };
+
+  const handleSaveJournal = (date, entry) => {
+    setCoachJournal(prev => ({ ...prev, [date]: { ...prev[date], ...entry } }));
+  };
+
+  const handleSaveNightly = (date, entry) => {
+    setCoachJournal(prev => ({ ...prev, [date]: { ...prev[date], nightly: entry } }));
+    setLastNightlyCheckin(date);
+    setShowNightlyCheckin(false);
+  };
+
+  useEffect(() => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayISO = yesterday.toISOString().split('T')[0];
+    const todayISO = new Date().toISOString().split('T')[0];
+    const yesterdayEntry = coachJournal[yesterdayISO];
+    const todayEntry = coachJournal[todayISO];
+    if (yesterdayEntry?.nightly?.answers?.soreness &&
+      yesterdayEntry.nightly.answers.soreness !== 'Feeling fresh — no issues' &&
+      yesterdayEntry.nightly.answers.soreness !== 'Rest day — no training today' &&
+      !todayEntry?.followUp) {
+      setShowFollowUp(true);
+    }
+  }, [coachJournal]);
 
   const handleAddCardio = (date, entry) => {
     setCardioLog(prev => {
@@ -4832,7 +5411,20 @@ function App() {
       case 'plan':     return <PlanScreen plan={plan} profile={profile}
                                 onRegenerate={() => handleGeneratePlan(profile)}
                                 onUpdatePlan={setPlan}/>;
-      case 'coach':    return <CoachScreen coachCheckins={coachCheckins} profile={profile} sorenessLog={sorenessLog}/>;
+      case 'coach':    return <CoachScreen
+                                profile={profile}
+                                logs={logs}
+                                coachCheckins={coachCheckins}
+                                coachJournal={coachJournal}
+                                nutritionLog={nutritionLog}
+                                nutritionGoals={nutritionGoals}
+                                weightHistory={weightHistory}
+                                cardioLog={cardioLog}
+                                onStartNightly={() => setShowNightlyCheckin(true)}
+                                showFollowUp={showFollowUp}
+                                onSaveJournal={handleSaveJournal}
+                                onDismissFollowUp={() => setShowFollowUp(false)}
+                              />;
       case 'log':      return <LogTab/>;
       case 'fuel':     return <FuelScreen
                                 nutritionLog={nutritionLog}
@@ -4863,6 +5455,21 @@ function App() {
           onClose={() => setActiveWorkout(null)}
           logs={logs}
           prs={prs}/>,
+        document.body
+      )}
+
+      {showNightlyCheckin && createPortal(
+        <NightlyCheckin
+          profile={profile}
+          logs={logs}
+          nutritionLog={nutritionLog}
+          nutritionGoals={nutritionGoals}
+          weightHistory={weightHistory}
+          cardioLog={cardioLog}
+          coachJournal={coachJournal}
+          onSave={handleSaveNightly}
+          onClose={() => setShowNightlyCheckin(false)}
+        />,
         document.body
       )}
 
