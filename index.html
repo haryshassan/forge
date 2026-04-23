@@ -1288,49 +1288,108 @@ function CoachScreen({ coachCheckins, profile }) {
 ═══════════════════════════════════════════════ */
 function BodyMap({ profile }) {
   const [view, setView] = useState('front');
-  const [soreness, setSoreness] = useState({});
+  const [assessedMuscles, setAssessedMuscles] = useState({});
+  const [activeAssessment, setActiveAssessment] = useState(null);
+  const [assessmentStep, setAssessmentStep] = useState(0);
+  const [currentAnswers, setCurrentAnswers] = useState({});
   const [coachAdvice, setCoachAdvice] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const toggleSoreness = (muscleId) => {
-    setSoreness(prev => {
-      const current = prev[muscleId] || 0;
-      const next = (current + 1) % 3;
-      if (next === 0) {
-        const updated = { ...prev };
-        delete updated[muscleId];
-        return updated;
-      }
-      return { ...prev, [muscleId]: next };
-    });
-  };
-
   const getFill = (muscleId) => {
-    const level = soreness[muscleId] || 0;
-    if (level === 1) return '#FF9F0A';
-    if (level === 2) return '#FF453A';
-    return '#2C2C2E';
+    const assessed = assessedMuscles[muscleId];
+    if (!assessed) return '#2C2C2E';
+    const sev = assessed.severity || 1;
+    if (sev <= 2) return '#FF9F0A';
+    if (sev <= 3) return '#FF6B35';
+    return '#FF453A';
   };
 
-  const selectedMuscles = Object.entries(soreness).map(([id, level]) => ({
-    name: id.replace(/-/g,' ').replace(/\b\w/g, c => c.toUpperCase()),
-    level: level === 1 ? 'mild' : 'significant',
-    id,
-  }));
+  const handleAnswer = (questionId, option) => {
+    const newAnswers = { ...currentAnswers, [questionId]: option };
+    setCurrentAnswers(newAnswers);
+    if (assessmentStep < PAIN_QUESTIONS.length - 1) {
+      setAssessmentStep(s => s + 1);
+    } else {
+      const severity = option.severity || newAnswers.severity?.severity || 2;
+      setAssessedMuscles(prev => ({
+        ...prev,
+        [activeAssessment.id]: {
+          muscle: activeAssessment,
+          answers: newAnswers,
+          severity,
+          completedAt: new Date().toISOString(),
+        }
+      }));
+      setActiveAssessment(null);
+      setAssessmentStep(0);
+      setCurrentAnswers({});
+    }
+  };
 
   const handleGetAdvice = async () => {
     if (!profile.apiKey) {
       setError('Add your API key in Profile to get coach advice.');
       return;
     }
+    if (Object.keys(assessedMuscles).length === 0) {
+      setError('Tap muscles on the body map to assess them first.');
+      return;
+    }
     setLoading(true);
     setError(null);
     setCoachAdvice(null);
     try {
-      const muscleList = selectedMuscles
-        .map(m => `${m.name} (${m.level})`)
-        .join(', ');
+      const muscleAssessments = Object.values(assessedMuscles).map(entry => {
+        const a = entry.answers;
+        return `MUSCLE: ${entry.muscle.label}
+- Onset: ${a.onset?.label || 'unknown'}
+- Pain type: ${a.pain_type?.label || 'unknown'}
+- Location: ${a.location_type?.label || 'unknown'}
+- Aggravated by: ${a.movement_pain?.label || 'unknown'}
+- Worst timing: ${a.pain_timing?.label || 'unknown'}
+- Severity: ${a.severity?.label || 'unknown'}
+- Visible symptoms: ${a.swelling_bruising?.label || 'none'}
+- Duration: ${a.duration?.label || 'unknown'}`;
+      }).join('\n\n');
+
+      const recentWorkouts = (profile.recentFocus || []).slice(0, 3).join(', ') || 'recent training';
+
+      const prompt = `You are FORGE Coach, a sports medicine and physiotherapy expert.
+
+ATHLETE PROFILE:
+- Name: ${profile.name}
+- Level: ${profile.fitnessLevel}
+- Goal: ${profile.goal}
+- Recent training: ${recentWorkouts}
+
+PAIN ASSESSMENT DATA:
+${muscleAssessments}
+
+Based on this clinical assessment data:
+
+1. TISSUE DIAGNOSIS: Identify the most likely tissue involved (muscle belly, muscle-tendon junction, tendon, nerve, joint) and explain your reasoning based on the symptoms described. Be specific.
+
+2. SEVERITY CLASSIFICATION: Classify as one of: DOMS / Mild strain (Grade 1) / Moderate strain (Grade 2) / Tendinopathy / Possible nerve irritation / RED FLAG (stop training, see a physiotherapist urgently)
+
+3. LIKELY CAUSE: Given their training (${profile.goal}, ${profile.fitnessLevel} level), what specific exercises or movement patterns likely caused this?
+
+4. REHAB PROTOCOL: Give 2-3 specific exercises with sets, reps, and frequency. Name each exercise. Include what to AVOID.
+
+5. TRAINING MODIFICATION: Can they train today? What to skip, what to modify, what is safe to continue.
+
+6. RECOVERY TIMELINE: Realistic timeframe for resolution.
+
+If ANY red flags are present (severe pain 8+/10, swelling+bruising, pain at rest, sudden onset during exercise, weakness/giving way), lead with a clear warning to stop training and see a physiotherapist.
+
+Format your response with these exact section headers:
+TISSUE DIAGNOSIS:
+SEVERITY:
+LIKELY CAUSE:
+REHAB PROTOCOL:
+TRAINING TODAY:
+RECOVERY TIMELINE:`;
+
       const res = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
@@ -1341,14 +1400,9 @@ function BodyMap({ profile }) {
         },
         body: JSON.stringify({
           model: 'claude-sonnet-4-20250514',
-          max_tokens: 300,
-          system: 'You are FORGE Coach, a sports medicine and rehabilitation expert. Give practical, safe, actionable advice. Keep response under 120 words. Structure your response in exactly 3 short paragraphs labelled: LIKELY CAUSE: / REHAB PROTOCOL: / TRAIN OR REST:',
-          messages: [{
-            role: 'user',
-            content: `Athlete: ${profile.name}, ${profile.fitnessLevel}, Goal: ${profile.goal}.
-Sore or tight areas: ${muscleList}.
-Provide: 1) Likely cause 2) 2-3 specific mobility or rehab exercises with sets and reps 3) Whether to train or rest today.`
-          }]
+          max_tokens: 600,
+          system: 'You are FORGE Coach, a sports medicine expert. Give specific, evidence-based, actionable advice. Always prioritise athlete safety. Never be vague. Reference their specific assessment answers.',
+          messages: [{ role: 'user', content: prompt }]
         })
       });
       const data = await res.json();
@@ -1359,6 +1413,107 @@ Provide: 1) Likely cause 2) 2-3 specific mobility or rehab exercises with sets a
       setLoading(false);
     }
   };
+
+  const PAIN_QUESTIONS = [
+    {
+      id: 'onset',
+      question: 'When did this pain start?',
+      subtitle: 'Onset timing helps identify injury type',
+      options: [
+        { emoji:'⚡', label:'During my workout',           value:'acute_during', hint:'Possible acute strain' },
+        { emoji:'🌅', label:'Within 24hrs after training', value:'doms',         hint:'Likely DOMS' },
+        { emoji:'📅', label:'Gradually over days or weeks',value:'gradual',      hint:'Possible overuse or tendinopathy' },
+        { emoji:'🤷', label:'Not sure — just noticed it',  value:'unknown',      hint:'' },
+      ]
+    },
+    {
+      id: 'pain_type',
+      question: 'How would you describe the pain?',
+      subtitle: 'Pain quality is the best indicator of tissue type',
+      options: [
+        { emoji:'😖', label:'Sharp and stabbing',              value:'sharp',      hint:'Possible muscle tear or nerve' },
+        { emoji:'😔', label:'Dull ache or throbbing',          value:'dull_ache',  hint:'Likely muscle soreness or DOMS' },
+        { emoji:'🔥', label:'Burning or stinging',             value:'burning',    hint:'Possible nerve involvement' },
+        { emoji:'⚡', label:'Shooting or radiating',           value:'shooting',   hint:'Likely nerve related' },
+        { emoji:'🪨', label:'Tight and stiff',                 value:'tight',      hint:'Muscle tightness or early strain' },
+        { emoji:'💉', label:'Deep, nagging ache near a joint', value:'deep_joint', hint:'Possible tendinopathy' },
+      ]
+    },
+    {
+      id: 'location_type',
+      question: 'Where exactly is the pain?',
+      subtitle: 'Location pinpoints which tissue is involved',
+      options: [
+        { emoji:'🎯', label:'Pinpoint — one exact spot',        value:'pinpoint',   hint:'Joint or tendon attachment likely' },
+        { emoji:'〰️', label:'Along a line or path',             value:'along_path', hint:'Possible nerve or tendon' },
+        { emoji:'🌊', label:'Spread across the whole muscle',   value:'diffuse',    hint:'Muscle belly — likely DOMS or strain' },
+        { emoji:'🔗', label:'Near a joint or bone',             value:'near_joint', hint:'Tendon attachment or joint issue' },
+      ]
+    },
+    {
+      id: 'movement_pain',
+      question: 'What makes the pain worse?',
+      subtitle: 'Aggravating factors reveal tissue stress patterns',
+      options: [
+        { emoji:'💪', label:'Contracting the muscle (tensing it)', value:'contraction', hint:'Muscle belly issue' },
+        { emoji:'🧘', label:'Stretching the muscle',               value:'stretch',     hint:'Possible muscle or tendon strain' },
+        { emoji:'🔁', label:'Repetitive movement',                 value:'repetitive',  hint:'Tendinopathy pattern' },
+        { emoji:'🪑', label:'Rest or sitting still',               value:'rest',        hint:'Inflammatory or systemic — see a doctor' },
+        { emoji:'✅', label:'Nothing specific — general soreness', value:'general',     hint:'Likely DOMS' },
+        { emoji:'⬆️', label:'Loading weight through it',           value:'loading',     hint:'Joint or tendon under load' },
+      ]
+    },
+    {
+      id: 'pain_timing',
+      question: 'When is the pain worst?',
+      subtitle: 'Timing patterns help distinguish injury stages',
+      options: [
+        { emoji:'🌅', label:'Worst in the morning, eases off',  value:'morning_stiff',   hint:'Tendinopathy classic pattern' },
+        { emoji:'🏋️', label:'During exercise only',              value:'during_exercise', hint:'Load-related — tendon or muscle' },
+        { emoji:'😴', label:'At rest or overnight',              value:'at_rest',         hint:'Red flag — see a professional' },
+        { emoji:'📈', label:'Gets worse as I keep training',     value:'worsens_training',hint:'Overuse injury building' },
+        { emoji:'📉', label:'Warms up and gets better',          value:'warms_up',        hint:'Typical DOMS or mild strain' },
+        { emoji:'🔄', label:'Constant — always there',           value:'constant',        hint:'Significant — needs assessment' },
+      ]
+    },
+    {
+      id: 'severity',
+      question: 'On a scale of 1–10, how bad is the pain?',
+      subtitle: '1 = barely noticeable · 10 = worst pain imaginable',
+      options: [
+        { emoji:'1️⃣', label:'1–2  Barely noticeable',                 value:'1-2',  severity:1 },
+        { emoji:'3️⃣', label:'3–4  Mild, manageable',                  value:'3-4',  severity:2 },
+        { emoji:'5️⃣', label:'5–6  Moderate, affecting performance',   value:'5-6',  severity:3 },
+        { emoji:'7️⃣', label:'7–8  Significant, hard to ignore',       value:'7-8',  severity:4 },
+        { emoji:'🆘', label:'9–10  Severe or unbearable',              value:'9-10', severity:5 },
+      ]
+    },
+    {
+      id: 'swelling_bruising',
+      question: 'Any visible symptoms?',
+      subtitle: 'Visible signs indicate the severity of tissue damage',
+      options: [
+        { emoji:'✅', label:'Nothing visible',                            value:'none' },
+        { emoji:'🔴', label:'Redness or warmth',                         value:'redness' },
+        { emoji:'💧', label:'Swelling or puffiness',                     value:'swelling' },
+        { emoji:'🟣', label:'Bruising or discolouration',                value:'bruising' },
+        { emoji:'⚡', label:'Weakness — muscle feels like it gives way', value:'weakness' },
+      ]
+    },
+    {
+      id: 'duration',
+      question: 'How long has this been going on?',
+      subtitle: 'Duration determines acute vs chronic classification',
+      options: [
+        { emoji:'⚡',  label:'Just started today',     value:'today',        acute:true },
+        { emoji:'📅',  label:'2–3 days',               value:'2-3_days',     acute:true },
+        { emoji:'📆',  label:'4–7 days',               value:'4-7_days',     acute:false },
+        { emoji:'🗓️', label:'1–3 weeks',               value:'1-3_weeks',    chronic:false },
+        { emoji:'📅',  label:'More than a month',       value:'1_month_plus', chronic:true },
+        { emoji:'😩',  label:'On and off for months',   value:'recurring',    chronic:true },
+      ]
+    },
+  ];
 
   const FRONT_MUSCLES = [
     // Head & Neck
@@ -1445,8 +1600,12 @@ Provide: 1) Likely cause 2) 2-3 specific mobility or rehab exercises with sets a
 
   const renderShape = (m) => {
     const fill = getFill(m.id);
-    const style = { cursor:'pointer', transition:'fill 0.18s ease', opacity: soreness[m.id] ? 1 : 0.85 };
-    const onClick = () => toggleSoreness(m.id);
+    const style = { cursor:'pointer', transition:'fill 0.18s ease', opacity: assessedMuscles[m.id] ? 1 : 0.85 };
+    const onClick = () => {
+      setActiveAssessment(m);
+      setAssessmentStep(0);
+      setCurrentAnswers({});
+    };
     const stroke = '#3A3A3C';
     const strokeWidth = 0.8;
     if (m.shape === 'ellipse') {
@@ -1460,6 +1619,96 @@ Provide: 1) Likely cause 2) 2-3 specific mobility or rehab exercises with sets a
     return <rect key={m.id} x={m.x} y={m.y} width={m.w} height={m.h} rx={m.r}
       fill={fill} stroke={stroke} strokeWidth={strokeWidth} style={style} onClick={onClick}/>;
   };
+
+  function MuscleAssessmentSheet({ muscle, step, answers, onAnswer, onClose }) {
+    const question = PAIN_QUESTIONS[step];
+    const progress = (step / PAIN_QUESTIONS.length) * 100;
+    return (
+      <div
+        onClick={onClose}
+        style={{
+          position:'fixed', top:0, left:'50%', transform:'translateX(-50%)',
+          width:'100%', maxWidth:430, height:'100%',
+          background:'rgba(0,0,0,0.7)', zIndex:9999,
+          display:'flex', alignItems:'flex-end', justifyContent:'center',
+        }}>
+        <div
+          onClick={e => e.stopPropagation()}
+          style={{
+            width:'100%', background:'#1A1A1C',
+            borderRadius:'24px 24px 0 0',
+            paddingBottom:'max(1.5rem, env(safe-area-inset-bottom))',
+            maxHeight:'85vh', overflowY:'auto',
+            animation:'slideUp 0.28s cubic-bezier(0.32,0.72,0,1)',
+          }}>
+          {/* Drag handle */}
+          <div style={{ width:32, height:4, borderRadius:2, background:'#3A3A3C',
+            margin:'12px auto 0' }}/>
+          {/* Header */}
+          <div style={{ padding:'16px 20px 12px' }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8 }}>
+              <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                <div style={{ width:28, height:28, borderRadius:'50%', background:'#C8FF00',
+                  display:'flex', alignItems:'center', justifyContent:'center' }}>
+                  <span style={{ fontSize:14 }}>⚡</span>
+                </div>
+                <div>
+                  <p style={{ color:'#C8FF00', fontSize:10, fontFamily:"'Bebas Neue',sans-serif",
+                    letterSpacing:2, margin:0 }}>PAIN ASSESSMENT</p>
+                  <p style={{ color:'#F5F5F0', fontSize:16, fontWeight:700, margin:0 }}>
+                    {muscle.label}
+                  </p>
+                </div>
+              </div>
+              <button onClick={onClose}
+                style={{ background:'#252527', border:'none', borderRadius:8, width:32, height:32,
+                  display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
+                <span style={{ color:'#8A8A8E', fontSize:16 }}>✕</span>
+              </button>
+            </div>
+            {/* Progress bar */}
+            <div style={{ height:3, background:'#252527', borderRadius:2, overflow:'hidden' }}>
+              <div style={{ height:'100%', background:'#C8FF00', borderRadius:2,
+                width:`${progress}%`, transition:'width 0.3s ease' }}/>
+            </div>
+            <p style={{ color:'#8A8A8E', fontSize:11, margin:'6px 0 0' }}>
+              Question {step + 1} of {PAIN_QUESTIONS.length}
+            </p>
+          </div>
+          {/* Question */}
+          <div style={{ padding:'8px 20px 16px' }}>
+            <p style={{ color:'#F5F5F0', fontSize:20, fontWeight:700, margin:'0 0 4px',
+              lineHeight:1.3 }}>{question.question}</p>
+            <p style={{ color:'#8A8A8E', fontSize:13, margin:'0 0 16px' }}>{question.subtitle}</p>
+            <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+              {question.options.map((opt, i) => (
+                <button key={i} onClick={() => onAnswer(question.id, opt)}
+                  style={{
+                    display:'flex', alignItems:'center', gap:14,
+                    padding:'14px 16px', borderRadius:16,
+                    background:'#252527', border:'1px solid #3A3A3C',
+                    cursor:'pointer', textAlign:'left', width:'100%',
+                    transition:'all 0.15s',
+                  }}>
+                  <span style={{ fontSize:22, flexShrink:0 }}>{opt.emoji}</span>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <p style={{ color:'#F5F5F0', fontSize:15, fontWeight:600,
+                      margin:0, lineHeight:1.3 }}>{opt.label}</p>
+                    {opt.hint && (
+                      <p style={{ color:'#8A8A8E', fontSize:12, margin:'2px 0 0' }}>
+                        {opt.hint}
+                      </p>
+                    )}
+                  </div>
+                  <span style={{ color:'#3A3A3C', fontSize:18, flexShrink:0 }}>›</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="px-5 mb-6">
@@ -1486,7 +1735,7 @@ Provide: 1) Likely cause 2) 2-3 specific mobility or rehab exercises with sets a
 
         {/* Tap instruction */}
         <p className="text-[#8A8A8E] text-xs text-center mb-2">
-          Tap once = mild · Tap twice = significant · Tap again = clear
+          Tap a muscle to start a pain assessment
         </p>
 
         {/* SVG Body */}
@@ -1513,8 +1762,9 @@ Provide: 1) Likely cause 2) 2-3 specific mobility or rehab exercises with sets a
         {/* Legend */}
         <div className="flex gap-4 justify-center py-3">
           {[
-            { color:'#2A2A2C', border:'1px solid #3A3A3C', label:'None' },
+            { color:'#2C2C2E', border:'1px solid #3A3A3C', label:'None' },
             { color:'#FF9F0A', label:'Mild' },
+            { color:'#FF6B35', label:'Moderate' },
             { color:'#FF453A', label:'Significant' },
           ].map(l => (
             <div key={l.label} className="flex items-center gap-1.5">
@@ -1525,19 +1775,37 @@ Provide: 1) Likely cause 2) 2-3 specific mobility or rehab exercises with sets a
           ))}
         </div>
 
-        {/* Selected muscles list */}
-        {selectedMuscles.length > 0 && (
-          <div className="px-5 pb-3 flex flex-wrap gap-2">
-            {selectedMuscles.map(m => (
-              <span key={m.id}
-                className="text-xs px-3 py-1.5 rounded-full font-semibold"
-                style={{
-                  background: m.level==='mild' ? 'rgba(255,159,10,0.15)' : 'rgba(255,69,58,0.15)',
-                  color: m.level==='mild' ? '#FF9F0A' : '#FF453A',
-                }}>
-                {m.name} · {m.level}
-              </span>
-            ))}
+        {/* Assessed muscles list */}
+        {Object.keys(assessedMuscles).length > 0 && (
+          <div style={{ padding:'8px 16px', display:'flex', flexWrap:'wrap', gap:8 }}>
+            {Object.values(assessedMuscles).map(entry => {
+              const sev = entry.severity || 1;
+              const color = sev <= 2 ? '#FF9F0A' : sev <= 3 ? '#FF6B35' : '#FF453A';
+              const label = sev <= 2 ? 'mild' : sev <= 3 ? 'moderate' : 'significant';
+              return (
+                <div key={entry.muscle.id}
+                  style={{
+                    display:'flex', alignItems:'center', gap:6,
+                    padding:'6px 12px', borderRadius:20,
+                    background:`${color}18`, border:`1px solid ${color}40`,
+                  }}>
+                  <div style={{ width:8, height:8, borderRadius:'50%', background:color }}/>
+                  <span style={{ color, fontSize:12, fontWeight:600 }}>
+                    {entry.muscle.label} · {label}
+                  </span>
+                  <button
+                    onClick={() => {
+                      const updated = { ...assessedMuscles };
+                      delete updated[entry.muscle.id];
+                      setAssessedMuscles(updated);
+                    }}
+                    style={{ background:'none', border:'none', color:'#8A8A8E',
+                      fontSize:14, cursor:'pointer', padding:0, lineHeight:1 }}>
+                    ✕
+                  </button>
+                </div>
+              );
+            })}
           </div>
         )}
 
@@ -1545,9 +1813,9 @@ Provide: 1) Likely cause 2) 2-3 specific mobility or rehab exercises with sets a
         <div className="px-5 pb-5">
           <button
             onClick={handleGetAdvice}
-            disabled={selectedMuscles.length === 0 || loading}
+            disabled={Object.keys(assessedMuscles).length === 0 || loading}
             className={`w-full py-4 rounded-2xl font-display text-xl tracking-wider transition-all active:scale-95
-              ${selectedMuscles.length > 0 && !loading
+              ${Object.keys(assessedMuscles).length > 0 && !loading
                 ? 'bg-[#C8FF00] text-[#0D0D0F]'
                 : 'bg-[#252527] text-[#8A8A8E]'}`}
             style={{ fontFamily:"'Bebas Neue',sans-serif" }}>
@@ -1574,30 +1842,73 @@ Provide: 1) Likely cause 2) 2-3 specific mobility or rehab exercises with sets a
 
         {/* Coach advice */}
         {coachAdvice && (
-          <div className="mx-5 mb-5">
-            {['LIKELY CAUSE','REHAB PROTOCOL','TRAIN OR REST'].map((section, i) => {
-              const regex = new RegExp(`${section}:([\\s\\S]*?)(?=LIKELY CAUSE:|REHAB PROTOCOL:|TRAIN OR REST:|$)`, 'i');
+          <div style={{ margin:'0 16px 20px' }}>
+            {[
+              { key:'TISSUE DIAGNOSIS', color:'#60A5FA', emoji:'🔬' },
+              { key:'SEVERITY',         color:'#C8FF00', emoji:'📊' },
+              { key:'LIKELY CAUSE',     color:'#FBBF24', emoji:'🎯' },
+              { key:'REHAB PROTOCOL',   color:'#34D399', emoji:'💊' },
+              { key:'TRAINING TODAY',   color:'#FB923C', emoji:'🏋️' },
+              { key:'RECOVERY TIMELINE',color:'#A78BFA', emoji:'📅' },
+            ].map(section => {
+              const regex = new RegExp(
+                `${section.key}:([\\s\\S]*?)(?=TISSUE DIAGNOSIS:|SEVERITY:|LIKELY CAUSE:|REHAB PROTOCOL:|TRAINING TODAY:|RECOVERY TIMELINE:|$)`,
+                'i'
+              );
               const match = coachAdvice.match(regex);
               const content = match ? match[1].trim() : null;
               if (!content) return null;
+              const isRedFlag = content.toLowerCase().includes('physiotherapist') &&
+                (content.toLowerCase().includes('urgent') || content.toLowerCase().includes('stop'));
               return (
-                <div key={i} className="bg-[#252527] rounded-2xl p-4 border border-[#3A3A3C] mb-2">
-                  <p className="text-[#C8FF00] text-[10px] font-display tracking-widest mb-1.5"
-                    style={{ fontFamily:"'Bebas Neue',sans-serif" }}>{section}</p>
-                  <p className="text-[#F5F5F0] text-sm leading-relaxed">{content}</p>
+                <div key={section.key}
+                  style={{
+                    background: isRedFlag ? 'rgba(255,69,58,0.1)' : '#252527',
+                    borderRadius:16, padding:'14px 16px',
+                    border: isRedFlag ? '1px solid rgba(255,69,58,0.4)' : '1px solid #3A3A3C',
+                    marginBottom:10,
+                  }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
+                    <span style={{ fontSize:14 }}>{isRedFlag ? '🚨' : section.emoji}</span>
+                    <p style={{
+                      color: isRedFlag ? '#FF453A' : section.color,
+                      fontSize:10, fontFamily:"'Bebas Neue',sans-serif",
+                      letterSpacing:2, margin:0,
+                    }}>{section.key}</p>
+                  </div>
+                  <p style={{ color:'#F5F5F0', fontSize:14, lineHeight:1.6, margin:0 }}>
+                    {content}
+                  </p>
                 </div>
               );
             })}
-            {!coachAdvice.match(/LIKELY CAUSE:/i) && (
-              <div className="bg-[#252527] rounded-2xl p-4 border border-[#3A3A3C]">
-                <p className="text-[#C8FF00] text-[10px] font-display tracking-widest mb-1.5"
-                  style={{ fontFamily:"'Bebas Neue',sans-serif" }}>COACH ADVICE</p>
-                <p className="text-[#F5F5F0] text-sm leading-relaxed">{coachAdvice}</p>
-              </div>
-            )}
+            <button
+              onClick={() => { setAssessedMuscles({}); setCoachAdvice(null); setError(null); }}
+              style={{
+                width:'100%', padding:'12px', borderRadius:14,
+                background:'transparent', border:'1px solid #3A3A3C',
+                color:'#8A8A8E', fontSize:13, fontWeight:600,
+                cursor:'pointer', marginTop:4,
+              }}>
+              CLEAR &amp; START OVER
+            </button>
           </div>
         )}
       </div>
+
+      {activeAssessment && (
+        <MuscleAssessmentSheet
+          muscle={activeAssessment}
+          step={assessmentStep}
+          answers={currentAnswers}
+          onAnswer={handleAnswer}
+          onClose={() => {
+            setActiveAssessment(null);
+            setAssessmentStep(0);
+            setCurrentAnswers({});
+          }}
+        />
+      )}
     </div>
   );
 }
