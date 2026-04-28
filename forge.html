@@ -752,7 +752,7 @@ Do not use bullet points. Write as a coach speaking directly to the athlete.`;
           body: JSON.stringify({
             model: 'claude-sonnet-4-20250514',
             max_tokens: 200,
-            system: 'You are FORGE Coach, an expert personal trainer. Give concise, specific, motivating coaching advice. Never be generic. Always reference their specific workout data.',
+            system: 'You are FORGE Coach, an expert personal trainer. Give concise, specific, motivating coaching advice. Never be generic. Always reference their specific workout data. If the check-in answers indicate significant pain, soreness, or very poor recovery that warrants a training modification, end your response with PLAN_CHANGE_SUGGESTED: followed immediately by a valid JSON object with fields: reason (string), changes (array of objects each with day, exercise_to_replace, replacement_exercise, new_sets, new_reps). Only include this if a specific exercise swap is clearly warranted.',
             messages: [{ role: 'user', content: prompt }]
           })
         });
@@ -818,7 +818,7 @@ Do not use bullet points. Write as a coach speaking directly to the athlete.`;
                     <p className="text-[#C8FF00] text-xs font-display tracking-widest"
                       style={{ fontFamily:"'Bebas Neue',sans-serif" }}>COACH SAYS</p>
                   </div>
-                  <p className="text-[#F5F5F0] text-sm leading-relaxed">{coachResponse}</p>
+                  <p className="text-[#F5F5F0] text-sm leading-relaxed">{parsePlanChange(coachResponse||'').displayText}</p>
                 </div>
                 <div className="flex flex-wrap gap-2 mb-6">
                   {answers.map((a,i) => (
@@ -907,16 +907,81 @@ function formatCoachMessage(text) {
   });
 }
 
+/* ── Plan-change helpers ── */
+function parsePlanChange(text) {
+  const marker = 'PLAN_CHANGE_SUGGESTED:';
+  const idx = text.indexOf(marker);
+  if (idx === -1) return { displayText: text, planChange: null };
+  const displayText = text.slice(0, idx).trim();
+  try {
+    const planChange = JSON.parse(text.slice(idx + marker.length).trim());
+    return { displayText, planChange };
+  } catch {
+    return { displayText, planChange: null };
+  }
+}
+
+function applyPlanChangesToPlan(plan, changes) {
+  if (!plan?.weeklySchedule) return plan;
+  const updated = { ...plan, weeklySchedule: plan.weeklySchedule.map(d => ({ ...d, workouts: [...(d.workouts||[])] })) };
+  (changes||[]).forEach(change => {
+    const day = updated.weeklySchedule.find(d =>
+      d.day?.toLowerCase().includes((change.day||'').toLowerCase()) ||
+      (change.day||'').toLowerCase().includes(d.day?.toLowerCase())
+    );
+    if (!day) return;
+    day.workouts = day.workouts.map(w => {
+      const wName = (w.exercise||'').toLowerCase();
+      const toReplace = (change.exercise_to_replace||'').toLowerCase();
+      if (wName.includes(toReplace) || toReplace.includes(wName)) {
+        return { ...w, exercise: change.replacement_exercise, sets: change.new_sets, reps: change.new_reps };
+      }
+      return w;
+    });
+  });
+  return updated;
+}
+
+function PlanChangeCard({ planChange, onApply, onKeep }) {
+  const summary = (planChange.changes||[]).map(c =>
+    `Replace ${c.exercise_to_replace} on ${c.day} with ${c.replacement_exercise} (${c.new_sets}×${c.new_reps})`
+  ).join('. ');
+  return (
+    <div style={{ borderLeft:'3px solid #C8FF00', background:'#1A1A1C', borderRadius:16, padding:'14px 16px', margin:'8px 0 4px 0' }}>
+      <p style={{ fontFamily:"'Bebas Neue',sans-serif", color:'#C8FF00', fontSize:13, letterSpacing:'0.08em', marginBottom:6 }}>
+        PLAN UPDATE SUGGESTED
+      </p>
+      {planChange.reason && (
+        <p style={{ color:'#8A8A8E', fontSize:12, marginBottom:6, fontFamily:"'DM Sans',sans-serif" }}>{planChange.reason}</p>
+      )}
+      <p style={{ color:'#F5F5F0', fontSize:13, lineHeight:1.5, marginBottom:12, fontFamily:"'DM Sans',sans-serif" }}>{summary}</p>
+      <div style={{ display:'flex', gap:8 }}>
+        <button onClick={onApply}
+          style={{ flex:1, padding:'10px 0', borderRadius:12, background:'#C8FF00', color:'#0D0D0F', fontFamily:"'Bebas Neue',sans-serif", fontSize:14, letterSpacing:'0.05em', border:'none', cursor:'pointer' }}>
+          APPLY CHANGES
+        </button>
+        <button onClick={onKeep}
+          style={{ flex:1, padding:'10px 0', borderRadius:12, background:'#252527', color:'#8A8A8E', fontFamily:"'Bebas Neue',sans-serif", fontSize:14, letterSpacing:'0.05em', border:'1px solid #3A3A3C', cursor:'pointer' }}>
+          KEEP CURRENT
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /* ═══════════════════════════════════════════════
    COACH SCREEN
 ═══════════════════════════════════════════════ */
 function CoachScreen({ coachCheckins, profile, plan, logs, prs, streak,
-  nutritionLog, nutritionGoals, weightHistory, cardioLog, badges }) {
+  nutritionLog, nutritionGoals, weightHistory, cardioLog, badges, onPlanUpdate }) {
 
   const [section,  setSection]  = useState('CHAT');
   const [messages, setMessages] = useLocalStorage('forge_coach_messages', []);
   const [input,    setInput]    = useState('');
   const [typing,   setTyping]   = useState(false);
+  const [planChanges, setPlanChanges] = useLocalStorage('forge_plan_changes', []);
+  const [pendingPlanChanges, setPendingPlanChanges] = useState({});
+  const [dismissedCheckinCard, setDismissedCheckinCard] = useState(false);
   const messagesEndRef = useRef(null);
   const inputRef       = useRef(null);
   const today = getTodayISO();
@@ -967,12 +1032,16 @@ function CoachScreen({ coachCheckins, profile, plan, logs, prs, streak,
 
     const journalText = Object.entries(coachCheckins||{})
       .sort((a,b)=>b[0].localeCompare(a[0])).slice(0,7)
-      .map(([d,v])=>v.workout ? `${d}: ${(v.workout.coachResponse||'').slice(0,120)}` : null)
+      .map(([d,v])=>v.workout ? `${d}: ${(v.workout.coachResponse||'').split('PLAN_CHANGE_SUGGESTED:')[0].trim().slice(0,120)}` : null)
       .filter(Boolean).join('\n') || 'No check-ins yet.';
 
     const badgeText = Object.entries(badges||{}).filter(([,v])=>v).map(([k])=>k).join(', ') || 'None yet.';
 
-    return `You are FORGE Coach, a world class personal trainer and nutritionist. You know everything about this athlete. You never diagnose injuries but can give training guidance around discomfort. When suggesting plan changes, remind ${name} to tap Regenerate Plan on the Plan tab to apply them. Always address the athlete by their first name.
+    const planChangesText = (planChanges||[]).slice(-5).map(c =>
+      `${c.date}: ${c.reason} — ${(c.changes||[]).map(ch=>`${ch.exercise_to_replace}→${ch.replacement_exercise} on ${ch.day}`).join(', ')}`
+    ).join('\n') || 'None yet.';
+
+    return `You are FORGE Coach, a world class personal trainer and nutritionist. You know everything about this athlete. You never diagnose injuries but can give training guidance around discomfort. Always address the athlete by their first name. When the athlete reports pain, fatigue, soreness, injury, or asks to modify their plan, you may suggest specific changes. To do so, end your message with PLAN_CHANGE_SUGGESTED: followed immediately by a valid JSON object (no extra text after the JSON) with fields: reason (string), changes (array of objects each with day, exercise_to_replace, replacement_exercise, new_sets, new_reps). Only suggest a plan change when clearly warranted — not every message.
 
 Keep every response under 120 words total. Use short sentences. Use line breaks between every separate point or idea. Use a short bold heading before each new topic if covering more than one thing — for example **Recovery** or **Nutrition** or **Today's Focus**. Never write more than 2 sentences under any single heading. Never write a wall of text. If the user asks a simple question give a simple short answer. If the user asks something complex cover the top 2 or 3 points only and keep each one brief. Always sound like a coach sending a quick message not writing a report. Never cut off a response mid sentence. Always finish your thought completely. If you are running low on space wrap up the response early rather than stopping halfway through a sentence or paragraph. Keep responses concise but always complete.
 
@@ -1001,7 +1070,10 @@ ${cardioText}
 CHECK-IN JOURNAL:
 ${journalText}
 
-BADGES: ${badgeText}`;
+BADGES: ${badgeText}
+
+RECENT PLAN CHANGES (last 5):
+${planChangesText}`;
   };
 
   /* ── Auto-scroll ── */
@@ -1029,6 +1101,22 @@ BADGES: ${badgeText}`;
       }]);
     }
   }, []);
+
+  /* ── Plan change handlers ── */
+  const handleApplyPlanChange = (planChange, cardKey) => {
+    const updated = applyPlanChangesToPlan(plan, planChange.changes);
+    if (onPlanUpdate) onPlanUpdate(updated);
+    const entry = { date: today, reason: planChange.reason, changes: planChange.changes };
+    setPlanChanges(prev => [...prev, entry].slice(-50));
+    const changeSummary = (planChange.changes||[]).map(c => `${c.exercise_to_replace} → ${c.replacement_exercise} on ${c.day}`).join(', ');
+    setMessages(m => [...m, { role:'assistant', content:`Done! Your plan has been updated: ${changeSummary}. You'll see it reflected in the Plan tab.` }].slice(-50));
+    setPendingPlanChanges(prev => { const n = {...prev}; delete n[cardKey]; return n; });
+  };
+
+  const handleKeepPlanChange = (cardKey) => {
+    setMessages(m => [...m, { role:'assistant', content:`No problem — keeping your current plan as is.` }].slice(-50));
+    setPendingPlanChanges(prev => { const n = {...prev}; delete n[cardKey]; return n; });
+  };
 
   /* ── Send message ── */
   const sendMessage = async (overrideText) => {
@@ -1066,8 +1154,11 @@ BADGES: ${badgeText}`;
         })
       });
       const data = await res.json();
-      const reply = data?.content?.[0]?.text || "I couldn't generate a response right now. Try again.";
-      setMessages(m => [...m, { role:'assistant', content:reply }].slice(-50));
+      const rawReply = data?.content?.[0]?.text || "I couldn't generate a response right now. Try again.";
+      const { displayText, planChange } = parsePlanChange(rawReply);
+      const msgId = `msg_${Date.now()}`;
+      setMessages(m => [...m, { role:'assistant', content:displayText, id:msgId }].slice(-50));
+      if (planChange) setPendingPlanChanges(prev => ({ ...prev, [msgId]: planChange }));
     } catch {
       setMessages(m => [...m, {
         role:'assistant',
@@ -1113,29 +1204,40 @@ BADGES: ${badgeText}`;
           {/* Message feed */}
           <div className="flex-1 overflow-y-auto px-4 py-2" style={{ overscrollBehavior:'contain' }}>
             {messages.map((msg, i) => (
-              <div key={i} className={`flex mb-3 ${msg.role==='user' ? 'justify-end' : 'justify-start'}`}>
-                {msg.role==='assistant' && (
-                  <div className="w-7 h-7 rounded-full bg-[#C8FF00] flex items-center justify-center flex-shrink-0 mr-2 mt-1">
-                    <Zap size={12} color="#0D0D0F"/>
-                  </div>
-                )}
-                <div style={{ maxWidth:'78%' }}>
-                  <div className={`px-4 py-3 rounded-2xl ${
-                    msg.role==='user'
-                      ? 'bg-[#C8FF00] text-[#0D0D0F] rounded-tr-sm'
-                      : 'bg-[#1A1A1C] text-[#F5F5F0] border border-[#252527] rounded-tl-sm'
-                  }`}>
-                    {msg.role === 'user' ? (
-                      <p className="text-sm leading-relaxed" style={{ fontFamily:"'DM Sans',sans-serif" }}>
-                        {msg.content}
-                      </p>
-                    ) : (
-                      <div className="text-sm leading-relaxed" style={{ fontFamily:"'DM Sans',sans-serif" }}>
-                        {formatCoachMessage(msg.content)}
-                      </div>
-                    )}
+              <div key={i}>
+                <div className={`flex mb-1 ${msg.role==='user' ? 'justify-end' : 'justify-start'}`}>
+                  {msg.role==='assistant' && (
+                    <div className="w-7 h-7 rounded-full bg-[#C8FF00] flex items-center justify-center flex-shrink-0 mr-2 mt-1">
+                      <Zap size={12} color="#0D0D0F"/>
+                    </div>
+                  )}
+                  <div style={{ maxWidth:'78%' }}>
+                    <div className={`px-4 py-3 rounded-2xl ${
+                      msg.role==='user'
+                        ? 'bg-[#C8FF00] text-[#0D0D0F] rounded-tr-sm'
+                        : 'bg-[#1A1A1C] text-[#F5F5F0] border border-[#252527] rounded-tl-sm'
+                    }`}>
+                      {msg.role === 'user' ? (
+                        <p className="text-sm leading-relaxed" style={{ fontFamily:"'DM Sans',sans-serif" }}>
+                          {msg.content}
+                        </p>
+                      ) : (
+                        <div className="text-sm leading-relaxed" style={{ fontFamily:"'DM Sans',sans-serif" }}>
+                          {formatCoachMessage(msg.content)}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
+                {msg.role==='assistant' && msg.id && pendingPlanChanges[msg.id] && (
+                  <div className="ml-9 mb-3">
+                    <PlanChangeCard
+                      planChange={pendingPlanChanges[msg.id]}
+                      onApply={() => handleApplyPlanChange(pendingPlanChanges[msg.id], msg.id)}
+                      onKeep={() => handleKeepPlanChange(msg.id)}
+                    />
+                  </div>
+                )}
               </div>
             ))}
 
@@ -1201,13 +1303,32 @@ BADGES: ${badgeText}`;
       {section === 'CHECK-INS' && (
         <div className="flex-1 overflow-y-auto pb-28 px-5 pt-2">
           <p className="text-[#8A8A8E] text-xs uppercase tracking-widest mb-3">Today's Check-in</p>
-          {todayCheckin?.workout ? (
-            <div className="bg-[rgba(200,255,0,0.06)] rounded-2xl p-5 border border-[rgba(200,255,0,0.15)] mb-4">
-              <span className="text-[#C8FF00] font-display text-sm tracking-widest"
-                style={{ fontFamily:"'Bebas Neue',sans-serif" }}>✓ WORKOUT CHECK-IN DONE</span>
-              <p className="text-[#F5F5F0] text-sm leading-relaxed mt-2">{todayCheckin.workout.coachResponse}</p>
-            </div>
-          ) : (
+          {todayCheckin?.workout ? (() => {
+            const { displayText: ciText, planChange: ciPlanChange } = parsePlanChange(todayCheckin.workout.coachResponse || '');
+            return (
+              <>
+                <div className="bg-[rgba(200,255,0,0.06)] rounded-2xl p-5 border border-[rgba(200,255,0,0.15)] mb-2">
+                  <span className="text-[#C8FF00] font-display text-sm tracking-widest"
+                    style={{ fontFamily:"'Bebas Neue',sans-serif" }}>✓ WORKOUT CHECK-IN DONE</span>
+                  <p className="text-[#F5F5F0] text-sm leading-relaxed mt-2">{ciText}</p>
+                </div>
+                {ciPlanChange && !dismissedCheckinCard && (
+                  <div className="mb-4">
+                    <PlanChangeCard
+                      planChange={ciPlanChange}
+                      onApply={() => {
+                        const updated = applyPlanChangesToPlan(plan, ciPlanChange.changes);
+                        if (onPlanUpdate) onPlanUpdate(updated);
+                        setPlanChanges(prev => [...prev, { date: today, reason: ciPlanChange.reason, changes: ciPlanChange.changes }].slice(-50));
+                        setDismissedCheckinCard(true);
+                      }}
+                      onKeep={() => setDismissedCheckinCard(true)}
+                    />
+                  </div>
+                )}
+              </>
+            );
+          })() : (
             <div className="bg-[#1A1A1C] rounded-2xl p-5 border border-[#252527] mb-4">
               <p className="text-[#8A8A8E] text-sm">Complete a workout to trigger your post-workout coach check-in.</p>
             </div>
@@ -1224,7 +1345,7 @@ BADGES: ${badgeText}`;
                       {new Date(date).toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})}
                       {checkin.workout.focus ? ` · ${checkin.workout.focus}` : ''}
                     </p>
-                    <p className="text-[#8A8A8E] text-sm leading-relaxed line-clamp-2">{checkin.workout.coachResponse}</p>
+                    <p className="text-[#8A8A8E] text-sm leading-relaxed line-clamp-2">{parsePlanChange(checkin.workout.coachResponse||'').displayText}</p>
                     <div className="flex flex-wrap gap-1.5 mt-2">
                       {(checkin.workout.answers||[]).map((a,i) => (
                         <span key={i} className="text-[10px] px-2 py-0.5 rounded-full bg-[#252527] text-[#8A8A8E] border border-[#3A3A3C]">{a}</span>
@@ -1252,7 +1373,7 @@ BADGES: ${badgeText}`;
       {/* ── BODY MAP ── */}
       {section === 'BODY MAP' && (
         <div className="flex-1 overflow-y-auto pb-28">
-          <BodyMap profile={profile}/>
+          <BodyMap profile={profile} plan={plan} onPlanUpdate={onPlanUpdate} planChanges={planChanges} setPlanChanges={setPlanChanges}/>
         </div>
       )}
     </div>
@@ -1263,10 +1384,12 @@ BADGES: ${badgeText}`;
 /* ═══════════════════════════════════════════════
    BODY MAP
 ═══════════════════════════════════════════════ */
-function BodyMap({ profile }) {
+function BodyMap({ profile, plan, onPlanUpdate, planChanges, setPlanChanges }) {
   const [view, setView] = useState('front');
   const [soreness, setSoreness] = useState({});
   const [coachAdvice, setCoachAdvice] = useState(null);
+  const [bodyMapPlanChange, setBodyMapPlanChange] = useState(null);
+  const [bodyMapCardDismissed, setBodyMapCardDismissed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -1319,7 +1442,7 @@ function BodyMap({ profile }) {
         body: JSON.stringify({
           model: 'claude-sonnet-4-20250514',
           max_tokens: 500,
-          system: 'You are FORGE Coach, a sports medicine and rehabilitation expert. Give practical, safe, actionable advice. Keep the response under 150 words. Use short bold headings before each section wrapped in double asterisks like **What This Could Be**. Write no more than 2 short sentences under each heading. Use line breaks between each section. Never write a wall of text. Sound like a knowledgeable coach not a medical report. Never cut off mid sentence. Always complete every section fully. If you need to keep it shorter to finish properly then reduce the detail but never leave a sentence or section unfinished.',
+          system: 'You are FORGE Coach, a sports medicine and rehabilitation expert. Give practical, safe, actionable advice. Keep the response under 150 words. Use short bold headings before each section wrapped in double asterisks like **What This Could Be**. Write no more than 2 short sentences under each heading. Use line breaks between each section. Never write a wall of text. Sound like a knowledgeable coach not a medical report. Never cut off mid sentence. Always complete every section fully. If you need to keep it shorter to finish properly then reduce the detail but never leave a sentence or section unfinished. If the soreness indicates a specific exercise should be avoided or replaced, end your response with PLAN_CHANGE_SUGGESTED: followed immediately by a valid JSON object with fields: reason (string), changes (array of objects each with day, exercise_to_replace, replacement_exercise, new_sets, new_reps). Only include this if a specific exercise swap is clearly warranted.',
           messages: [{
             role: 'user',
             content: `Athlete: ${profile.name}, ${profile.fitnessLevel}, Goal: ${profile.goal}.
@@ -1329,7 +1452,12 @@ Provide: 1) Likely cause 2) 2-3 specific mobility or rehab exercises with sets a
         })
       });
       const data = await res.json();
-      setCoachAdvice(data?.content?.[0]?.text || null);
+      const rawText = data?.content?.[0]?.text || null;
+      if (rawText) {
+        const { displayText, planChange } = parsePlanChange(rawText);
+        setCoachAdvice(displayText);
+        if (planChange) { setBodyMapPlanChange(planChange); setBodyMapCardDismissed(false); }
+      }
     } catch(e) {
       setError('Could not reach coach. Check your API key.');
     } finally {
@@ -1499,13 +1627,27 @@ Provide: 1) Likely cause 2) 2-3 specific mobility or rehab exercises with sets a
 
         {/* Coach advice */}
         {coachAdvice && (
-          <div className="mx-5 mb-5">
+          <div className="mx-5 mb-3">
             <div className="bg-[#252527] rounded-2xl p-4 border border-[#3A3A3C]">
               <div className="text-[#F5F5F0] text-sm leading-relaxed"
                 style={{ fontFamily:"'DM Sans',sans-serif" }}>
                 {formatCoachMessage(coachAdvice)}
               </div>
             </div>
+          </div>
+        )}
+        {bodyMapPlanChange && !bodyMapCardDismissed && (
+          <div className="mx-5 mb-5">
+            <PlanChangeCard
+              planChange={bodyMapPlanChange}
+              onApply={() => {
+                const updated = applyPlanChangesToPlan(plan, bodyMapPlanChange.changes);
+                if (onPlanUpdate) onPlanUpdate(updated);
+                if (setPlanChanges) setPlanChanges(prev => [...prev, { date: getTodayISO(), reason: bodyMapPlanChange.reason, changes: bodyMapPlanChange.changes }].slice(-50));
+                setBodyMapCardDismissed(true);
+              }}
+              onKeep={() => setBodyMapCardDismissed(true)}
+            />
           </div>
         )}
       </div>
@@ -4187,7 +4329,8 @@ function App() {
       case 'coach':    return <CoachScreen coachCheckins={coachCheckins} profile={profile}
                                 plan={plan} logs={logs} prs={prs} streak={streak}
                                 nutritionLog={nutritionLog} nutritionGoals={nutritionGoals}
-                                weightHistory={weightHistory} cardioLog={cardioLog} badges={badges}/>;
+                                weightHistory={weightHistory} cardioLog={cardioLog} badges={badges}
+                                onPlanUpdate={setPlan}/>;
       case 'log':      return <LogTab/>;
       case 'fuel':     return <FuelScreen
                                 nutritionLog={nutritionLog}
