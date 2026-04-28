@@ -389,12 +389,12 @@ function getSplitInstructions(profile) {
   const days = profile.trainingDays || [];
   if (split === 'arnold_ul' && days.length >= 5) {
     return `MANDATORY SPLIT STRUCTURE — Arnold Split + Upper/Lower (DO NOT deviate):
-- ${days[0]}: Chest + Back — Chest Press 3x6-10, Pec Fly 2x6-10, Pull-Ups 3x6-10, Lat Pulldown 2x6-10, T-Bar Row 3x6-10
-- ${days[1]}: Arms + Shoulders — Military Press 3x6-10, Lateral Raises 2x6-10, Rear Delt Fly 2x6-10, Cable Curl 3x6-10, Hammer Curl 2x6-10, Tricep Pushdown 3x6-10, Overhead Tricep Extension 2x6-10
-- ${days[2]}: Legs (Quad Focus) — Hack Squat 3x6-10, Leg Press 2x6-10, Leg Extension 2x6-10, Calf Raises 3x6-10
-- ${days[3]}: Upper — Incline Chest Press 3x6-10, Pec Fly 2x6-10, Seated Row 3x6-10, Lat Pulldown 2x6-10, Lateral Raises 2x6-10, Cable Curl 2x6-10, Tricep Pushdown 2x6-10
-- ${days[4]}: Lower (Posterior / Deadlift Focus) — Deadlift 3x5-8, Back Extension 3x6-10, Seated Hamstring Curl 2x6-10, Calf Raises 3x6-10
-All exercises are straight sets only. No supersets. You MUST follow this day-by-day structure exactly with these exact exercises, sets, and reps. Do not merge days, swap exercises, or deviate from this list.`;
+- ${days[0]}: Chest + Back — Chest Press 3 sets 6-10 reps, Pec Fly 2 sets 6-10 reps, Pull-Ups 3 sets 6-10 reps, Lat Pulldown 2 sets 6-10 reps, T-Bar Row 3 sets 6-10 reps
+- ${days[1]}: Arms + Shoulders — Military Press 3 sets 6-10 reps, Lateral Raises 2 sets 6-10 reps, Rear Delt Fly 2 sets 6-10 reps, Cable Curl 3 sets 6-10 reps, Hammer Curl 2 sets 6-10 reps, Tricep Pushdown 3 sets 6-10 reps, Overhead Tricep Extension 2 sets 6-10 reps
+- ${days[2]}: Legs Quad Focus — Hack Squat 3 sets 6-10 reps, Leg Press 2 sets 6-10 reps, Leg Extension 2 sets 6-10 reps, Calf Raises 3 sets 6-10 reps
+- ${days[3]}: Upper — Incline Chest Press 3 sets 6-10 reps, Pec Fly 2 sets 6-10 reps, Seated Row 3 sets 6-10 reps, Lat Pulldown 2 sets 6-10 reps, Lateral Raises 2 sets 6-10 reps, Cable Curl 2 sets 6-10 reps, Tricep Pushdown 2 sets 6-10 reps
+- ${days[4]}: Lower Posterior Deadlift Focus — Deadlift 3 sets 5-8 reps, Back Extension 3 sets 6-10 reps, Seated Hamstring Curl 2 sets 6-10 reps, Calf Raises 3 sets 6-10 reps
+Straight sets only. No supersets. No substitutions. You MUST follow this day-by-day structure exactly with these exact exercises, sets, and reps. Do not merge days, swap exercises, or deviate from this list.`;
   }
   if (split === 'pplul' && days.length >= 5) {
     return `MANDATORY SPLIT: PPL + Upper/Lower over 5 days:
@@ -2057,6 +2057,15 @@ function PlanScreen({ plan, profile, onRegenerate, onUpdatePlan }) {
           </div>
         </div>
       )}
+
+      {/* Regenerate plan button */}
+      <div className="px-5 pt-2 pb-4">
+        <button onClick={onRegenerate}
+          className="w-full py-4 rounded-2xl text-[#C8FF00] font-display text-xl tracking-wider active:scale-95 transition-all border border-[rgba(200,255,0,0.25)]"
+          style={{ fontFamily:"'Bebas Neue',sans-serif", background:'rgba(200,255,0,0.07)' }}>
+          REGENERATE PLAN
+        </button>
+      </div>
     </div>
   );
 }
@@ -3903,7 +3912,7 @@ function App() {
       case 'home':     return <HomeScreen profile={profile} plan={plan} logs={logs} streak={streak} prs={prs}
                                 onStartWorkout={setActiveWorkout} onSetTab={setActiveTab}/>;
       case 'plan':     return <PlanScreen plan={plan} profile={profile}
-                                onRegenerate={() => handleGeneratePlan(profile)}
+                                onRegenerate={() => { setPlan(null); handleGeneratePlan(profile); }}
                                 onUpdatePlan={setPlan}/>;
       case 'coach':    return <CoachScreen coachCheckins={coachCheckins} profile={profile} sorenessLog={sorenessLog}/>;
       case 'log':      return <LogTab/>;
