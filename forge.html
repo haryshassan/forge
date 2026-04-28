@@ -887,6 +887,26 @@ Do not use bullet points. Write as a coach speaking directly to the athlete.`;
   );
 }
 
+function formatCoachMessage(text) {
+  return text.split('\n').filter((p, i, arr) => p.trim() !== '' || i < arr.length - 1).map((para, i) => {
+    if (para.trim() === '') return <div key={i} style={{ height: 4 }}/>;
+    const parts = [];
+    let remaining = para;
+    let key = 0;
+    const bold = /\*\*(.+?)\*\*/g;
+    let last = 0;
+    let m;
+    bold.lastIndex = 0;
+    while ((m = bold.exec(para)) !== null) {
+      if (m.index > last) parts.push(<span key={key++}>{para.slice(last, m.index)}</span>);
+      parts.push(<span key={key++} style={{ color:'#C8FF00', fontWeight:700 }}>{m[1]}</span>);
+      last = m.index + m[0].length;
+    }
+    if (last < para.length) parts.push(<span key={key++}>{para.slice(last)}</span>);
+    return <div key={i} style={{ marginBottom: 6 }}>{parts}</div>;
+  });
+}
+
 /* ═══════════════════════════════════════════════
    COACH SCREEN
 ═══════════════════════════════════════════════ */
@@ -1105,9 +1125,15 @@ BADGES: ${badgeText}`;
                       ? 'bg-[#C8FF00] text-[#0D0D0F] rounded-tr-sm'
                       : 'bg-[#1A1A1C] text-[#F5F5F0] border border-[#252527] rounded-tl-sm'
                   }`}>
-                    <p className="text-sm leading-relaxed" style={{ fontFamily:"'DM Sans',sans-serif" }}>
-                      {msg.content}
-                    </p>
+                    {msg.role === 'user' ? (
+                      <p className="text-sm leading-relaxed" style={{ fontFamily:"'DM Sans',sans-serif" }}>
+                        {msg.content}
+                      </p>
+                    ) : (
+                      <div className="text-sm leading-relaxed" style={{ fontFamily:"'DM Sans',sans-serif" }}>
+                        {formatCoachMessage(msg.content)}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
