@@ -197,283 +197,6 @@ const NUTRITION_BADGE_DEFS = [
 
 const ALL_BADGE_DEFS = [...BADGE_DEFS.map(b=>({...b,type:'fitness'})), ...NUTRITION_BADGE_DEFS.map(b=>({...b,type:'nutrition'}))];
 
-/* ── Food database (per 100g values) ── */
-// Fields: id, name, emoji, cat, cal, pro, carb, fat, fib
-const FOOD_DB = [
-  // 🥩 Meats & Fish
-  {id:'chicken_breast',name:'Chicken Breast',emoji:'🍗',cat:'Meats & Fish',cal:165,pro:31,carb:0,fat:3.6,fib:0,unit:{label:'breast',grams:170}},
-  {id:'salmon',name:'Salmon',emoji:'🐟',cat:'Meats & Fish',cal:208,pro:20,carb:0,fat:13,fib:0,unit:{label:'fillet',grams:150}},
-  {id:'beef_mince',name:'Beef Mince (Lean)',emoji:'🥩',cat:'Meats & Fish',cal:215,pro:26,carb:0,fat:12,fib:0},
-  {id:'tuna_can',name:'Tuna (Canned)',emoji:'🐡',cat:'Meats & Fish',cal:116,pro:26,carb:0,fat:1,fib:0,unit:{label:'can (185g)',grams:185}},
-  {id:'turkey_breast',name:'Turkey Breast',emoji:'🦃',cat:'Meats & Fish',cal:157,pro:29,carb:0,fat:3.5,fib:0},
-  {id:'eggs',name:'Eggs',emoji:'🥚',cat:'Meats & Fish',cal:155,pro:13,carb:1.1,fat:11,fib:0,unit:{label:'egg',grams:60}},
-  {id:'sardines',name:'Sardines',emoji:'🐟',cat:'Meats & Fish',cal:208,pro:25,carb:0,fat:11,fib:0,unit:{label:'can (100g)',grams:100}},
-  {id:'lamb',name:'Lamb (Lean)',emoji:'🥩',cat:'Meats & Fish',cal:258,pro:25,carb:0,fat:17,fib:0},
-  {id:'pork_loin',name:'Pork Loin',emoji:'🥩',cat:'Meats & Fish',cal:242,pro:27,carb:0,fat:14,fib:0},
-  {id:'cod',name:'Cod',emoji:'🐠',cat:'Meats & Fish',cal:82,pro:18,carb:0,fat:0.7,fib:0,unit:{label:'fillet',grams:150}},
-  {id:'shrimp',name:'Shrimp',emoji:'🍤',cat:'Meats & Fish',cal:85,pro:18,carb:0.9,fat:0.5,fib:0},
-  {id:'beef_steak',name:'Beef Steak',emoji:'🥩',cat:'Meats & Fish',cal:271,pro:26,carb:0,fat:18,fib:0},
-  {id:'chicken_thigh',name:'Chicken Thigh',emoji:'🍗',cat:'Meats & Fish',cal:209,pro:26,carb:0,fat:11,fib:0},
-  {id:'bacon',name:'Bacon (Nitrate-Free)',emoji:'🥓',cat:'Meats & Fish',cal:541,pro:37,carb:1.4,fat:42,fib:0,unit:{label:'rasher',grams:25}},
-  // 🥦 Vegetables
-  {id:'broccoli',name:'Broccoli',emoji:'🥦',cat:'Vegetables',cal:34,pro:2.8,carb:7,fat:0.4,fib:2.6},
-  {id:'spinach',name:'Spinach',emoji:'🥬',cat:'Vegetables',cal:23,pro:2.9,carb:3.6,fat:0.4,fib:2.2},
-  {id:'kale',name:'Kale',emoji:'🥬',cat:'Vegetables',cal:49,pro:4.3,carb:9,fat:0.9,fib:3.6},
-  {id:'sweet_potato',name:'Sweet Potato',emoji:'🍠',cat:'Vegetables',cal:86,pro:1.6,carb:20,fat:0.1,fib:3},
-  {id:'zucchini',name:'Zucchini',emoji:'🥒',cat:'Vegetables',cal:17,pro:1.2,carb:3.1,fat:0.3,fib:1},
-  {id:'capsicum',name:'Capsicum (Red)',emoji:'🫑',cat:'Vegetables',cal:31,pro:1,carb:6,fat:0.3,fib:2.1},
-  {id:'cauliflower',name:'Cauliflower',emoji:'🥦',cat:'Vegetables',cal:25,pro:1.9,carb:5,fat:0.3,fib:2},
-  {id:'asparagus',name:'Asparagus',emoji:'🌿',cat:'Vegetables',cal:20,pro:2.2,carb:3.9,fat:0.1,fib:2.1},
-  {id:'green_beans',name:'Green Beans',emoji:'🫘',cat:'Vegetables',cal:31,pro:1.8,carb:7,fat:0.2,fib:2.7},
-  {id:'cucumber',name:'Cucumber',emoji:'🥒',cat:'Vegetables',cal:15,pro:0.7,carb:3.6,fat:0.1,fib:0.5},
-  {id:'tomato',name:'Tomato',emoji:'🍅',cat:'Vegetables',cal:18,pro:0.9,carb:3.9,fat:0.2,fib:1.2},
-  {id:'carrot',name:'Carrot',emoji:'🥕',cat:'Vegetables',cal:41,pro:0.9,carb:10,fat:0.2,fib:2.8},
-  {id:'beetroot',name:'Beetroot',emoji:'🫀',cat:'Vegetables',cal:43,pro:1.6,carb:10,fat:0.2,fib:2.8},
-  {id:'mushrooms',name:'Mushrooms',emoji:'🍄',cat:'Vegetables',cal:22,pro:3.1,carb:3.3,fat:0.3,fib:1},
-  {id:'onion',name:'Onion',emoji:'🧅',cat:'Vegetables',cal:40,pro:1.1,carb:9,fat:0.1,fib:1.7},
-  {id:'garlic',name:'Garlic',emoji:'🧄',cat:'Vegetables',cal:149,pro:6.4,carb:33,fat:0.5,fib:2.1},
-  {id:'avocado',name:'Avocado',emoji:'🥑',cat:'Vegetables',cal:160,pro:2,carb:9,fat:15,fib:7,unit:{label:'half',grams:100}},
-  {id:'edamame',name:'Edamame',emoji:'🫘',cat:'Vegetables',cal:122,pro:11,carb:10,fat:5,fib:5},
-  // 🍎 Fruits
-  {id:'banana',name:'Banana',emoji:'🍌',cat:'Fruits',cal:89,pro:1.1,carb:23,fat:0.3,fib:2.6,unit:{label:'banana (medium)',grams:120}},
-  {id:'apple',name:'Apple',emoji:'🍎',cat:'Fruits',cal:52,pro:0.3,carb:14,fat:0.2,fib:2.4,unit:{label:'apple (medium)',grams:150}},
-  {id:'blueberries',name:'Blueberries',emoji:'🫐',cat:'Fruits',cal:57,pro:0.7,carb:14,fat:0.3,fib:2.4},
-  {id:'strawberries',name:'Strawberries',emoji:'🍓',cat:'Fruits',cal:32,pro:0.7,carb:7.7,fat:0.3,fib:2},
-  {id:'mango',name:'Mango',emoji:'🥭',cat:'Fruits',cal:60,pro:0.8,carb:15,fat:0.4,fib:1.6},
-  {id:'orange',name:'Orange',emoji:'🍊',cat:'Fruits',cal:47,pro:0.9,carb:12,fat:0.1,fib:2.4,unit:{label:'orange (medium)',grams:150}},
-  {id:'grapes',name:'Grapes',emoji:'🍇',cat:'Fruits',cal:67,pro:0.6,carb:17,fat:0.4,fib:0.9},
-  {id:'watermelon',name:'Watermelon',emoji:'🍉',cat:'Fruits',cal:30,pro:0.6,carb:7.6,fat:0.2,fib:0.4},
-  {id:'pineapple',name:'Pineapple',emoji:'🍍',cat:'Fruits',cal:50,pro:0.5,carb:13,fat:0.1,fib:1.4},
-  {id:'raspberries',name:'Raspberries',emoji:'🍓',cat:'Fruits',cal:52,pro:1.2,carb:12,fat:0.7,fib:6.5},
-  {id:'dates',name:'Dates',emoji:'🫐',cat:'Fruits',cal:277,pro:1.8,carb:75,fat:0.2,fib:6.7,unit:{label:'date',grams:24}},
-  {id:'kiwi',name:'Kiwi',emoji:'🥝',cat:'Fruits',cal:61,pro:1.1,carb:15,fat:0.5,fib:3,unit:{label:'kiwi',grams:70}},
-  // 🌾 Whole Grains & Legumes
-  {id:'brown_rice',name:'Brown Rice (Cooked)',emoji:'🍚',cat:'Grains & Legumes',cal:216,pro:4.5,carb:45,fat:1.8,fib:3.5},
-  {id:'oats',name:'Oats (Dry)',emoji:'🌾',cat:'Grains & Legumes',cal:389,pro:17,carb:66,fat:7,fib:11},
-  {id:'quinoa',name:'Quinoa (Cooked)',emoji:'🌾',cat:'Grains & Legumes',cal:120,pro:4.4,carb:22,fat:1.9,fib:2.8},
-  {id:'lentils',name:'Lentils (Cooked)',emoji:'🫘',cat:'Grains & Legumes',cal:116,pro:9,carb:20,fat:0.4,fib:7.9},
-  {id:'black_beans',name:'Black Beans (Cooked)',emoji:'🫘',cat:'Grains & Legumes',cal:132,pro:8.9,carb:24,fat:0.5,fib:8.7},
-  {id:'chickpeas',name:'Chickpeas (Cooked)',emoji:'🫘',cat:'Grains & Legumes',cal:164,pro:8.9,carb:27,fat:2.6,fib:7.6},
-  {id:'wg_bread',name:'Whole Grain Bread',emoji:'🍞',cat:'Grains & Legumes',cal:247,pro:9,carb:47,fat:3.4,fib:6,unit:{label:'slice',grams:35}},
-  {id:'buckwheat',name:'Buckwheat (Cooked)',emoji:'🌾',cat:'Grains & Legumes',cal:92,pro:3.4,carb:20,fat:0.6,fib:2.7},
-  // 🥛 Dairy & Alternatives
-  {id:'greek_yoghurt',name:'Greek Yoghurt',emoji:'🥛',cat:'Dairy & Alternatives',cal:97,pro:9,carb:3.6,fat:5,fib:0},
-  {id:'cottage_cheese',name:'Cottage Cheese',emoji:'🧀',cat:'Dairy & Alternatives',cal:98,pro:11,carb:3.4,fat:4.3,fib:0},
-  {id:'whole_milk',name:'Whole Milk',emoji:'🥛',cat:'Dairy & Alternatives',cal:61,pro:3.2,carb:4.8,fat:3.3,fib:0},
-  {id:'almond_milk',name:'Almond Milk',emoji:'🥛',cat:'Dairy & Alternatives',cal:15,pro:0.6,carb:0.3,fat:1.2,fib:0.2},
-  {id:'cheddar',name:'Cheddar Cheese',emoji:'🧀',cat:'Dairy & Alternatives',cal:402,pro:25,carb:1.3,fat:33,fib:0},
-  {id:'mozzarella',name:'Mozzarella',emoji:'🧀',cat:'Dairy & Alternatives',cal:300,pro:22,carb:2.2,fat:22,fib:0},
-  // 🥜 Nuts, Seeds & Fats
-  {id:'almonds',name:'Almonds',emoji:'🥜',cat:'Nuts & Seeds',cal:579,pro:21,carb:22,fat:50,fib:12},
-  {id:'walnuts',name:'Walnuts',emoji:'🌰',cat:'Nuts & Seeds',cal:654,pro:15,carb:14,fat:65,fib:6.7},
-  {id:'cashews',name:'Cashews',emoji:'🥜',cat:'Nuts & Seeds',cal:553,pro:18,carb:30,fat:44,fib:3.3},
-  {id:'chia_seeds',name:'Chia Seeds',emoji:'🌱',cat:'Nuts & Seeds',cal:486,pro:17,carb:42,fat:31,fib:34},
-  {id:'flaxseeds',name:'Flaxseeds',emoji:'🌱',cat:'Nuts & Seeds',cal:534,pro:18,carb:29,fat:42,fib:27},
-  {id:'olive_oil',name:'Olive Oil',emoji:'🫒',cat:'Nuts & Seeds',cal:884,pro:0,carb:0,fat:100,fib:0},
-  {id:'coconut_oil',name:'Coconut Oil',emoji:'🥥',cat:'Nuts & Seeds',cal:862,pro:0,carb:0,fat:100,fib:0},
-  {id:'peanut_butter',name:'Peanut Butter',emoji:'🥜',cat:'Nuts & Seeds',cal:588,pro:25,carb:20,fat:50,fib:6,unit:{label:'tbsp',grams:16}},
-  {id:'almond_butter',name:'Almond Butter',emoji:'🥜',cat:'Nuts & Seeds',cal:614,pro:21,carb:19,fat:56,fib:10,unit:{label:'tbsp',grams:16}},
-  // 🥜 More Nuts & Seeds
-  {id:'macadamia',name:'Macadamia Nuts',emoji:'🥜',cat:'Nuts & Seeds',cal:718,pro:7.9,carb:14,fat:76,fib:8.6,unit:{label:'handful (≈10)',grams:20}},
-  {id:'pecans',name:'Pecans',emoji:'🌰',cat:'Nuts & Seeds',cal:691,pro:9.2,carb:14,fat:72,fib:9.6,unit:{label:'handful (≈15)',grams:20}},
-  {id:'pine_nuts',name:'Pine Nuts',emoji:'🌱',cat:'Nuts & Seeds',cal:673,pro:14,carb:13,fat:68,fib:3.7},
-  {id:'pumpkin_seeds',name:'Pumpkin Seeds',emoji:'🌱',cat:'Nuts & Seeds',cal:559,pro:30,carb:11,fat:49,fib:6,unit:{label:'tbsp',grams:10}},
-  {id:'sunflower_seeds',name:'Sunflower Seeds',emoji:'🌻',cat:'Nuts & Seeds',cal:584,pro:21,carb:20,fat:51,fib:8.6,unit:{label:'tbsp',grams:10}},
-  {id:'hemp_seeds',name:'Hemp Seeds',emoji:'🌱',cat:'Nuts & Seeds',cal:553,pro:32,carb:8.7,fat:49,fib:4,unit:{label:'tbsp',grams:10}},
-  {id:'tahini',name:'Tahini',emoji:'🫙',cat:'Nuts & Seeds',cal:595,pro:17,carb:21,fat:54,fib:9.3,unit:{label:'tbsp',grams:15}},
-  {id:'mixed_nuts',name:'Mixed Nuts',emoji:'🥜',cat:'Nuts & Seeds',cal:628,pro:14,carb:22,fat:57,fib:7,unit:{label:'handful',grams:30}},
-  // 🐟 More Meats & Fish
-  {id:'mackerel',name:'Mackerel',emoji:'🐟',cat:'Meats & Fish',cal:205,pro:19,carb:0,fat:14,fib:0},
-  {id:'tilapia',name:'Tilapia',emoji:'🐠',cat:'Meats & Fish',cal:96,pro:20,carb:0,fat:1.7,fib:0},
-  {id:'prawns',name:'Prawns',emoji:'🍤',cat:'Meats & Fish',cal:85,pro:18,carb:0.9,fat:0.5,fib:0},
-  {id:'duck_breast',name:'Duck Breast',emoji:'🦆',cat:'Meats & Fish',cal:201,pro:28,carb:0,fat:10,fib:0},
-  {id:'canned_salmon',name:'Salmon (Canned)',emoji:'🐟',cat:'Meats & Fish',cal:142,pro:21,carb:0,fat:6.1,fib:0},
-  {id:'tofu_firm',name:'Tofu (Firm)',emoji:'🧊',cat:'Meats & Fish',cal:76,pro:8,carb:1.9,fat:4.8,fib:0.3},
-  {id:'tempeh',name:'Tempeh',emoji:'🟫',cat:'Meats & Fish',cal:193,pro:19,carb:9.4,fat:11,fib:0},
-  {id:'ham',name:'Ham (Lean)',emoji:'🍖',cat:'Meats & Fish',cal:145,pro:21,carb:1.5,fat:5.5,fib:0,unit:{label:'slice',grams:30}},
-  {id:'tuna_steak',name:'Tuna Steak',emoji:'🐡',cat:'Meats & Fish',cal:130,pro:29,carb:0,fat:1,fib:0},
-  // 🥦 More Vegetables
-  {id:'corn',name:'Corn (Sweetcorn)',emoji:'🌽',cat:'Vegetables',cal:86,pro:3.2,carb:19,fat:1.2,fib:2.7},
-  {id:'peas',name:'Peas (Frozen)',emoji:'🟢',cat:'Vegetables',cal:81,pro:5.4,carb:14,fat:0.4,fib:5.1},
-  {id:'leek',name:'Leek',emoji:'🥬',cat:'Vegetables',cal:61,pro:1.5,carb:14,fat:0.3,fib:1.8},
-  {id:'celery',name:'Celery',emoji:'🥬',cat:'Vegetables',cal:16,pro:0.7,carb:3,fat:0.2,fib:1.6},
-  {id:'butternut_squash',name:'Butternut Squash',emoji:'🎃',cat:'Vegetables',cal:45,pro:1,carb:12,fat:0.1,fib:2},
-  {id:'beansprouts',name:'Bean Sprouts',emoji:'🌱',cat:'Vegetables',cal:30,pro:3,carb:5.9,fat:0.2,fib:1.8},
-  {id:'pak_choi',name:'Pak Choi',emoji:'🥬',cat:'Vegetables',cal:13,pro:1.5,carb:2.2,fat:0.2,fib:1},
-  {id:'fennel',name:'Fennel',emoji:'🌿',cat:'Vegetables',cal:31,pro:1.2,carb:7.3,fat:0.2,fib:3.1},
-  {id:'radish',name:'Radish',emoji:'🔴',cat:'Vegetables',cal:16,pro:0.7,carb:3.4,fat:0.1,fib:1.6},
-  {id:'artichoke',name:'Artichoke',emoji:'🌿',cat:'Vegetables',cal:47,pro:3.3,carb:11,fat:0.2,fib:5.4},
-  // 🍎 More Fruits
-  {id:'peach',name:'Peach',emoji:'🍑',cat:'Fruits',cal:39,pro:0.9,carb:9.5,fat:0.3,fib:1.5,unit:{label:'peach',grams:150}},
-  {id:'plum',name:'Plum',emoji:'🍑',cat:'Fruits',cal:46,pro:0.7,carb:11,fat:0.3,fib:1.4,unit:{label:'plum',grams:80}},
-  {id:'cherries',name:'Cherries',emoji:'🍒',cat:'Fruits',cal:50,pro:1,carb:12,fat:0.3,fib:1.6},
-  {id:'pear',name:'Pear',emoji:'🍐',cat:'Fruits',cal:57,pro:0.4,carb:15,fat:0.1,fib:3.1,unit:{label:'pear',grams:160}},
-  {id:'pomegranate',name:'Pomegranate Seeds',emoji:'💎',cat:'Fruits',cal:83,pro:1.7,carb:19,fat:1.2,fib:4},
-  {id:'lemon',name:'Lemon (juice)',emoji:'🍋',cat:'Fruits',cal:29,pro:1.1,carb:9.3,fat:0.3,fib:2.8},
-  {id:'coconut_flesh',name:'Coconut (Flesh)',emoji:'🥥',cat:'Fruits',cal:354,pro:3.3,carb:15,fat:33,fib:9},
-  {id:'papaya',name:'Papaya',emoji:'🍈',cat:'Fruits',cal:43,pro:0.5,carb:11,fat:0.3,fib:1.7},
-  // 🌾 More Grains & Legumes
-  {id:'white_rice',name:'White Rice (Cooked)',emoji:'🍚',cat:'Grains & Legumes',cal:130,pro:2.7,carb:28,fat:0.3,fib:0.4},
-  {id:'pasta_cooked',name:'Pasta (Cooked)',emoji:'🍝',cat:'Grains & Legumes',cal:158,pro:5.8,carb:31,fat:0.9,fib:1.8},
-  {id:'sourdough',name:'Sourdough Bread',emoji:'🍞',cat:'Grains & Legumes',cal:224,pro:8.8,carb:43,fat:1.6,fib:2.5,unit:{label:'slice',grams:40}},
-  {id:'white_bread',name:'White Bread',emoji:'🍞',cat:'Grains & Legumes',cal:265,pro:9,carb:50,fat:3.2,fib:2.3,unit:{label:'slice',grams:30}},
-  {id:'bagel',name:'Bagel',emoji:'🥯',cat:'Grains & Legumes',cal:245,pro:9.5,carb:48,fat:1.6,fib:2.1,unit:{label:'bagel',grams:100}},
-  {id:'wrap',name:'Wrap / Tortilla',emoji:'🫓',cat:'Grains & Legumes',cal:290,pro:8,carb:52,fat:5.4,fib:2.7,unit:{label:'wrap',grams:50}},
-  {id:'couscous',name:'Couscous (Cooked)',emoji:'🌾',cat:'Grains & Legumes',cal:112,pro:3.8,carb:23,fat:0.2,fib:1.4},
-  {id:'bulgur',name:'Bulgur Wheat (Cooked)',emoji:'🌾',cat:'Grains & Legumes',cal:83,pro:3,carb:19,fat:0.2,fib:4.5},
-  {id:'kidney_beans',name:'Kidney Beans (Cooked)',emoji:'🫘',cat:'Grains & Legumes',cal:127,pro:8.7,carb:23,fat:0.5,fib:7.4},
-  {id:'edamame_shelled',name:'Edamame (Shelled)',emoji:'🫘',cat:'Grains & Legumes',cal:122,pro:11,carb:10,fat:5,fib:5},
-  {id:'granola',name:'Granola',emoji:'🌾',cat:'Grains & Legumes',cal:471,pro:10,carb:64,fat:20,fib:5},
-  {id:'rice_cakes',name:'Rice Cakes',emoji:'⬜',cat:'Grains & Legumes',cal:392,pro:8.4,carb:82,fat:3.1,fib:1.4,unit:{label:'cake',grams:9}},
-  // 🥛 More Dairy & Alternatives
-  {id:'low_fat_yoghurt',name:'Low Fat Yoghurt',emoji:'🥛',cat:'Dairy & Alternatives',cal:63,pro:5.3,carb:7.5,fat:1.5,fib:0,unit:{label:'pot (150g)',grams:150}},
-  {id:'skimmed_milk',name:'Skimmed Milk',emoji:'🥛',cat:'Dairy & Alternatives',cal:34,pro:3.4,carb:5,fat:0.1,fib:0},
-  {id:'semi_milk',name:'Semi-Skimmed Milk',emoji:'🥛',cat:'Dairy & Alternatives',cal:46,pro:3.4,carb:4.9,fat:1.6,fib:0},
-  {id:'butter',name:'Butter',emoji:'🧈',cat:'Dairy & Alternatives',cal:717,pro:0.9,carb:0.1,fat:81,fib:0,unit:{label:'tbsp',grams:14}},
-  {id:'cream_cheese',name:'Cream Cheese',emoji:'🧀',cat:'Dairy & Alternatives',cal:350,pro:6,carb:4,fat:35,fib:0,unit:{label:'tbsp',grams:15}},
-  {id:'feta',name:'Feta Cheese',emoji:'🧀',cat:'Dairy & Alternatives',cal:264,pro:14,carb:4,fat:21,fib:0},
-  {id:'parmesan',name:'Parmesan',emoji:'🧀',cat:'Dairy & Alternatives',cal:431,pro:38,carb:4.1,fat:29,fib:0,unit:{label:'tbsp (grated)',grams:10}},
-  {id:'whey_protein',name:'Whey Protein',emoji:'💪',cat:'Dairy & Alternatives',cal:385,pro:75,carb:7,fat:5,fib:0,unit:{label:'scoop',grams:30}},
-  {id:'casein_protein',name:'Casein Protein',emoji:'💪',cat:'Dairy & Alternatives',cal:370,pro:78,carb:5,fat:3,fib:0,unit:{label:'scoop',grams:30}},
-  // 🍫 Snacks & Extras
-  {id:'dark_chocolate',name:'Dark Chocolate (85%)',emoji:'🍫',cat:'Snacks & Extras',cal:599,pro:7.8,carb:46,fat:43,fib:11,unit:{label:'square',grams:10}},
-  {id:'protein_bar',name:'Protein Bar',emoji:'🍫',cat:'Snacks & Extras',cal:380,pro:20,carb:42,fat:12,fib:3,unit:{label:'bar',grams:60}},
-  {id:'popcorn',name:'Popcorn (Plain)',emoji:'🍿',cat:'Snacks & Extras',cal:375,pro:11,carb:74,fat:4.3,fib:14.5},
-  {id:'hummus',name:'Hummus',emoji:'🫙',cat:'Snacks & Extras',cal:177,pro:8,carb:14,fat:10,fib:6,unit:{label:'tbsp',grams:30}},
-  {id:'pita_bread',name:'Pita Bread',emoji:'🫓',cat:'Snacks & Extras',cal:275,pro:9.1,carb:56,fat:1.2,fib:2.2,unit:{label:'pita',grams:60}},
-  {id:'ketchup',name:'Ketchup',emoji:'🍅',cat:'Snacks & Extras',cal:101,pro:1.3,carb:25,fat:0.1,fib:0.3,unit:{label:'tbsp',grams:17}},
-  {id:'soy_sauce',name:'Soy Sauce',emoji:'🫙',cat:'Snacks & Extras',cal:53,pro:5.6,carb:5.6,fat:0.1,fib:0.8,unit:{label:'tbsp',grams:16}},
-  {id:'olive_oil_tbsp',name:'Olive Oil (Extra Virgin)',emoji:'🫒',cat:'Snacks & Extras',cal:884,pro:0,carb:0,fat:100,fib:0,unit:{label:'tbsp',grams:13.5}},
-  {id:'mayo',name:'Mayonnaise',emoji:'🫙',cat:'Snacks & Extras',cal:680,pro:1,carb:2.5,fat:75,fib:0,unit:{label:'tbsp',grams:15}},
-  // 🥤 Beverages & Smoothies
-  {id:'orange_juice',name:'Orange Juice',emoji:'🍊',cat:'Beverages',cal:45,pro:0.7,carb:10,fat:0.2,fib:0.2},
-  {id:'whole_milk_latte',name:'Latte (Whole Milk)',emoji:'☕',cat:'Beverages',cal:61,pro:3.2,carb:4.8,fat:3.3,fib:0,unit:{label:'cup (250ml)',grams:250}},
-  {id:'black_coffee',name:'Black Coffee',emoji:'☕',cat:'Beverages',cal:2,pro:0.3,carb:0,fat:0,fib:0,unit:{label:'cup (250ml)',grams:250}},
-  {id:'green_tea',name:'Green Tea',emoji:'🍵',cat:'Beverages',cal:1,pro:0,carb:0.2,fat:0,fib:0,unit:{label:'cup (250ml)',grams:250}},
-  // 🥛 More Beverages
-  {id:'oat_milk',name:'Oat Milk',emoji:'🥛',cat:'Beverages',cal:46,pro:1.2,carb:9,fat:1.5,fib:0.8},
-  {id:'coconut_water',name:'Coconut Water',emoji:'🥥',cat:'Beverages',cal:19,pro:0.7,carb:4.5,fat:0.2,fib:1.1},
-  {id:'cold_brew',name:'Cold Brew Coffee',emoji:'☕',cat:'Beverages',cal:3,pro:0.5,carb:0.2,fat:0,fib:0,unit:{label:'cup (250ml)',grams:250}},
-  {id:'kombucha',name:'Kombucha',emoji:'🫙',cat:'Beverages',cal:16,pro:0.2,carb:3.6,fat:0,fib:0},
-  {id:'bone_broth_drink',name:'Bone Broth',emoji:'🍲',cat:'Beverages',cal:31,pro:6.5,carb:0.5,fat:0.5,fib:0,unit:{label:'cup (240ml)',grams:240}},
-  // 🍯 Sweeteners & Condiments
-  {id:'raw_honey',name:'Raw Honey',emoji:'🍯',cat:'Sweeteners',cal:304,pro:0.3,carb:82,fat:0,fib:0.2,unit:{label:'tbsp',grams:21}},
-  {id:'manuka_honey',name:'Manuka Honey',emoji:'🍯',cat:'Sweeteners',cal:294,pro:0.4,carb:82,fat:0.1,fib:0,unit:{label:'tbsp',grams:21}},
-  {id:'maple_syrup',name:'Pure Maple Syrup',emoji:'🍁',cat:'Sweeteners',cal:260,pro:0,carb:67,fat:0.1,fib:0,unit:{label:'tbsp',grams:20}},
-  {id:'blackstrap_molasses',name:'Blackstrap Molasses',emoji:'🫙',cat:'Sweeteners',cal:290,pro:2.8,carb:75,fat:0.1,fib:0,unit:{label:'tbsp',grams:20}},
-  {id:'coconut_sugar',name:'Coconut Sugar',emoji:'🥥',cat:'Sweeteners',cal:375,pro:0,carb:100,fat:0,fib:0,unit:{label:'tsp',grams:4}},
-  {id:'apple_cider_vinegar',name:'Apple Cider Vinegar',emoji:'🍶',cat:'Sweeteners',cal:22,pro:0,carb:0.9,fat:0,fib:0,unit:{label:'tbsp',grams:15}},
-  {id:'balsamic_vinegar',name:'Balsamic Vinegar',emoji:'🍶',cat:'Sweeteners',cal:88,pro:0.5,carb:17,fat:0,fib:0,unit:{label:'tbsp',grams:16}},
-  {id:'tamari',name:'Tamari / Soy Sauce',emoji:'🫙',cat:'Sweeteners',cal:60,pro:5.8,carb:5.6,fat:0,fib:0.1,unit:{label:'tbsp',grams:18}},
-  {id:'dijon_mustard',name:'Dijon Mustard',emoji:'🫙',cat:'Sweeteners',cal:66,pro:4.5,carb:5,fat:3.6,fib:2,unit:{label:'tsp',grams:5}},
-  {id:'tomato_paste',name:'Tomato Paste',emoji:'🍅',cat:'Sweeteners',cal:82,pro:4.3,carb:19,fat:0.5,fib:4.1,unit:{label:'tbsp',grams:16}},
-  {id:'miso_paste',name:'Miso Paste',emoji:'🫙',cat:'Sweeteners',cal:199,pro:12,carb:27,fat:6,fib:5.4,unit:{label:'tbsp',grams:17}},
-  // 🌿 Herbs & Spices
-  {id:'turmeric',name:'Turmeric Powder',emoji:'🟡',cat:'Herbs & Spices',cal:312,pro:9.7,carb:68,fat:3.3,fib:21,unit:{label:'tsp',grams:3}},
-  {id:'cinnamon',name:'Cinnamon',emoji:'🌿',cat:'Herbs & Spices',cal:247,pro:4,carb:81,fat:1.2,fib:53,unit:{label:'tsp',grams:2.6}},
-  {id:'ginger_powder',name:'Ginger Powder',emoji:'🌿',cat:'Herbs & Spices',cal:335,pro:8.9,carb:72,fat:4.2,fib:14,unit:{label:'tsp',grams:1.8}},
-  {id:'paprika',name:'Paprika',emoji:'🌶️',cat:'Herbs & Spices',cal:282,pro:14,carb:55,fat:13,fib:35,unit:{label:'tsp',grams:2.3}},
-  {id:'cumin',name:'Cumin',emoji:'🌿',cat:'Herbs & Spices',cal:375,pro:18,carb:44,fat:22,fib:11,unit:{label:'tsp',grams:2.1}},
-  {id:'cacao_powder',name:'Cacao Powder',emoji:'🍫',cat:'Herbs & Spices',cal:228,pro:20,carb:57,fat:13,fib:33,unit:{label:'tbsp',grams:7.5}},
-  {id:'cacao_nibs',name:'Cacao Nibs',emoji:'🍫',cat:'Herbs & Spices',cal:539,pro:14,carb:58,fat:43,fib:33,unit:{label:'tbsp',grams:12}},
-  // 🧀 Expanded Dairy
-  {id:'goat_cheese',name:'Goat Cheese',emoji:'🧀',cat:'Dairy & Alternatives',cal:364,pro:22,carb:2.5,fat:30,fib:0},
-  {id:'labneh',name:'Labneh',emoji:'🧀',cat:'Dairy & Alternatives',cal:125,pro:6.8,carb:4.5,fat:9,fib:0},
-  {id:'skyr',name:'Skyr',emoji:'🥛',cat:'Dairy & Alternatives',cal:65,pro:11,carb:4,fat:0.2,fib:0,unit:{label:'pot (150g)',grams:150}},
-  {id:'a2_milk',name:'A2 Whole Milk',emoji:'🥛',cat:'Dairy & Alternatives',cal:61,pro:3.2,carb:4.8,fat:3.3,fib:0},
-  {id:'whey_isolate',name:'Whey Protein Isolate',emoji:'💪',cat:'Dairy & Alternatives',cal:360,pro:85,carb:4,fat:2,fib:0,unit:{label:'scoop',grams:30}},
-  {id:'collagen_powder',name:'Collagen Powder',emoji:'💊',cat:'Dairy & Alternatives',cal:360,pro:90,carb:0,fat:0,fib:0,unit:{label:'scoop',grams:10}},
-  // 🥩 More Meats
-  {id:'chicken_liver',name:'Chicken Liver',emoji:'🍗',cat:'Meats & Fish',cal:172,pro:25,carb:1,fat:7.5,fib:0},
-  {id:'beef_heart',name:'Beef Heart',emoji:'🥩',cat:'Meats & Fish',cal:112,pro:17,carb:0.1,fat:4.7,fib:0},
-  {id:'wagyu',name:'Wagyu Beef',emoji:'🥩',cat:'Meats & Fish',cal:400,pro:18,carb:0,fat:37,fib:0},
-  {id:'grass_fed_beef',name:'Grass-Fed Beef Steak',emoji:'🥩',cat:'Meats & Fish',cal:250,pro:26,carb:0,fat:16,fib:0},
-  {id:'smoked_salmon',name:'Smoked Salmon',emoji:'🐟',cat:'Meats & Fish',cal:117,pro:18,carb:0,fat:4.3,fib:0},
-  {id:'gravlax',name:'Gravlax (Cured Salmon)',emoji:'🐟',cat:'Meats & Fish',cal:170,pro:19,carb:0.1,fat:10,fib:0},
-  {id:'canned_mackerel',name:'Mackerel (Canned)',emoji:'🐟',cat:'Meats & Fish',cal:205,pro:19,carb:0,fat:14,fib:0,unit:{label:'can (125g)',grams:125}},
-  {id:'smoked_trout',name:'Smoked Trout',emoji:'🐠',cat:'Meats & Fish',cal:149,pro:20,carb:0,fat:7.5,fib:0},
-  {id:'tinned_oysters',name:'Tinned Oysters',emoji:'🦪',cat:'Meats & Fish',cal:102,pro:11,carb:5.6,fat:3.4,fib:0},
-  {id:'deli_turkey',name:'Deli Turkey Breast',emoji:'🦃',cat:'Meats & Fish',cal:104,pro:22,carb:0.5,fat:1.2,fib:0,unit:{label:'slice',grams:28}},
-  {id:'deli_chicken',name:'Deli Chicken Breast',emoji:'🍗',cat:'Meats & Fish',cal:98,pro:21,carb:1,fat:1,fib:0,unit:{label:'slice',grams:28}},
-  // 🥦 More Vegetables & Fermented
-  {id:'nori',name:'Nori Sheet',emoji:'🌿',cat:'Vegetables',cal:35,pro:5.8,carb:5.1,fat:0.7,fib:0.3,unit:{label:'sheet',grams:2.5}},
-  {id:'wakame',name:'Wakame Seaweed',emoji:'🌿',cat:'Vegetables',cal:45,pro:3,carb:9.1,fat:0.6,fib:0.5},
-  {id:'microgreens',name:'Microgreens',emoji:'🌱',cat:'Vegetables',cal:31,pro:3.1,carb:5.2,fat:0.5,fib:1.8},
-  {id:'hearts_of_palm',name:'Hearts of Palm',emoji:'🌿',cat:'Vegetables',cal:36,pro:3.7,carb:3.8,fat:0.4,fib:2.2},
-  {id:'jackfruit',name:'Jackfruit (Young)',emoji:'🫛',cat:'Vegetables',cal:95,pro:1.7,carb:23,fat:0.4,fib:1.5},
-  {id:'sun_dried_tomato',name:'Sun-Dried Tomatoes',emoji:'🍅',cat:'Vegetables',cal:258,pro:14,carb:56,fat:3,fib:12},
-  {id:'sauerkraut',name:'Sauerkraut',emoji:'🫙',cat:'Vegetables',cal:19,pro:0.9,carb:4.3,fat:0.1,fib:2.9},
-  {id:'kimchi',name:'Kimchi',emoji:'🌶️',cat:'Vegetables',cal:15,pro:1.1,carb:2.4,fat:0.5,fib:1.6},
-  {id:'pickles',name:'Pickles (Gherkins)',emoji:'🥒',cat:'Vegetables',cal:11,pro:0.7,carb:2.3,fat:0.2,fib:1.2},
-  {id:'bamboo_shoots',name:'Bamboo Shoots',emoji:'🎋',cat:'Vegetables',cal:27,pro:2.6,carb:5.2,fat:0.3,fib:2.2},
-  {id:'water_chestnuts',name:'Water Chestnuts',emoji:'🤍',cat:'Vegetables',cal:97,pro:2,carb:23,fat:0.1,fib:3},
-  // 🍎 Dried Fruits
-  {id:'dried_apricots',name:'Dried Apricots',emoji:'🍑',cat:'Fruits',cal:241,pro:3.4,carb:63,fat:0.5,fib:7.3,unit:{label:'piece',grams:8}},
-  {id:'dried_mango',name:'Dried Mango',emoji:'🥭',cat:'Fruits',cal:319,pro:2.7,carb:78,fat:1.2,fib:2.4},
-  {id:'dried_cranberries',name:'Dried Cranberries',emoji:'🍒',cat:'Fruits',cal:308,pro:0.1,carb:82,fat:1.4,fib:5.7},
-  {id:'prunes',name:'Prunes (Dried Plums)',emoji:'🫐',cat:'Fruits',cal:240,pro:2.2,carb:64,fat:0.4,fib:7.1,unit:{label:'prune',grams:8}},
-  {id:'raisins',name:'Raisins',emoji:'🍇',cat:'Fruits',cal:299,pro:3.1,carb:79,fat:0.5,fib:3.7,unit:{label:'tbsp',grams:9}},
-  {id:'goji_berries',name:'Goji Berries',emoji:'🔴',cat:'Fruits',cal:349,pro:14,carb:77,fat:0.4,fib:13,unit:{label:'tbsp',grams:9}},
-  {id:'acai_pulp',name:'Acai Pulp',emoji:'🫐',cat:'Fruits',cal:70,pro:1.5,carb:7,fat:5,fib:2},
-  {id:'guava',name:'Guava',emoji:'🟢',cat:'Fruits',cal:68,pro:2.6,carb:14,fat:1,fib:5.4},
-  // 🌾 More Grains & Noodles
-  {id:'white_rice_cooked',name:'White Rice (Cooked)',emoji:'🍚',cat:'Grains & Legumes',cal:130,pro:2.7,carb:28,fat:0.3,fib:0.4,unit:{label:'cup (186g)',grams:186}},
-  {id:'brown_rice_cooked',name:'Brown Rice (Cooked)',emoji:'🍚',cat:'Grains & Legumes',cal:111,pro:2.6,carb:23,fat:0.9,fib:1.8,unit:{label:'cup (195g)',grams:195}},
-  {id:'oats_cooked',name:'Oats (Cooked Porridge)',emoji:'🌾',cat:'Grains & Legumes',cal:71,pro:2.5,carb:12,fat:1.4,fib:1.7,unit:{label:'cup (240g)',grams:240}},
-  {id:'sushi_rice',name:'Sushi Rice (Cooked)',emoji:'🍚',cat:'Grains & Legumes',cal:169,pro:3,carb:38,fat:0.3,fib:0.3},
-  {id:'udon',name:'Udon Noodles (Cooked)',emoji:'🍜',cat:'Grains & Legumes',cal:132,pro:3.6,carb:27,fat:0.7,fib:1.5},
-  {id:'glass_noodles',name:'Glass Noodles (Cooked)',emoji:'🍜',cat:'Grains & Legumes',cal:82,pro:0.1,carb:20,fat:0,fib:0.5},
-  {id:'rice_paper',name:'Rice Paper Wrapper',emoji:'🫓',cat:'Grains & Legumes',cal:320,pro:0,carb:80,fat:0,fib:0.9,unit:{label:'sheet',grams:16}},
-  // 🥜 More Seeds & Nut Butters
-  {id:'sunflower_butter',name:'Sunflower Seed Butter',emoji:'🌻',cat:'Nuts & Seeds',cal:617,pro:22,carb:22,fat:57,fib:6.4,unit:{label:'tbsp',grams:16}},
-  {id:'black_sesame',name:'Black Sesame Seeds',emoji:'⚫',cat:'Nuts & Seeds',cal:573,pro:18,carb:23,fat:50,fib:11.8,unit:{label:'tbsp',grams:9}},
-  {id:'coconut_butter',name:'Coconut Butter',emoji:'🥥',cat:'Nuts & Seeds',cal:671,pro:7.1,carb:25,fat:67,fib:16,unit:{label:'tbsp',grams:14}},
-  {id:'trail_mix',name:'Trail Mix',emoji:'🥜',cat:'Nuts & Seeds',cal:462,pro:11,carb:45,fat:28,fib:5,unit:{label:'handful',grams:30}},
-  // 🍳 Common Prepared Foods
-  {id:'hard_boiled_egg',name:'Hard Boiled Egg',emoji:'🥚',cat:'Prepared Foods',cal:155,pro:13,carb:1.1,fat:11,fib:0,unit:{label:'egg',grams:50}},
-  {id:'scrambled_eggs',name:'Scrambled Eggs (with butter)',emoji:'🍳',cat:'Prepared Foods',cal:182,pro:12,carb:1.4,fat:14,fib:0},
-  {id:'grilled_chicken',name:'Grilled Chicken Breast',emoji:'🍗',cat:'Prepared Foods',cal:165,pro:31,carb:0,fat:3.6,fib:0},
-  {id:'baked_salmon',name:'Baked Salmon (Cooked)',emoji:'🐟',cat:'Prepared Foods',cal:208,pro:20,carb:0,fat:13,fib:0},
-  {id:'steamed_broccoli',name:'Steamed Broccoli',emoji:'🥦',cat:'Prepared Foods',cal:28,pro:2.4,carb:5.6,fat:0.4,fib:2.4},
-  {id:'roasted_sweet_potato',name:'Roasted Sweet Potato',emoji:'🍠',cat:'Prepared Foods',cal:90,pro:2,carb:21,fat:0.1,fib:3.3},
-  {id:'overnight_oats',name:'Overnight Oats',emoji:'🌾',cat:'Prepared Foods',cal:150,pro:7,carb:24,fat:3.5,fib:3},
-  {id:'chia_pudding',name:'Chia Pudding',emoji:'🌱',cat:'Prepared Foods',cal:140,pro:5,carb:15,fat:7,fib:8},
-  {id:'smoothie_bowl',name:'Smoothie Bowl Base',emoji:'🍓',cat:'Prepared Foods',cal:120,pro:3,carb:28,fat:0.5,fib:3},
-  {id:'homemade_granola',name:'Homemade Granola',emoji:'🌾',cat:'Prepared Foods',cal:455,pro:10,carb:61,fat:20,fib:5},
-  {id:'acai_bowl',name:'Acai Bowl Base',emoji:'🫐',cat:'Prepared Foods',cal:100,pro:2,carb:18,fat:3,fib:3,unit:{label:'bowl (200g)',grams:200}},
-];
-
-const FOOD_CATEGORIES = ['Meats & Fish','Vegetables','Fruits','Grains & Legumes','Dairy & Alternatives','Nuts & Seeds','Snacks & Extras','Beverages','Sweeteners','Herbs & Spices','Prepared Foods'];
-
-const FOOD_ALIASES = {
-  // British / regional alternates
-  prawn: 'shrimp', prawns: 'shrimp', courgette: 'zucchini',
-  aubergine: 'eggplant', coriander: 'cilantro', rocket: 'arugula',
-  biscuit: 'cookie', crisps: 'chips', tinned: 'canned',
-  squash: 'butternut', mince: 'beef mince',
-  capsicum: 'capsicum', 'bell pepper': 'capsicum', pepper: 'capsicum',
-  // Proteins
-  'protein powder': 'whey', 'whey powder': 'whey', pb: 'peanut butter',
-  'nut butter': 'peanut butter', 'almond butter': 'almond',
-  chicken: 'chicken', beef: 'beef', tuna: 'tuna', fish: 'salmon',
-  // Dairy
-  yoghurt: 'yoghurt', yogurt: 'greek', kefir: 'skyr',
-  'cream cheese': 'cream', ricotta: 'cottage', feta: 'feta',
-  // Grains
-  oatmeal: 'oats', porridge: 'oats', pasta: 'pasta', noodles: 'noodle',
-  rice: 'rice', bread: 'bread', toast: 'sourdough',
-  // Sweeteners
-  honey: 'honey', maple: 'maple', molasses: 'molasses', syrup: 'maple',
-  // Cacao
-  cacao: 'cacao', cocoa: 'cacao', chocolate: 'dark chocolate',
-  // Fermented
-  kimchi: 'kimchi', sauerkraut: 'sauerkraut', kombucha: 'kombucha',
-  // Other
-  nuts: 'almonds', 'mixed nuts': 'mixed', 'dried fruit': 'raisins',
-  collagen: 'collagen', 'bone broth': 'bone', seaweed: 'nori',
-  avocado: 'avocado', avo: 'avocado',
-  'sweet potato': 'sweet potato', yam: 'sweet potato',
-};
 
 const TRAINING_SPLITS = {
   2: [
@@ -566,26 +289,6 @@ function calcNutritionGoals(profile, nutritionGoals) {
   return { calories, protein, carbs, fat: fatG };
 }
 
-function fuzzySearch(query, limit=20) {
-  if (!query.trim()) return [];
-  const q = query.toLowerCase().trim();
-  const resolved = FOOD_ALIASES[q] || q;
-  // score: exact match > start > contains
-  const score = (f, term) => {
-    const n = f.name.toLowerCase();
-    if (n === term) return 3;
-    if (n.startsWith(term)) return 2;
-    if (n.includes(term)) return 1;
-    if (f.cat.toLowerCase().includes(term)) return 0.5;
-    return 0;
-  };
-  return FOOD_DB
-    .map(f => ({ f, s: Math.max(score(f, q), score(f, resolved)) }))
-    .filter(x => x.s > 0)
-    .sort((a, b) => b.s - a.s)
-    .map(x => x.f)
-    .slice(0, limit);
-}
 
 // Mifflin-St Jeor BMR
 function calcBMR({ weight, height, age, sex }) {
@@ -3620,20 +3323,34 @@ function FoodDetailSheet({ food, onAdd, onClose, lockedMeal=null }) {
 function FoodAddModal({ onAdd, onClose }) {
   const [query,   setQuery]  = useState('');
   const [results, setResults]= useState([]);
-  const [sel,     setSel]    = useState(null); // selected food
-  const MEALS = ['Breakfast','Lunch','Dinner','Snack'];
+  const [loading, setLoading]= useState(false);
+  const [error,   setError]  = useState(''); // '' | 'no_results' | 'api_error'
+  const [sel,     setSel]    = useState(null);
 
   useEffect(()=>{
-    setResults(query.length>0 ? fuzzySearch(query, 10) : FOOD_DB.slice(0,10));
+    if (query.length < 2) { setResults([]); setError(''); setLoading(false); return; }
+    setLoading(true); setError('');
+    const t = setTimeout(async () => {
+      try {
+        const res = await fetch(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=20&fields=product_name,nutriments,serving_size,serving_quantity,brands`);
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        const mapped = (data.products||[]).filter(p=>p.product_name&&p.product_name.trim()).map((p,idx)=>{
+          const n=p.nutriments||{};
+          const cal100=n['energy-kcal_100g']!=null?n['energy-kcal_100g']:(n['energy_100g']!=null?n['energy_100g']/4.184:0);
+          const sg=p.serving_quantity?parseFloat(p.serving_quantity):null;
+          return { id:`off_${Date.now()}_${idx}`, name:p.product_name.trim(), emoji:'🍽️', cat:p.brands||'', brand:p.brands||'',
+            cal:Math.round(cal100), pro:Math.round((n['proteins_100g']||0)*10)/10, carb:Math.round((n['carbohydrates_100g']||0)*10)/10,
+            fat:Math.round((n['fat_100g']||0)*10)/10, fib:Math.round((n['fiber_100g']||0)*10)/10,
+            unit:sg&&sg>0?{label:'serving',grams:sg}:null };
+        });
+        if (mapped.length===0) { setError('no_results'); setResults([]); } else { setResults(mapped); setError(''); }
+      } catch { setError('api_error'); setResults([]); } finally { setLoading(false); }
+    }, 400);
+    return ()=>clearTimeout(t);
   },[query]);
 
-  // Init with popular foods
-  useEffect(()=>{ setResults(FOOD_DB.slice(0,10)); },[]);
-
-  const handleAdd = (entry) => {
-    onAdd(entry);
-    onClose();
-  };
+  const handleAdd = (entry) => { onAdd(entry); onClose(); };
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col" style={{ maxWidth:430, left:'50%', transform:'translateX(-50%)' }}>
@@ -3656,26 +3373,25 @@ function FoodAddModal({ onAdd, onClose }) {
             <div className="flex items-center gap-3 bg-[#252527] rounded-2xl px-4 py-3 mb-4 border border-[#3A3A3C]">
               <Search size={17} color="#8A8A8E"/>
               <input autoFocus value={query} onChange={e=>setQuery(e.target.value)}
-                placeholder="Search 300+ foods…"
+                placeholder="Search foods…"
                 className="flex-1 bg-transparent text-[#F5F5F0] text-sm outline-none placeholder:text-[#8A8A8E]"/>
               {query && <button onClick={()=>setQuery('')}><X size={14} color="#8A8A8E"/></button>}
             </div>
             <div className="flex-1 overflow-y-auto space-y-1">
-              {results.length === 0 && query.length > 0 && (
-                <p className="text-[#8A8A8E] text-sm text-center py-8">No foods found for "{query}"</p>
-              )}
-              {results.map(food=>(
+              {loading ? (
+                <div className="flex justify-center items-center py-8">
+                  <div className="w-5 h-5 rounded-full border-2 border-[#3A3A3C] border-t-[#C8FF00] animate-spin"/>
+                </div>
+              ) : error === 'no_results' ? (
+                <p className="text-[#8A8A8E] text-sm text-center py-8">No results found — try a different search</p>
+              ) : error === 'api_error' ? (
+                <p className="text-[#8A8A8E] text-sm text-center py-8">Could not reach food database — check your connection</p>
+              ) : results.map(food=>(
                 <button key={food.id} onClick={()=>setSel(food)}
                   className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl bg-[#252527] active:scale-95 transition-all border border-[#3A3A3C] text-left">
-                  <span className="text-2xl">{food.emoji}</span>
                   <div className="flex-1 min-w-0">
                     <p className="text-[#F5F5F0] text-sm font-medium truncate">{food.name}</p>
-                    <p className="text-[#8A8A8E] text-xs">{food.cat}</p>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-[#C8FF00] text-sm font-display"
-                      style={{ fontFamily:"'Bebas Neue',sans-serif" }}>{food.cal}</p>
-                    <p className="text-[#8A8A8E] text-[10px]">kcal/100g</p>
+                    {food.brand && <p className="text-[#8A8A8E] text-xs truncate">{food.brand}</p>}
                   </div>
                 </button>
               ))}
@@ -3814,6 +3530,8 @@ function FuelScreen({ nutritionLog, nutritionGoals, weightHistory, onAddFood, on
   const [mealSearchOpen, setMealSearchOpen] = useState(false); // inline search banner open
   const [searchQ,    setSearchQ]        = useState('');
   const [searchResults, setSearchResults] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError,   setSearchError]   = useState(''); // '' | 'no_results' | 'api_error'
   const [addToast,   setAddToast]       = useState('');
   const [weightInput, setWeightInput]   = useState('');
   const [expanded,   setExpanded]       = useState({ Breakfast:true, Lunch:true, Dinner:true, Snack:true });
@@ -3830,13 +3548,60 @@ function FuelScreen({ nutritionLog, nutritionGoals, weightHistory, onAddFood, on
   const hour = new Date().getHours();
   const showNudge = hour >= 20 && totals.cal < (goals.calories||2000) * 0.5;
 
-  // Search effect
+  // Debounced Open Food Facts search
   useEffect(() => {
-    if (searchQ.length > 0) {
-      setSearchResults(fuzzySearch(searchQ, 10));
-    } else {
+    if (searchQ.length < 2) {
       setSearchResults([]);
+      setSearchError('');
+      setSearchLoading(false);
+      return;
     }
+    setSearchLoading(true);
+    setSearchError('');
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(searchQ)}&search_simple=1&action=process&json=1&page_size=20&fields=product_name,nutriments,serving_size,serving_quantity,brands`
+        );
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        const mapped = (data.products || [])
+          .filter(p => p.product_name && p.product_name.trim())
+          .map((p, idx) => {
+            const n = p.nutriments || {};
+            const cal100 = n['energy-kcal_100g'] != null
+              ? n['energy-kcal_100g']
+              : (n['energy_100g'] != null ? n['energy_100g'] / 4.184 : 0);
+            const servGrams = p.serving_quantity ? parseFloat(p.serving_quantity) : null;
+            return {
+              id: `off_${Date.now()}_${idx}`,
+              name: p.product_name.trim(),
+              emoji: '🍽️',
+              cat: p.brands || '',
+              brand: p.brands || '',
+              cal: Math.round(cal100),
+              pro: Math.round((n['proteins_100g'] || 0) * 10) / 10,
+              carb: Math.round((n['carbohydrates_100g'] || 0) * 10) / 10,
+              fat: Math.round((n['fat_100g'] || 0) * 10) / 10,
+              fib: Math.round((n['fiber_100g'] || 0) * 10) / 10,
+              unit: servGrams && servGrams > 0 ? { label: 'serving', grams: servGrams } : null,
+            };
+          });
+        if (mapped.length === 0) {
+          setSearchError('no_results');
+          setSearchResults([]);
+        } else {
+          setSearchResults(mapped);
+          setSearchError('');
+        }
+      } catch {
+        setSearchError('api_error');
+        setSearchResults([]);
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
   }, [searchQ]);
 
   const openMealSearch = (mealName) => {
@@ -3945,22 +3710,23 @@ function FuelScreen({ nutritionLog, nutritionGoals, weightHistory, onAddFood, on
             )}
           </div>
           {/* Inline results */}
-          {searchQ.length > 0 && (
-            <div className="mt-1 bg-[#1A1A1C] border border-[#3A3A3C] rounded-2xl overflow-hidden shadow-2xl">
-              {searchResults.length === 0 ? (
-                <p className="text-[#8A8A8E] text-sm text-center py-4">No results for "{searchQ}"</p>
+          {searchQ.length >= 2 && (
+            <div className="mt-1 bg-[#1A1A1C] border border-[#3A3A3C] rounded-2xl overflow-hidden shadow-2xl max-h-72 overflow-y-auto">
+              {searchLoading ? (
+                <div className="flex justify-center items-center py-4">
+                  <div className="w-5 h-5 rounded-full border-2 border-[#3A3A3C] border-t-[#C8FF00] animate-spin"/>
+                </div>
+              ) : searchError === 'no_results' ? (
+                <p className="text-[#8A8A8E] text-sm text-center py-4 px-4">No results found — try a different search</p>
+              ) : searchError === 'api_error' ? (
+                <p className="text-[#8A8A8E] text-sm text-center py-4 px-4">Could not reach food database — check your connection</p>
               ) : (
                 searchResults.map((food, i) => (
                   <button key={food.id} onMouseDown={e=>{e.preventDefault();setSelFood(food);}}
                     className={`w-full flex items-center gap-3 px-4 py-3 text-left active:bg-[#252527] ${i>0?'border-t border-[#252527]':''}`}>
-                    <span className="text-xl">{food.emoji}</span>
                     <div className="flex-1 min-w-0">
                       <p className="text-[#F5F5F0] text-sm font-medium truncate">{food.name}</p>
-                      <p className="text-[#8A8A8E] text-xs">{food.cat}{food.unit?` · 1 ${food.unit.label}`:''}</p>
-                    </div>
-                    <div className="text-right flex-shrink-0">
-                      <p className="text-[#C8FF00] text-xs font-display" style={{ fontFamily:"'Bebas Neue',sans-serif" }}>{food.cal}</p>
-                      <p className="text-[#8A8A8E] text-[10px]">per 100g</p>
+                      {food.brand && <p className="text-[#8A8A8E] text-xs truncate">{food.brand}</p>}
                     </div>
                   </button>
                 ))
@@ -3987,24 +3753,25 @@ function FuelScreen({ nutritionLog, nutritionGoals, weightHistory, onAddFood, on
         </div>
 
         {/* Inline results when typing in persistent bar */}
-        {searchQ.length > 0 && (
-          <div className="absolute left-5 right-5 top-full mt-1 bg-[#1A1A1C] border border-[#3A3A3C] rounded-2xl overflow-hidden shadow-2xl"
+        {searchQ.length >= 2 && (
+          <div className="absolute left-5 right-5 top-full mt-1 bg-[#1A1A1C] border border-[#3A3A3C] rounded-2xl overflow-hidden shadow-2xl max-h-72 overflow-y-auto"
             style={{ zIndex:50 }}>
-            {searchResults.length === 0 ? (
-              <p className="text-[#8A8A8E] text-sm text-center py-4">No results for "{searchQ}"</p>
+            {searchLoading ? (
+              <div className="flex justify-center items-center py-4">
+                <div className="w-5 h-5 rounded-full border-2 border-[#3A3A3C] border-t-[#C8FF00] animate-spin"/>
+              </div>
+            ) : searchError === 'no_results' ? (
+              <p className="text-[#8A8A8E] text-sm text-center py-4 px-4">No results found — try a different search</p>
+            ) : searchError === 'api_error' ? (
+              <p className="text-[#8A8A8E] text-sm text-center py-4 px-4">Could not reach food database — check your connection</p>
             ) : (
               searchResults.map((food, i) => (
                 <button key={food.id} onMouseDown={e=>{e.preventDefault();setSelFood(food);}}
                   className={`w-full flex items-center gap-3 px-4 py-3 text-left active:bg-[#252527]
                     ${i>0?'border-t border-[#252527]':''}`}>
-                  <span className="text-xl">{food.emoji}</span>
                   <div className="flex-1 min-w-0">
                     <p className="text-[#F5F5F0] text-sm font-medium truncate">{food.name}</p>
-                    <p className="text-[#8A8A8E] text-xs">{food.cat}</p>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-[#C8FF00] text-xs font-display" style={{ fontFamily:"'Bebas Neue',sans-serif" }}>{food.cal}</p>
-                    <p className="text-[#8A8A8E] text-[10px]">per 100g</p>
+                    {food.brand && <p className="text-[#8A8A8E] text-xs truncate">{food.brand}</p>}
                   </div>
                 </button>
               ))
