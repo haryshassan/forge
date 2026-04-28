@@ -954,7 +954,7 @@ function CoachScreen({ coachCheckins, profile, plan, logs, prs, streak,
 
     return `You are FORGE Coach, a world class personal trainer and nutritionist. You know everything about this athlete. You never diagnose injuries but can give training guidance around discomfort. When suggesting plan changes, remind ${name} to tap Regenerate Plan on the Plan tab to apply them. Always address the athlete by their first name.
 
-Keep responses short and conversational — no more than 4 to 6 sentences per message. Write like a coach texting their athlete, not like a report. Use short punchy sentences. Break information into separate short paragraphs with a line break between each point so it is easy to read on a phone screen. Never write a wall of text. Never use bullet points or dashes or numbered lists. Never use headers or bold text. Just clean short paragraphs that are easy to scan and digest. If there is a lot to cover, prioritise the most important point and keep everything else brief. Always sound human, direct and encouraging — not clinical or formal.
+Keep every response under 120 words total. Use short sentences. Use line breaks between every separate point or idea. Use a short bold heading before each new topic if covering more than one thing — for example **Recovery** or **Nutrition** or **Today's Focus**. Never write more than 2 sentences under any single heading. Never write a wall of text. If the user asks a simple question give a simple short answer. If the user asks something complex cover the top 2 or 3 points only and keep each one brief. Always sound like a coach sending a quick message not writing a report.
 
 ATHLETE: ${name} | Level: ${profile.fitnessLevel||'unknown'} | Goal: ${profile.goal||'unknown'} | Equipment: ${(profile.equipment||[]).join(', ')||'unknown'} | Split: ${profile.trainingSplit||'unknown'} | Days: ${(profile.trainingDays||[]).join(', ')||'unknown'} | Session: ${profile.sessionLength||60}min
 
@@ -1040,7 +1040,7 @@ BADGES: ${badgeText}`;
         },
         body: JSON.stringify({
           model: 'claude-sonnet-4-20250514',
-          max_tokens: 300,
+          max_tokens: 200,
           system: buildSystemPrompt(),
           messages: next.slice(-20),
         })
