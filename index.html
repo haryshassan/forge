@@ -1142,22 +1142,23 @@ BADGES: ${badgeText}`;
             ))}
           </div>
 
-          {/* Input bar */}
-          <div className="flex-shrink-0 px-4"
-            style={{ paddingBottom:'calc(0.75rem + env(safe-area-inset-bottom))' }}>
-            <div className="flex items-center gap-2 bg-[#1A1A1C] rounded-2xl px-3 py-2 border border-[#252527]">
+          {/* Input bar — sits below chips, above bottom nav */}
+          <div className="flex-shrink-0 px-4 pt-1"
+            style={{ paddingBottom:'calc(4.5rem + env(safe-area-inset-bottom))' }}>
+            <div className="flex items-center gap-2 rounded-2xl px-3 py-2"
+              style={{ background:'#252527' }}>
               <input ref={inputRef} value={input}
                 onChange={e=>setInput(e.target.value)}
                 onKeyDown={e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); sendMessage(); }}}
-                placeholder="Ask your coach anything…"
-                className="flex-1 bg-transparent text-[#F5F5F0] text-sm outline-none placeholder:text-[#3A3A3C]"
+                placeholder="Ask your coach anything..."
+                className="flex-1 bg-transparent text-[#F5F5F0] text-sm outline-none placeholder:text-[#6A6A6E]"
                 style={{ fontFamily:"'DM Sans',sans-serif" }}/>
               <button onClick={()=>sendMessage()} disabled={!input.trim()||typing}
                 className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-all active:scale-90 ${
-                  input.trim()&&!typing ? 'bg-[#C8FF00]' : 'bg-[#252527]'
+                  input.trim()&&!typing ? 'bg-[#C8FF00]' : 'bg-[#3A3A3C]'
                 }`}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-                  stroke={input.trim()&&!typing ? '#0D0D0F' : '#3A3A3C'}
+                  stroke={input.trim()&&!typing ? '#0D0D0F' : '#5A5A5E'}
                   strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="22" y1="2" x2="11" y2="13"/>
                   <polygon points="22 2 15 22 11 13 2 9 22 2"/>
