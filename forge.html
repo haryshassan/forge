@@ -1319,7 +1319,7 @@ function BodyMap({ profile }) {
         body: JSON.stringify({
           model: 'claude-sonnet-4-20250514',
           max_tokens: 300,
-          system: 'You are FORGE Coach, a sports medicine and rehabilitation expert. Give practical, safe, actionable advice. Keep response under 120 words. Structure your response in exactly 3 short paragraphs labelled: LIKELY CAUSE: / REHAB PROTOCOL: / TRAIN OR REST:',
+          system: 'You are FORGE Coach, a sports medicine and rehabilitation expert. Give practical, safe, actionable advice. Keep the response under 150 words. Use short bold headings before each section wrapped in double asterisks like **What This Could Be**. Write no more than 2 short sentences under each heading. Use line breaks between each section. Never write a wall of text. Sound like a knowledgeable coach not a medical report.',
           messages: [{
             role: 'user',
             content: `Athlete: ${profile.name}, ${profile.fitnessLevel}, Goal: ${profile.goal}.
@@ -1500,26 +1500,12 @@ Provide: 1) Likely cause 2) 2-3 specific mobility or rehab exercises with sets a
         {/* Coach advice */}
         {coachAdvice && (
           <div className="mx-5 mb-5">
-            {['LIKELY CAUSE','REHAB PROTOCOL','TRAIN OR REST'].map((section, i) => {
-              const regex = new RegExp(`${section}:([\\s\\S]*?)(?=LIKELY CAUSE:|REHAB PROTOCOL:|TRAIN OR REST:|$)`, 'i');
-              const match = coachAdvice.match(regex);
-              const content = match ? match[1].trim() : null;
-              if (!content) return null;
-              return (
-                <div key={i} className="bg-[#252527] rounded-2xl p-4 border border-[#3A3A3C] mb-2">
-                  <p className="text-[#C8FF00] text-[10px] font-display tracking-widest mb-1.5"
-                    style={{ fontFamily:"'Bebas Neue',sans-serif" }}>{section}</p>
-                  <p className="text-[#F5F5F0] text-sm leading-relaxed">{content}</p>
-                </div>
-              );
-            })}
-            {!coachAdvice.match(/LIKELY CAUSE:/i) && (
-              <div className="bg-[#252527] rounded-2xl p-4 border border-[#3A3A3C]">
-                <p className="text-[#C8FF00] text-[10px] font-display tracking-widest mb-1.5"
-                  style={{ fontFamily:"'Bebas Neue',sans-serif" }}>COACH ADVICE</p>
-                <p className="text-[#F5F5F0] text-sm leading-relaxed">{coachAdvice}</p>
+            <div className="bg-[#252527] rounded-2xl p-4 border border-[#3A3A3C]">
+              <div className="text-[#F5F5F0] text-sm leading-relaxed"
+                style={{ fontFamily:"'DM Sans',sans-serif" }}>
+                {formatCoachMessage(coachAdvice)}
               </div>
-            )}
+            </div>
           </div>
         )}
       </div>
