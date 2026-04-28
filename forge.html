@@ -399,12 +399,12 @@ function getSplitInstructions(profile) {
   const days = profile.trainingDays || [];
   if (split === 'arnold_ul' && days.length >= 5) {
     return `MANDATORY SPLIT STRUCTURE — Arnold Split + Upper/Lower (DO NOT deviate):
-- ${days[0]}: Chest + Back (bench press, barbell rows, incline press, pull-ups, cable flyes, pullovers — all straight sets)
-- ${days[1]}: Shoulders + Arms (overhead press, lateral raises, rear delt flyes, bicep curls, hammer curls, tricep extensions, skull crushers, face pulls)
-- ${days[2]}: Legs (back squats, Romanian deadlifts, leg press, walking lunges, leg curl, calf raises)
-- ${days[3]}: Upper Body (conventional upper push + pull balance — compound pressing and pulling)
-- ${days[4]}: Lower Body (quad and hamstring focus — squats variation, deadlift variation, glute and calf work)
-You MUST follow this day-by-day structure exactly. Do not merge days or create a generic 3-day split.`;
+- ${days[0]}: Chest + Back — Chest Press 3x6-10, Pec Fly 2x6-10, Pull-Ups 3x6-10, Lat Pulldown 2x6-10, T-Bar Row 3x6-10
+- ${days[1]}: Arms + Shoulders — Military Press 3x6-10, Lateral Raises 2x6-10, Rear Delt Fly 2x6-10, Cable Curl 3x6-10, Hammer Curl 2x6-10, Tricep Pushdown 3x6-10, Overhead Tricep Extension 2x6-10
+- ${days[2]}: Legs (Quad Focus) — Hack Squat 3x6-10, Leg Press 2x6-10, Leg Extension 2x6-10, Calf Raises 3x6-10
+- ${days[3]}: Upper — Incline Chest Press 3x6-10, Pec Fly 2x6-10, Seated Row 3x6-10, Lat Pulldown 2x6-10, Lateral Raises 2x6-10, Cable Curl 2x6-10, Tricep Pushdown 2x6-10
+- ${days[4]}: Lower (Posterior / Deadlift Focus) — Deadlift 3x5-8, Back Extension 3x6-10, Seated Hamstring Curl 2x6-10, Calf Raises 3x6-10
+All exercises are straight sets only. No supersets. You MUST follow this day-by-day structure exactly with these exact exercises, sets, and reps. Do not merge days, swap exercises, or deviate from this list.`;
   }
   if (split === 'pplul' && days.length >= 5) {
     return `MANDATORY SPLIT: PPL + Upper/Lower over 5 days:
