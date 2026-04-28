@@ -250,16 +250,6 @@ const CARDIO_ACTIVITIES = [
 ];
 
 /* ── Nutrition utilities ── */
-function scaleMacros(food, grams) {
-  const s = grams / 100;
-  return {
-    cal: Math.round(food.cal * s),
-    pro: Math.round(food.pro * s * 10) / 10,
-    carb: Math.round(food.carb * s * 10) / 10,
-    fat: Math.round(food.fat * s * 10) / 10,
-    fib: Math.round(food.fib * s * 10) / 10,
-  };
-}
 
 function sumMacros(meals) {
   return meals.reduce((t, m) => ({
@@ -3201,207 +3191,7 @@ function WeightChart({ history, goalWeight }) {
   );
 }
 
-/* Food quantity bottom sheet — lockedMeal: if set, hides meal picker and locks to that meal */
-function FoodDetailSheet({ food, onAdd, onClose, lockedMeal=null }) {
-  const [byUnit, setByUnit] = useState(!!food.unit);
-  const [count,  setCount]  = useState(1);
-  const [grams,  setGrams]  = useState(food.unit ? food.unit.grams : 100);
-  const [meal,   setMeal]   = useState(lockedMeal || 'Lunch');
-  const MEALS = ['Breakfast','Lunch','Dinner','Snack'];
 
-  const effectiveGrams = byUnit && food.unit ? Math.round(count * food.unit.grams) : grams;
-  const p = scaleMacros(food, effectiveGrams);
-
-  const handleAdd = () => {
-    onAdd({
-      id: `food_${Date.now()}`,
-      foodId: food.id,
-      name: food.name,
-      emoji: food.emoji,
-      grams: effectiveGrams,
-      meal,
-      macros: p,
-      displayQty: byUnit && food.unit ? `${count} ${food.unit.label}` : `${grams}g`,
-    });
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex flex-col" style={{ maxWidth:430, left:'50%', transform:'translateX(-50%)' }}>
-      <div className="flex-1" onClick={onClose} style={{ background:'rgba(0,0,0,0.6)' }}/>
-      <div className="bg-[#1A1A1C] rounded-t-3xl animate-slide-up border-t border-[#252527]"
-        style={{ maxHeight:'50vh', overflowY:'auto', paddingBottom:'max(1.25rem,env(safe-area-inset-bottom))' }}>
-
-        {/* Drag handle */}
-        <div className="flex justify-center pt-3 pb-3">
-          <div className="w-8 h-1 rounded-full bg-[#3A3A3C]"/>
-        </div>
-
-        <div className="px-5 pb-1">
-          {/* Food header */}
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-2xl">{food.emoji}</span>
-            <span className="text-[#F5F5F0] font-semibold text-base leading-tight truncate">{food.name}</span>
-            <span className="text-[#8A8A8E] text-sm flex-shrink-0">· {food.cat}</span>
-          </div>
-
-          {/* Unit toggle */}
-          {food.unit && (
-            <div className="flex gap-1 mb-3 bg-[#252527] p-0.5 rounded-xl w-40">
-              <button onClick={() => setByUnit(true)}
-                className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all
-                  ${byUnit ? 'bg-[#C8FF00] text-[#0D0D0F]' : 'text-[#8A8A8E]'}`}>
-                BY UNIT
-              </button>
-              <button onClick={() => setByUnit(false)}
-                className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all
-                  ${!byUnit ? 'bg-[#C8FF00] text-[#0D0D0F]' : 'text-[#8A8A8E]'}`}>
-                BY GRAMS
-              </button>
-            </div>
-          )}
-
-          {/* Quantity row */}
-          <div className="flex items-center gap-3 mb-1">
-            <button onPointerDown={e => { e.preventDefault(); byUnit && food.unit ? setCount(c => Math.max(1, c-1)) : setGrams(g => Math.max(10, g-10)); }}
-              className="w-10 h-10 rounded-xl bg-[#252527] flex items-center justify-center text-[#8A8A8E] text-lg font-bold active:bg-[#3A3A3C] select-none">−</button>
-            <div className="flex items-baseline gap-1.5">
-              <span className="font-display text-3xl text-[#F5F5F0] tabular-nums leading-none select-none"
-                style={{ fontFamily:"'Bebas Neue',sans-serif" }}>
-                {byUnit && food.unit ? count : grams}
-              </span>
-              <span className="text-[#8A8A8E] text-sm">
-                {byUnit && food.unit ? food.unit.label : 'g'}
-              </span>
-            </div>
-            <button onPointerDown={e => { e.preventDefault(); byUnit && food.unit ? setCount(c => c+1) : setGrams(g => g+10); }}
-              className="w-10 h-10 rounded-xl bg-[#252527] flex items-center justify-center text-[#C8FF00] text-lg font-bold active:bg-[#3A3A3C] select-none">+</button>
-          </div>
-          {byUnit && food.unit && (
-            <p className="text-[#8A8A8E] text-xs mb-3">= {effectiveGrams}g</p>
-          )}
-          {(!byUnit || !food.unit) && <div className="mb-3"/>}
-
-          {/* Macro preview — single line */}
-          <p className="text-[#8A8A8E] text-sm mb-3">
-            <span className="text-[#C8FF00] font-semibold">{p.cal} kcal</span>
-            <span className="mx-1.5 opacity-40">·</span>
-            <span className="text-[#F5F5F0]">{p.pro}g protein</span>
-            <span className="mx-1.5 opacity-40">·</span>
-            <span className="text-[#F5F5F0]">{p.carb}g carbs</span>
-            <span className="mx-1.5 opacity-40">·</span>
-            <span className="text-[#F5F5F0]">{p.fat}g fat</span>
-          </p>
-
-          {/* Meal selector (only when not locked) */}
-          {!lockedMeal && (
-            <div className="flex gap-2 mb-3">
-              {MEALS.map(m => (
-                <button key={m} onClick={() => setMeal(m)}
-                  className={`flex-1 py-1.5 rounded-xl text-xs font-semibold transition-all border
-                    ${meal === m
-                      ? 'bg-[rgba(200,255,0,0.12)] text-[#C8FF00] border-[rgba(200,255,0,0.3)]'
-                      : 'bg-[#252527] text-[#8A8A8E] border-[#3A3A3C]'}`}>
-                  {m}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Add button */}
-          <button onClick={handleAdd}
-            className="w-full py-3.5 rounded-2xl bg-[#C8FF00] text-[#0D0D0F] font-display text-xl tracking-wider active:scale-95 transition-all"
-            style={{ fontFamily:"'Bebas Neue',sans-serif" }}>
-            ADD TO {lockedMeal ? lockedMeal.toUpperCase() : meal.toUpperCase()}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* Food search + add bottom sheet (legacy, still used as fallback) */
-function FoodAddModal({ onAdd, onClose }) {
-  const [query,   setQuery]  = useState('');
-  const [results, setResults]= useState([]);
-  const [loading, setLoading]= useState(false);
-  const [error,   setError]  = useState(''); // '' | 'no_results' | 'api_error'
-  const [sel,     setSel]    = useState(null);
-
-  useEffect(()=>{
-    if (query.length < 2) { setResults([]); setError(''); setLoading(false); return; }
-    setLoading(true); setError('');
-    const t = setTimeout(async () => {
-      try {
-        const res = await fetch(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=20&fields=product_name,nutriments,serving_size,serving_quantity,brands`);
-        if (!res.ok) throw new Error();
-        const data = await res.json();
-        const mapped = (data.products||[]).filter(p=>p.product_name&&p.product_name.trim()).map((p,idx)=>{
-          const n=p.nutriments||{};
-          const cal100=n['energy-kcal_100g']!=null?n['energy-kcal_100g']:(n['energy_100g']!=null?n['energy_100g']/4.184:0);
-          const sg=p.serving_quantity?parseFloat(p.serving_quantity):null;
-          return { id:`off_${Date.now()}_${idx}`, name:p.product_name.trim(), emoji:'🍽️', cat:p.brands||'', brand:p.brands||'',
-            cal:Math.round(cal100), pro:Math.round((n['proteins_100g']||0)*10)/10, carb:Math.round((n['carbohydrates_100g']||0)*10)/10,
-            fat:Math.round((n['fat_100g']||0)*10)/10, fib:Math.round((n['fiber_100g']||0)*10)/10,
-            unit:sg&&sg>0?{label:'serving',grams:sg}:null };
-        });
-        if (mapped.length===0) { setError('no_results'); setResults([]); } else { setResults(mapped); setError(''); }
-      } catch { setError('api_error'); setResults([]); } finally { setLoading(false); }
-    }, 400);
-    return ()=>clearTimeout(t);
-  },[query]);
-
-  const handleAdd = (entry) => { onAdd(entry); onClose(); };
-
-  return (
-    <div className="fixed inset-0 z-50 flex flex-col" style={{ maxWidth:430, left:'50%', transform:'translateX(-50%)' }}>
-      <div className="flex-1 bg-black/60" onClick={onClose}/>
-      {sel && <FoodDetailSheet food={sel} onAdd={handleAdd} onClose={onClose}/>}
-      {!sel && (
-        <div className="bg-[#1A1A1C] rounded-t-3xl animate-slide-up flex flex-col" style={{ maxHeight:'88vh' }}>
-          <div className="flex justify-center pt-3 pb-1">
-            <div className="w-10 h-1 rounded-full bg-[#3A3A3C]"/>
-          </div>
-          <div className="flex flex-col flex-1 overflow-hidden px-5 pb-6">
-            <div className="flex items-center justify-between mb-4 pt-2">
-              <h2 className="font-display text-3xl text-[#F5F5F0]"
-                style={{ fontFamily:"'Bebas Neue',sans-serif" }}>ADD FOOD</h2>
-              <button onClick={onClose}
-                className="w-9 h-9 rounded-xl bg-[#252527] flex items-center justify-center active:scale-90">
-                <X size={16} color="#8A8A8E"/>
-              </button>
-            </div>
-            <div className="flex items-center gap-3 bg-[#252527] rounded-2xl px-4 py-3 mb-4 border border-[#3A3A3C]">
-              <Search size={17} color="#8A8A8E"/>
-              <input autoFocus value={query} onChange={e=>setQuery(e.target.value)}
-                placeholder="Search foods…"
-                className="flex-1 bg-transparent text-[#F5F5F0] text-sm outline-none placeholder:text-[#8A8A8E]"/>
-              {query && <button onClick={()=>setQuery('')}><X size={14} color="#8A8A8E"/></button>}
-            </div>
-            <div className="flex-1 overflow-y-auto space-y-1">
-              {loading ? (
-                <div className="flex justify-center items-center py-8">
-                  <div className="w-5 h-5 rounded-full border-2 border-[#3A3A3C] border-t-[#C8FF00] animate-spin"/>
-                </div>
-              ) : error === 'no_results' ? (
-                <p className="text-[#8A8A8E] text-sm text-center py-8">No results found — try a different search</p>
-              ) : error === 'api_error' ? (
-                <p className="text-[#8A8A8E] text-sm text-center py-8">Could not reach food database — check your connection</p>
-              ) : results.map(food=>(
-                <button key={food.id} onClick={()=>setSel(food)}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl bg-[#252527] active:scale-95 transition-all border border-[#3A3A3C] text-left">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[#F5F5F0] text-sm font-medium truncate">{food.name}</p>
-                    {food.brand && <p className="text-[#8A8A8E] text-xs truncate">{food.brand}</p>}
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
 
 /* Cardio add modal */
 function CardioAddModal({ onAdd, onClose, userWeight }) {
@@ -3516,117 +3306,171 @@ function CardioAddModal({ onAdd, onClose, userWeight }) {
   );
 }
 
+/* Inline meal entry section */
+function MealSection({ mealName, items, today, onAdd, onDelete }) {
+  const BLANK = { cal:'', pro:'', carb:'', fat:'', note:'' };
+  const [formOpen, setFormOpen] = useState(false);
+  const [editId,   setEditId]   = useState(null);
+  const [fields,   setFields]   = useState(BLANK);
+
+  const mealTotals = sumMacros(items);
+  const set = (k) => (e) => setFields(f => ({...f, [k]: e.target.value}));
+
+  const openAdd = () => { setFields(BLANK); setEditId(null); setFormOpen(true); };
+
+  const openEdit = (item) => {
+    setFields({
+      cal:  String(item.macros.cal  || ''),
+      pro:  String(item.macros.pro  || ''),
+      carb: String(item.macros.carb || ''),
+      fat:  String(item.macros.fat  || ''),
+      note: item.note || item.name  || '',
+    });
+    setEditId(item.id);
+    setFormOpen(true);
+  };
+
+  const handleSave = () => {
+    const cal  = parseInt(fields.cal)    || 0;
+    const pro  = parseFloat(fields.pro)  || 0;
+    const carb = parseFloat(fields.carb) || 0;
+    const fat  = parseFloat(fields.fat)  || 0;
+    if (cal === 0 && pro === 0 && carb === 0 && fat === 0) return;
+    if (editId) onDelete(today, editId);
+    onAdd(today, {
+      id:     `meal_${Date.now()}`,
+      meal:   mealName,
+      name:   fields.note.trim() || mealName,
+      note:   fields.note.trim(),
+      macros: { cal, pro, carb, fat, fib: 0 },
+    });
+    setFields(BLANK); setEditId(null); setFormOpen(false);
+  };
+
+  const handleCancel = () => { setFields(BLANK); setEditId(null); setFormOpen(false); };
+
+  return (
+    <div className="px-5 mb-3">
+      {/* Meal header */}
+      <div className="flex items-center justify-between py-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="font-display text-lg text-[#F5F5F0]"
+            style={{ fontFamily:"'Bebas Neue',sans-serif" }}>{mealName.toUpperCase()}</span>
+          {items.length > 0 && (
+            <span className="text-[#8A8A8E] text-xs flex-shrink-0">
+              {items.length} item{items.length !== 1 ? 's' : ''} &middot; {mealTotals.cal} kcal
+            </span>
+          )}
+        </div>
+        {!formOpen && (
+          <button onClick={openAdd}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold active:scale-90 ml-2 flex-shrink-0"
+            style={{ background:'rgba(200,255,0,0.1)', border:'1px solid rgba(200,255,0,0.2)', color:'#C8FF00' }}>
+            <Plus size={11} color="#C8FF00" strokeWidth={2.5}/> ADD
+          </button>
+        )}
+      </div>
+
+      {/* Saved entries */}
+      {items.length > 0 && (
+        <div className="bg-[#1A1A1C] rounded-2xl overflow-hidden border border-[#252527] mb-2">
+          {items.map((item, i) => (
+            <div key={item.id}
+              className={`flex items-center gap-3 px-4 py-3 ${i > 0 ? 'border-t border-[#252527]' : ''}`}>
+              <button onClick={() => openEdit(item)} className="flex-1 min-w-0 text-left active:opacity-70">
+                <p className="text-[#F5F5F0] text-sm font-medium truncate">
+                  {item.note || item.name || mealName}
+                </p>
+                <p className="text-[#8A8A8E] text-xs">
+                  {item.macros.cal} kcal &middot; P:{item.macros.pro}g &middot; C:{item.macros.carb}g &middot; F:{item.macros.fat}g
+                </p>
+              </button>
+              <button onClick={() => onDelete(today, item.id)}
+                className="w-8 h-8 rounded-lg bg-[#252527] flex items-center justify-center active:scale-90 flex-shrink-0">
+                <X size={13} color="#FF453A"/>
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Empty state */}
+      {items.length === 0 && !formOpen && (
+        <div className="bg-[#1A1A1C] rounded-2xl border border-[#252527] px-4 py-3 text-center">
+          <p className="text-[#3A3A3C] text-xs">Nothing logged yet</p>
+        </div>
+      )}
+
+      {/* Inline entry form */}
+      {formOpen && (
+        <div className="bg-[#1A1A1C] rounded-2xl p-4"
+          style={{ border:'1px solid rgba(200,255,0,0.25)' }}>
+          {/* Note */}
+          <input value={fields.note} onChange={set('note')}
+            placeholder="Meal note — e.g. chicken salad (optional)"
+            className="w-full bg-[#252527] rounded-xl px-3 py-2.5 text-[#F5F5F0] text-sm outline-none placeholder:text-[#8A8A8E] mb-3 border border-[#3A3A3C]"/>
+          {/* Macro fields */}
+          <div className="grid grid-cols-4 gap-2 mb-3">
+            {[
+              { label:'CALORIES', key:'cal',  unit:'kcal' },
+              { label:'PROTEIN',  key:'pro',  unit:'g' },
+              { label:'CARBS',    key:'carb', unit:'g' },
+              { label:'FAT',      key:'fat',  unit:'g' },
+            ].map(({ label, key, unit }) => (
+              <div key={key} className="flex flex-col items-center gap-1">
+                <p className="text-[#8A8A8E] text-[9px] font-semibold tracking-wide text-center">{label}</p>
+                <input type="number" inputMode="numeric" min="0"
+                  value={fields[key]} onChange={set(key)}
+                  placeholder="0"
+                  className="w-full bg-[#252527] rounded-xl px-1 py-2 text-[#F5F5F0] text-sm text-center outline-none border border-[#3A3A3C] placeholder:text-[#3A3A3C]"/>
+                <p className="text-[#8A8A8E] text-[9px]">{unit}</p>
+              </div>
+            ))}
+          </div>
+          {/* Buttons */}
+          <div className="flex gap-2">
+            <button onClick={handleCancel}
+              className="flex-1 py-2.5 rounded-xl bg-[#252527] text-[#8A8A8E] text-sm font-semibold active:scale-95 transition-all">
+              CANCEL
+            </button>
+            <button onClick={handleSave}
+              className="py-2.5 rounded-xl bg-[#C8FF00] text-[#0D0D0F] text-sm font-semibold active:scale-95 transition-all"
+              style={{ flex:2 }}>
+              SAVE
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* Main FUEL screen */
 function FuelScreen({ nutritionLog, nutritionGoals, weightHistory, onAddFood, onDeleteFood, onLogWeight, profile, cardioLog={}, onAddCardio, onDeleteCardio }) {
   const today = getTodayISO();
   const todayLog = getNutritionLog(nutritionLog, today);
   const totals = sumMacros(todayLog.meals);
   const goals = nutritionGoals;
-  const MEALS = ['Breakfast','Lunch','Dinner','Snack'];
-  // Search & add state
-  const [showCardio, setShowCardio]     = useState(false);
-  const [selFood,    setSelFood]        = useState(null);     // food selected for detail sheet
-  const [addingToMeal, setAddingToMeal] = useState(null);    // null = free, string = locked meal
-  const [mealSearchOpen, setMealSearchOpen] = useState(false); // inline search banner open
-  const [searchQ,    setSearchQ]        = useState('');
-  const [searchResults, setSearchResults] = useState([]);
-  const [searchLoading, setSearchLoading] = useState(false);
-  const [searchError,   setSearchError]   = useState(''); // '' | 'no_results' | 'api_error'
-  const [addToast,   setAddToast]       = useState('');
-  const [weightInput, setWeightInput]   = useState('');
-  const [expanded,   setExpanded]       = useState({ Breakfast:true, Lunch:true, Dinner:true, Snack:true });
-  const [showChart,  setShowChart]      = useState(false);
-  const searchRef = useRef(null);
+  const MEALS = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
 
-  const todayCardio = (cardioLog[today] || []);
-  const burnedToday = todayCardio.reduce((s, c) => s + (c.calories||0), 0);
-  const netCalories = totals.cal - burnedToday;
+  const [showCardio,  setShowCardio]  = useState(false);
+  const [addToast,    setAddToast]    = useState('');
+  const [weightInput, setWeightInput] = useState('');
+  const [showChart,   setShowChart]   = useState(false);
 
-  const todayWeight = weightHistory.find(w => w.date === today);
-  const latestWeight = weightHistory.length > 0 ? weightHistory[weightHistory.length-1].weight : null;
+  const todayCardio  = (cardioLog[today] || []);
+  const burnedToday  = todayCardio.reduce((s, c) => s + (c.calories || 0), 0);
+  const netCalories  = totals.cal - burnedToday;
+
+  const todayWeight  = weightHistory.find(w => w.date === today);
+  const latestWeight = weightHistory.length > 0 ? weightHistory[weightHistory.length - 1].weight : null;
 
   const hour = new Date().getHours();
-  const showNudge = hour >= 20 && totals.cal < (goals.calories||2000) * 0.5;
+  const showNudge = hour >= 20 && totals.cal < (goals.calories || 2000) * 0.5;
 
-  // Debounced Open Food Facts search
-  useEffect(() => {
-    if (searchQ.length < 2) {
-      setSearchResults([]);
-      setSearchError('');
-      setSearchLoading(false);
-      return;
-    }
-    setSearchLoading(true);
-    setSearchError('');
-    const timer = setTimeout(async () => {
-      try {
-        const res = await fetch(
-          `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(searchQ)}&search_simple=1&action=process&json=1&page_size=20&fields=product_name,nutriments,serving_size,serving_quantity,brands`
-        );
-        if (!res.ok) throw new Error();
-        const data = await res.json();
-        const mapped = (data.products || [])
-          .filter(p => p.product_name && p.product_name.trim())
-          .map((p, idx) => {
-            const n = p.nutriments || {};
-            const cal100 = n['energy-kcal_100g'] != null
-              ? n['energy-kcal_100g']
-              : (n['energy_100g'] != null ? n['energy_100g'] / 4.184 : 0);
-            const servGrams = p.serving_quantity ? parseFloat(p.serving_quantity) : null;
-            return {
-              id: `off_${Date.now()}_${idx}`,
-              name: p.product_name.trim(),
-              emoji: '🍽️',
-              cat: p.brands || '',
-              brand: p.brands || '',
-              cal: Math.round(cal100),
-              pro: Math.round((n['proteins_100g'] || 0) * 10) / 10,
-              carb: Math.round((n['carbohydrates_100g'] || 0) * 10) / 10,
-              fat: Math.round((n['fat_100g'] || 0) * 10) / 10,
-              fib: Math.round((n['fiber_100g'] || 0) * 10) / 10,
-              unit: servGrams && servGrams > 0 ? { label: 'serving', grams: servGrams } : null,
-            };
-          });
-        if (mapped.length === 0) {
-          setSearchError('no_results');
-          setSearchResults([]);
-        } else {
-          setSearchResults(mapped);
-          setSearchError('');
-        }
-      } catch {
-        setSearchError('api_error');
-        setSearchResults([]);
-      } finally {
-        setSearchLoading(false);
-      }
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [searchQ]);
-
-  const openMealSearch = (mealName) => {
-    setAddingToMeal(mealName);
-    setMealSearchOpen(true);
-    setSearchQ('');
-    setTimeout(() => searchRef.current?.focus(), 80);
-  };
-
-  const closeMealSearch = () => {
-    setAddingToMeal(null);
-    setMealSearchOpen(false);
-    setSearchQ('');
-    setSelFood(null);
-  };
-
-  const handleAddFood = (entry) => {
-    onAddFood(today, entry);
-    setSelFood(null);
-    setSearchQ('');
-    // If in meal-specific mode, keep banner open but clear food selection
-    if (!addingToMeal) {
-      setMealSearchOpen(false);
-    }
-    setAddToast(`✓ ${entry.name} added to ${entry.meal}`);
+  const handleAddFood = (date, entry) => {
+    onAddFood(date, entry);
+    setAddToast(`✓ ${entry.name || entry.meal} logged`);
     setTimeout(() => setAddToast(''), 2500);
   };
 
@@ -3648,8 +3492,7 @@ function FuelScreen({ nutritionLog, nutritionGoals, weightHistory, onAddFood, on
     <div className="h-full overflow-y-auto pb-32">
       {/* Toast */}
       {addToast && (
-        <div className="fixed top-5 left-1/2 z-[60] animate-toast"
-          style={{ transform:'translateX(-50%)' }}>
+        <div className="fixed top-5 left-1/2 z-[60] animate-toast" style={{ transform:'translateX(-50%)' }}>
           <div className="bg-[#1A1A1C] border border-[#C8FF00] rounded-2xl px-5 py-3 text-[#C8FF00] font-semibold text-sm whitespace-nowrap shadow-xl">
             {addToast}
           </div>
@@ -3658,19 +3501,7 @@ function FuelScreen({ nutritionLog, nutritionGoals, weightHistory, onAddFood, on
 
       {/* Cardio modal */}
       {showCardio && (
-        <CardioAddModal
-          onAdd={handleAddCardio}
-          onClose={()=>setShowCardio(false)}
-          userWeight={latestWeight}/>
-      )}
-
-      {/* Food detail sheet for selected food */}
-      {selFood && (
-        <FoodDetailSheet
-          food={selFood}
-          onAdd={handleAddFood}
-          onClose={()=>setSelFood(null)}
-          lockedMeal={addingToMeal}/>
+        <CardioAddModal onAdd={handleAddCardio} onClose={()=>setShowCardio(false)} userWeight={latestWeight}/>
       )}
 
       {/* Header */}
@@ -3678,108 +3509,9 @@ function FuelScreen({ nutritionLog, nutritionGoals, weightHistory, onAddFood, on
         <h1 className="font-display text-5xl text-[#F5F5F0]"
           style={{ fontFamily:"'Bebas Neue',sans-serif" }}>FUEL</h1>
         <p className="text-[#8A8A8E] text-sm">
-          {new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'})}
+          {new Date().toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long' })}
         </p>
       </div>
-
-      {/* Meal-first search bar — shown when mealSearchOpen or addingToMeal */}
-      {mealSearchOpen && (
-        <div className="px-5 mb-3" style={{ zIndex:40, position:'relative' }}>
-          {/* Meal context banner */}
-          {addingToMeal && (
-            <div className="flex items-center justify-between px-4 py-2 mb-2 rounded-xl"
-              style={{ background:'rgba(200,255,0,0.08)', border:'1px solid rgba(200,255,0,0.2)' }}>
-              <span className="text-[#C8FF00] text-sm font-semibold">Adding to: {addingToMeal.toUpperCase()}</span>
-              <button onClick={closeMealSearch} className="active:scale-90">
-                <X size={14} color="#C8FF00"/>
-              </button>
-            </div>
-          )}
-          <div className="flex items-center gap-3 bg-[#1A1A1C] rounded-2xl px-4 py-3 border border-[#C8FF00]">
-            <Search size={17} color="#C8FF00"/>
-            <input ref={searchRef} value={searchQ}
-              onChange={e=>setSearchQ(e.target.value)}
-              placeholder={`Search for ${addingToMeal ? addingToMeal.toLowerCase() : 'any food'}…`}
-              className="flex-1 bg-transparent text-[#F5F5F0] text-sm outline-none placeholder:text-[#8A8A8E]"
-              autoFocus/>
-            {searchQ ? (
-              <button onMouseDown={e=>{e.preventDefault();setSearchQ('');}}><X size={14} color="#8A8A8E"/></button>
-            ) : (
-              <button onMouseDown={e=>{e.preventDefault();closeMealSearch();}}
-                className="text-[#8A8A8E] text-xs active:scale-90">CANCEL</button>
-            )}
-          </div>
-          {/* Inline results */}
-          {searchQ.length >= 2 && (
-            <div className="mt-1 bg-[#1A1A1C] border border-[#3A3A3C] rounded-2xl overflow-hidden shadow-2xl max-h-72 overflow-y-auto">
-              {searchLoading ? (
-                <div className="flex justify-center items-center py-4">
-                  <div className="w-5 h-5 rounded-full border-2 border-[#3A3A3C] border-t-[#C8FF00] animate-spin"/>
-                </div>
-              ) : searchError === 'no_results' ? (
-                <p className="text-[#8A8A8E] text-sm text-center py-4 px-4">No results found — try a different search</p>
-              ) : searchError === 'api_error' ? (
-                <p className="text-[#8A8A8E] text-sm text-center py-4 px-4">Could not reach food database — check your connection</p>
-              ) : (
-                searchResults.map((food, i) => (
-                  <button key={food.id} onMouseDown={e=>{e.preventDefault();setSelFood(food);}}
-                    className={`w-full flex items-center gap-3 px-4 py-3 text-left active:bg-[#252527] ${i>0?'border-t border-[#252527]':''}`}>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[#F5F5F0] text-sm font-medium truncate">{food.name}</p>
-                      {food.brand && <p className="text-[#8A8A8E] text-xs truncate">{food.brand}</p>}
-                    </div>
-                  </button>
-                ))
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Persistent search bar (always visible when NOT in meal mode) */}
-      {!mealSearchOpen && (
-      <div className="px-5 mb-3 relative" style={{ zIndex:1 }}>
-        <div className="flex items-center gap-3 bg-[#1A1A1C] rounded-2xl px-4 py-3 border border-[#3A3A3C]">
-          <Search size={17} color="#8A8A8E"/>
-          <input ref={searchRef} value={searchQ}
-            onChange={e=>{setSearchQ(e.target.value);if(!mealSearchOpen)setMealSearchOpen(true);}}
-            onFocus={()=>{setMealSearchOpen(true);}}
-            placeholder="Search 500+ foods to add…"
-            className="flex-1 bg-transparent text-[#F5F5F0] text-sm outline-none placeholder:text-[#8A8A8E]"/>
-          <button onMouseDown={e=>{e.preventDefault();setShowCardio(true);}}
-            className="flex items-center gap-1.5 bg-[#252527] px-2.5 py-1.5 rounded-lg active:scale-90">
-            <Activity size={13} color="#C8FF00"/><span className="text-[#C8FF00] text-xs font-semibold">CARDIO</span>
-          </button>
-        </div>
-
-        {/* Inline results when typing in persistent bar */}
-        {searchQ.length >= 2 && (
-          <div className="absolute left-5 right-5 top-full mt-1 bg-[#1A1A1C] border border-[#3A3A3C] rounded-2xl overflow-hidden shadow-2xl max-h-72 overflow-y-auto"
-            style={{ zIndex:50 }}>
-            {searchLoading ? (
-              <div className="flex justify-center items-center py-4">
-                <div className="w-5 h-5 rounded-full border-2 border-[#3A3A3C] border-t-[#C8FF00] animate-spin"/>
-              </div>
-            ) : searchError === 'no_results' ? (
-              <p className="text-[#8A8A8E] text-sm text-center py-4 px-4">No results found — try a different search</p>
-            ) : searchError === 'api_error' ? (
-              <p className="text-[#8A8A8E] text-sm text-center py-4 px-4">Could not reach food database — check your connection</p>
-            ) : (
-              searchResults.map((food, i) => (
-                <button key={food.id} onMouseDown={e=>{e.preventDefault();setSelFood(food);}}
-                  className={`w-full flex items-center gap-3 px-4 py-3 text-left active:bg-[#252527]
-                    ${i>0?'border-t border-[#252527]':''}`}>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[#F5F5F0] text-sm font-medium truncate">{food.name}</p>
-                    {food.brand && <p className="text-[#8A8A8E] text-xs truncate">{food.brand}</p>}
-                  </div>
-                </button>
-              ))
-            )}
-          </div>
-        )}
-      </div>
-      )}
 
       {/* Calorie ring + macros */}
       <div className="px-5 mb-4">
@@ -3787,35 +3519,33 @@ function FuelScreen({ nutritionLog, nutritionGoals, weightHistory, onAddFood, on
           <div className="flex items-center justify-center mb-3">
             <CalorieRing consumed={netCalories > 0 ? netCalories : totals.cal} goal={goals.calories || 2000}/>
           </div>
-          {/* Eaten / Burned / Net row (only when cardio logged) */}
           {burnedToday > 0 && (
             <div className="flex items-center justify-between mb-4 px-2 py-2 bg-[#252527] rounded-xl">
               <div className="text-center flex-1">
-                <p className="text-[#8A8A8E] text-[10px]">🍽 EATEN</p>
+                <p className="text-[#8A8A8E] text-[10px]">{'🍽'} EATEN</p>
                 <p className="font-display text-base text-[#F5F5F0]" style={{ fontFamily:"'Bebas Neue',sans-serif" }}>{totals.cal}</p>
               </div>
-              <span className="text-[#3A3A3C] font-bold">−</span>
+              <span className="text-[#3A3A3C] font-bold">{'−'}</span>
               <div className="text-center flex-1">
-                <p className="text-[#8A8A8E] text-[10px]">🔥 BURNED</p>
+                <p className="text-[#8A8A8E] text-[10px]">{'🔥'} BURNED</p>
                 <p className="font-display text-base text-[#FF9F0A]" style={{ fontFamily:"'Bebas Neue',sans-serif" }}>{burnedToday}</p>
               </div>
               <span className="text-[#3A3A3C] font-bold">=</span>
               <div className="text-center flex-1">
-                <p className="text-[#8A8A8E] text-[10px]">⚡ NET</p>
+                <p className="text-[#8A8A8E] text-[10px]">{'⚡'} NET</p>
                 <p className="font-display text-base text-[#C8FF00]" style={{ fontFamily:"'Bebas Neue',sans-serif" }}>{netCalories}</p>
               </div>
             </div>
           )}
-          {/* Under-goal warning */}
-          {showNudge && netCalories < (goals.calories||2000) * 0.4 && (
+          {showNudge && netCalories < (goals.calories || 2000) * 0.4 && (
             <div className="mb-3 px-3 py-2 bg-[rgba(255,159,10,0.08)] border border-[rgba(255,159,10,0.2)] rounded-xl">
-              <p className="text-[#FF9F0A] text-xs text-center">⚠️ You're well under your calorie goal today</p>
+              <p className="text-[#FF9F0A] text-xs text-center">{'⚠️'} You're well under your calorie goal today</p>
             </div>
           )}
           <div className="flex gap-2">
-            <MacroCard label="PROTEIN" current={totals.pro} goal={goals.protein||150} color="#60A5FA"/>
-            <MacroCard label="CARBS"   current={totals.carb} goal={goals.carbs||200}   color="#FBBF24"/>
-            <MacroCard label="FAT"     current={totals.fat}  goal={goals.fat||65}       color="#FB923C"/>
+            <MacroCard label="PROTEIN" current={totals.pro}  goal={goals.protein || 150} color="#60A5FA"/>
+            <MacroCard label="CARBS"   current={totals.carb} goal={goals.carbs   || 200} color="#FBBF24"/>
+            <MacroCard label="FAT"     current={totals.fat}  goal={goals.fat     || 65}  color="#FB923C"/>
           </div>
         </div>
       </div>
@@ -3850,7 +3580,7 @@ function FuelScreen({ nutritionLog, nutritionGoals, weightHistory, onAddFood, on
             <div className="flex items-center gap-3">
               <input type="number" value={weightInput}
                 onChange={e=>setWeightInput(e.target.value)}
-                placeholder={latestWeight ? `${latestWeight}` : "0.0"}
+                placeholder={latestWeight ? `${latestWeight}` : '0.0'}
                 className="set-input" style={{ width:96, fontSize:22 }}/>
               <span className="text-[#8A8A8E]">kg</span>
               <button onClick={handleLogWeight}
@@ -3872,14 +3602,12 @@ function FuelScreen({ nutritionLog, nutritionGoals, weightHistory, onAddFood, on
       {(todayCardio.length > 0 || onAddCardio) && (
         <div className="px-5 mb-3">
           <div className="flex items-center justify-between py-2">
-            <span className="font-display text-lg text-[#F5F5F0]" style={{ fontFamily:"'Bebas Neue',sans-serif" }}>
-              CARDIO
-            </span>
+            <span className="font-display text-lg text-[#F5F5F0]"
+              style={{ fontFamily:"'Bebas Neue',sans-serif" }}>CARDIO</span>
             <div className="flex items-center gap-2">
               {burnedToday > 0 && (
-                <span className="text-[#FF9F0A] text-xs font-display" style={{ fontFamily:"'Bebas Neue',sans-serif" }}>
-                  -{burnedToday} kcal
-                </span>
+                <span className="text-[#FF9F0A] text-xs font-display"
+                  style={{ fontFamily:"'Bebas Neue',sans-serif" }}>-{burnedToday} kcal</span>
               )}
               <button onClick={()=>setShowCardio(true)}
                 className="flex items-center gap-1 text-[#C8FF00] text-xs font-semibold active:scale-90">
@@ -3891,17 +3619,18 @@ function FuelScreen({ nutritionLog, nutritionGoals, weightHistory, onAddFood, on
             <div className="bg-[#1A1A1C] rounded-2xl overflow-hidden border border-[#252527]">
               {todayCardio.map((entry, i) => (
                 <div key={entry.id}
-                  className={`flex items-center gap-3 px-4 py-3 ${i>0?'border-t border-[#252527]':''}`}>
+                  className={`flex items-center gap-3 px-4 py-3 ${i > 0 ? 'border-t border-[#252527]' : ''}`}>
                   <span className="text-xl flex-shrink-0">{entry.emoji}</span>
                   <div className="flex-1 min-w-0">
                     <p className="text-[#F5F5F0] text-sm font-medium">{entry.name}</p>
                     <p className="text-[#8A8A8E] text-xs">
-                      {entry.duration}min · {entry.intensity}
+                      {entry.duration}min &middot; {entry.intensity}
                       {entry.distance ? ` · ${entry.distance}km` : ''}
                     </p>
                   </div>
                   <div className="text-right flex-shrink-0 mr-2">
-                    <p className="text-[#FF9F0A] text-sm font-display" style={{ fontFamily:"'Bebas Neue',sans-serif" }}>-{entry.calories}</p>
+                    <p className="text-[#FF9F0A] text-sm font-display"
+                      style={{ fontFamily:"'Bebas Neue',sans-serif" }}>-{entry.calories}</p>
                     <p className="text-[#8A8A8E] text-[10px]">kcal</p>
                   </div>
                   {onDeleteCardio && (
@@ -3922,80 +3651,20 @@ function FuelScreen({ nutritionLog, nutritionGoals, weightHistory, onAddFood, on
         </div>
       )}
 
-      {/* Meal sections */}
+      {/* Meal sections — manual macro entry */}
       {MEALS.map(mealName => {
         const items = todayLog.meals.filter(m => m.meal === mealName);
-        const mealTotals = sumMacros(items);
-        const isOpen = expanded[mealName];
-        const isActiveSearch = addingToMeal === mealName && mealSearchOpen;
         return (
-          <div key={mealName} className="px-5 mb-3">
-            {/* Meal header row */}
-            <div className="flex items-center justify-between py-2">
-              <button onClick={()=>setExpanded(e=>({...e,[mealName]:!e[mealName]}))}
-                className="flex items-center gap-2 active:opacity-70 flex-1 min-w-0 text-left">
-                <span className={`font-display text-lg transition-colors
-                  ${isActiveSearch ? 'text-[#C8FF00]' : 'text-[#F5F5F0]'}`}
-                  style={{ fontFamily:"'Bebas Neue',sans-serif" }}>{mealName.toUpperCase()}</span>
-                {items.length > 0 && (
-                  <span className="text-[#8A8A8E] text-xs">{items.length} item{items.length!==1?'s':''} · {mealTotals.cal} kcal</span>
-                )}
-              </button>
-              {/* + Add button */}
-              <button
-                onClick={()=>{ openMealSearch(mealName); setExpanded(e=>({...e,[mealName]:true})); }}
-                className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold active:scale-90 transition-all ml-2
-                  ${isActiveSearch
-                    ? 'bg-[#C8FF00] text-[#0D0D0F]'
-                    : 'bg-[rgba(200,255,0,0.1)] text-[#C8FF00] border border-[rgba(200,255,0,0.2)]'}`}>
-                <Plus size={11} color={isActiveSearch ? '#0D0D0F' : '#C8FF00'} strokeWidth={2.5}/>
-                <span>ADD</span>
-              </button>
-            </div>
-
-            {isOpen && (
-              <div className="bg-[#1A1A1C] rounded-2xl overflow-hidden border border-[#252527]">
-                {items.length === 0 ? (
-                  <button onClick={()=>{ openMealSearch(mealName); setExpanded(e=>({...e,[mealName]:true})); }}
-                    className="w-full px-4 py-4 text-center active:bg-[#252527]">
-                    <p className="text-[#8A8A8E] text-xs">Nothing logged yet — tap to add</p>
-                  </button>
-                ) : (
-                  items.map((item, i) => (
-                    <div key={item.id}
-                      className={`flex items-center gap-3 px-4 py-3 ${i>0?'border-t border-[#252527]':''}`}>
-                      <span className="text-xl flex-shrink-0">{item.emoji}</span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[#F5F5F0] text-sm font-medium truncate">{item.name}</p>
-                        <p className="text-[#8A8A8E] text-xs">
-                          {item.displayQty || `${item.grams}g`} · {item.macros.cal}kcal ·
-                          P:{item.macros.pro}g C:{item.macros.carb}g F:{item.macros.fat}g
-                        </p>
-                      </div>
-                      <button onClick={()=>onDeleteFood(today, item.id)}
-                        className="w-8 h-8 rounded-lg bg-[#252527] flex items-center justify-center active:scale-90 flex-shrink-0">
-                        <X size={13} color="#FF453A"/>
-                      </button>
-                    </div>
-                  ))
-                )}
-              </div>
-            )}
-          </div>
+          <MealSection
+            key={mealName}
+            mealName={mealName}
+            items={items}
+            today={today}
+            onAdd={handleAddFood}
+            onDelete={onDeleteFood}
+          />
         );
       })}
-
-      {/* Floating ADD FOOD button (free mode — shows meal selector) */}
-      <div className="fixed left-1/2 z-20"
-        style={{ bottom:'calc(4.5rem + env(safe-area-inset-bottom))', transform:'translateX(-50%)', maxWidth:430, width:'100%', pointerEvents:'none' }}>
-        <div className="px-5" style={{ pointerEvents:'all' }}>
-          <button onClick={()=>{ setAddingToMeal(null); setMealSearchOpen(true); setTimeout(()=>searchRef.current?.focus(),80); }}
-            className="w-full py-3.5 rounded-2xl bg-[#C8FF00] text-[#0D0D0F] font-display text-xl tracking-wider active:scale-95 transition-all shadow-xl flex items-center justify-center gap-2"
-            style={{ fontFamily:"'Bebas Neue',sans-serif" }}>
-            <Plus size={20} color="#0D0D0F" strokeWidth={2.5}/> ADD FOOD
-          </button>
-        </div>
-      </div>
     </div>
   );
 }
