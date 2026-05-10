@@ -356,6 +356,7 @@ function useLocalStorage(key, initial) {
     setVal(prev => {
       const next = typeof v === 'function' ? v(prev) : v;
       try { localStorage.setItem(key, JSON.stringify(next)); } catch {}
+      syncToBackend(key, next);
       return next;
     });
   }, [key]);
@@ -365,20 +366,19 @@ function useLocalStorage(key, initial) {
 /* ═══════════════════════════════════════════════
    CLAUDE API
 ═══════════════════════════════════════════════ */
-async function callClaude(apiKey, messages, maxTokens = 4000) {
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
+async function callClaude(messages, maxTokens = 4000, system = '') {
+  const token = localStorage.getItem('forge_token');
+  const res = await fetch(`${BACKEND_URL}/ai/chat`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
+      'Authorization': 'Bearer ' + (token || ''),
     },
-    body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: maxTokens, messages }),
+    body: JSON.stringify({ messages, max_tokens: maxTokens, system }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.error?.message || `API error ${res.status}`);
+    throw new Error(err.error?.message || err.message || `API error ${res.status}`);
   }
   const data = await res.json();
   return data.content[0].text;
@@ -490,7 +490,7 @@ Return ONLY a valid JSON object (no markdown, no explanation) matching this EXAC
   "motivationalMessage": "string",
   "coachTip": "string"
 }`;
-  const text = await callClaude(profile.apiKey, [{ role:'user', content: prompt }], 4000);
+  const text = await callClaude([{ role:'user', content: prompt }], 4000);
   const match = text.match(/\{[\s\S]*\}/);
   if (!match) throw new Error('Could not parse plan — please try again.');
   return JSON.parse(match[0]);
@@ -516,7 +516,7 @@ PERSONAL RECORDS: ${prSummary}
 
 Provide exactly 3 specific, actionable, motivating coaching insights based on this data.
 Return ONLY a JSON array (no markdown): ["insight 1", "insight 2", "insight 3"]`;
-  const text = await callClaude(profile.apiKey, [{ role:'user', content: prompt }], 800);
+  const text = await callClaude([{ role:'user', content: prompt }], 800);
   const match = text.match(/\[[\s\S]*\]/);
   if (!match) return null;
   return JSON.parse(match[0]);
@@ -741,16 +741,13 @@ Check-in answers:
 Give a personalised post-workout coaching response in 3-4 sentences.
 Be specific to their workout and answers. Give 1-2 actionable recommendations for next session.
 Do not use bullet points. Write as a coach speaking directly to the athlete.`;
-        const res = await fetch('https://api.anthropic.com/v1/messages', {
+        const res = await fetch(`${BACKEND_URL}/ai/chat`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'x-api-key': profile.apiKey || '',
-            'anthropic-version': '2023-06-01',
-            'anthropic-dangerous-direct-browser-access': 'true',
+            'Authorization': 'Bearer ' + (localStorage.getItem('forge_token') || ''),
           },
           body: JSON.stringify({
-            model: 'claude-sonnet-4-20250514',
             max_tokens: 200,
             system: 'You are FORGE Coach, an expert personal trainer. Give concise, specific, motivating coaching advice. Never be generic. Always reference their specific workout data. If the check-in answers indicate significant pain, soreness, or very poor recovery that warrants a training modification, end your response with PLAN_CHANGE_SUGGESTED: followed immediately by a valid JSON object with fields: reason (string), changes (array of objects each with day, exercise_to_replace, replacement_exercise, new_sets, new_reps). Only include this if a specific exercise swap is clearly warranted.',
             messages: [{ role: 'user', content: prompt }]
@@ -1154,10 +1151,10 @@ ${planChangesText}`;
     setMessages(next);
     setTyping(true);
 
-    if (!profile.apiKey?.trim()) {
+    if (!localStorage.getItem('forge_token')) {
       setMessages(m => [...m, {
         role:'assistant',
-        content:`I'd love to help, ${profile.name||'there'} — but I need your Anthropic API key first. Add it in the Profile tab.`
+        content:`Session expired — please log in again.`
       }].slice(-50));
       setTyping(false);
       return;
@@ -1173,7 +1170,6 @@ ${planChangesText}`;
     })).filter(m => m.content.trim() !== '');
 
     const requestBody = {
-      model: 'claude-sonnet-4-20250514',
       max_tokens: 500,
       system: systemPrompt,
       messages: apiMessages,
@@ -1181,13 +1177,11 @@ ${planChangesText}`;
     console.log('[FORGE Coach] request body:', JSON.stringify(requestBody, null, 2));
 
     try {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
+      const res = await fetch(`${BACKEND_URL}/ai/chat`, {
         method:'POST',
         headers:{
           'Content-Type':'application/json',
-          'x-api-key': profile.apiKey,
-          'anthropic-version':'2023-06-01',
-          'anthropic-dangerous-direct-browser-access':'true',
+          'Authorization': 'Bearer ' + (localStorage.getItem('forge_token') || ''),
         },
         body: JSON.stringify(requestBody),
       });
@@ -1463,8 +1457,8 @@ function BodyMap({ profile, plan, onPlanUpdate, planChanges, setPlanChanges }) {
   }));
 
   const handleGetAdvice = async () => {
-    if (!profile.apiKey) {
-      setError('Add your API key in Profile to get coach advice.');
+    if (!localStorage.getItem('forge_token')) {
+      setError('Session expired — please log in again.');
       return;
     }
     setLoading(true);
@@ -1474,16 +1468,13 @@ function BodyMap({ profile, plan, onPlanUpdate, planChanges, setPlanChanges }) {
       const muscleList = selectedMuscles
         .map(m => `${m.name} (${m.level})`)
         .join(', ');
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
+      const res = await fetch(`${BACKEND_URL}/ai/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': profile.apiKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true',
+          'Authorization': 'Bearer ' + (localStorage.getItem('forge_token') || ''),
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
           max_tokens: 500,
           system: 'You are FORGE Coach, a sports medicine and rehabilitation expert. Give practical, safe, actionable advice. Keep the response under 150 words. Use short bold headings before each section wrapped in double asterisks like **What This Could Be**. Write no more than 2 short sentences under each heading. Use line breaks between each section. Never write a wall of text. Sound like a knowledgeable coach not a medical report. Never cut off mid sentence. Always complete every section fully. If you need to keep it shorter to finish properly then reduce the detail but never leave a sentence or section unfinished. If the soreness indicates a specific exercise should be avoided or replaced, end your response with PLAN_CHANGE_SUGGESTED: followed immediately by a valid JSON object with fields: reason (string), changes (array of objects each with day, exercise_to_replace, replacement_exercise, new_sets, new_reps). Only include this if a specific exercise swap is clearly warranted.',
           messages: [{
@@ -1801,7 +1792,7 @@ function LoadingPlan({ error }) {
 /* ═══════════════════════════════════════════════
    PROFILE / ONBOARDING SCREEN
 ═══════════════════════════════════════════════ */
-function ProfileScreen({ profile, onSave, onGeneratePlan, isExisting, onNutritionGoals=()=>{} }) {
+function ProfileScreen({ profile, onSave, onGeneratePlan, isExisting, onNutritionGoals=()=>{}, onLogout=()=>{} }) {
   const TOTAL_STEPS = 7;
   const [step, setStep] = useState(0);
   const [form, setForm] = useState({
@@ -1813,7 +1804,6 @@ function ProfileScreen({ profile, onSave, onGeneratePlan, isExisting, onNutritio
     trainingDays:        profile.trainingDays || [],
     trainingSplit:       profile.trainingSplit || '',
     sessionLength:       profile.sessionLength || 60,
-    apiKey:              profile.apiKey || '',
   });
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
@@ -1884,24 +1874,13 @@ function ProfileScreen({ profile, onSave, onGeneratePlan, isExisting, onNutritio
             <p className="text-[#8A8A8E] text-xs">{profile.sessionLength} min sessions</p>
           </div>
 
-          {/* API Key */}
-          <div className="bg-[#1A1A1C] rounded-2xl p-5 border border-[#252527]">
-            <p className="text-[#8A8A8E] text-xs uppercase tracking-widest mb-1">Anthropic API Key</p>
-            <p className="text-[#8A8A8E] text-xs mb-3">Required for AI plan generation and insights</p>
-            <input type="password" value={form.apiKey}
-              onChange={e => set('apiKey', e.target.value)}
-              onBlur={() => onSave({ ...profile, apiKey: form.apiKey })}
-              placeholder="sk-ant-api03-…"
-              className="w-full bg-[#252527] text-[#F5F5F0] rounded-xl px-4 py-3 text-sm border border-[#3A3A3C] focus:border-[#C8FF00] outline-none"/>
-          </div>
-
           <button onClick={() => { onSave({ ...profile, onboardingComplete: false }); }}
             className="w-full py-4 rounded-2xl bg-[#252527] text-[#F5F5F0] font-display text-xl tracking-wider active:scale-95 transition-all border border-[#3A3A3C]"
             style={{ fontFamily:"'Bebas Neue',sans-serif" }}>
             EDIT PROFILE
           </button>
 
-          <button onClick={() => onGeneratePlan({ ...profile, apiKey: form.apiKey })}
+          <button onClick={() => onGeneratePlan(profile)}
             className="w-full py-4 rounded-2xl bg-[#C8FF00] text-[#0D0D0F] font-display text-xl tracking-wider active:scale-95 transition-all"
             style={{ fontFamily:"'Bebas Neue',sans-serif" }}>
             REGENERATE PLAN
@@ -1912,6 +1891,12 @@ function ProfileScreen({ profile, onSave, onGeneratePlan, isExisting, onNutritio
             className="w-full py-4 rounded-2xl bg-[#1A1A1C] text-[#C8FF00] font-display text-xl tracking-wider active:scale-95 transition-all border border-[rgba(200,255,0,0.2)] flex items-center justify-center gap-2"
             style={{ fontFamily:"'Bebas Neue',sans-serif" }}>
             <Flame size={18} color="#C8FF00"/> NUTRITION GOALS
+          </button>
+
+          <button onClick={onLogout}
+            className="w-full py-4 rounded-2xl bg-[#1A1A1C] text-[#8A8A8E] font-display text-xl tracking-wider active:scale-95 transition-all border border-[#252527]"
+            style={{ fontFamily:"'Bebas Neue',sans-serif" }}>
+            LOG OUT
           </button>
         </div>
       </div>
@@ -2072,12 +2057,12 @@ function ProfileScreen({ profile, onSave, onGeneratePlan, isExisting, onNutritio
           </div>
         )}
 
-        {/* Step 6: Session length + API key */}
+        {/* Step 6: Session length */}
         {step === 6 && (
           <div className="animate-fade-slide">
             <p className="text-[#C8FF00] font-display text-sm tracking-widest mb-2" style={{ fontFamily:"'Bebas Neue',sans-serif" }}>STEP 7 OF 7</p>
             <h2 className="font-display text-5xl text-[#F5F5F0] mb-2" style={{ fontFamily:"'Bebas Neue',sans-serif" }}>LAST DETAILS</h2>
-            <p className="text-[#8A8A8E] mb-6">Session length and your API key.</p>
+            <p className="text-[#8A8A8E] mb-6">How long are your sessions?</p>
 
             <div className="grid grid-cols-4 gap-3 mb-8">
               {SESSION_LENGTHS.map(len => (
@@ -2091,17 +2076,6 @@ function ProfileScreen({ profile, onSave, onGeneratePlan, isExisting, onNutritio
                   <p className="text-[#8A8A8E] text-xs">min</p>
                 </button>
               ))}
-            </div>
-
-            <div className="bg-[#1A1A1C] rounded-2xl p-5 border border-[#252527]">
-              <p className="text-[#F5F5F0] font-semibold mb-1">Anthropic API Key</p>
-              <p className="text-[#8A8A8E] text-xs mb-3">
-                Get yours at <span className="text-[#C8FF00]">console.anthropic.com</span> — required to generate your AI plan.
-              </p>
-              <input type="password" value={form.apiKey}
-                onChange={e => set('apiKey', e.target.value)}
-                placeholder="sk-ant-api03-…"
-                className="w-full bg-[#252527] text-[#F5F5F0] rounded-xl px-4 py-3 text-sm border border-[#3A3A3C] focus:border-[#C8FF00] outline-none"/>
             </div>
           </div>
         )}
@@ -2301,7 +2275,7 @@ function PlanScreen({ plan, profile, onRegenerate, onUpdatePlan }) {
       const { workout } = replaceSheet;
       const hint = replaceQuery.trim() ? ` Preference: ${replaceQuery.trim()}.` : '';
       const prompt = `Suggest 3 alternative exercises to replace '${workout.exercise}' for someone with goal: ${profile.goal}, equipment: ${(profile.equipment||[]).join(', ')}, level: ${profile.fitnessLevel}.${hint} The alternative must be a straight set exercise — no supersets. Return ONLY a JSON array of 3 objects: [{"name":"string","sets":3,"reps":"8-10","rest":"90s","notes":"string","muscleGroup":"string"}]`;
-      const text = await callClaude(profile.apiKey, [{ role:'user', content: prompt }], 600);
+      const text = await callClaude([{ role:'user', content: prompt }], 600);
       const match = text.match(/\[[\s\S]*\]/);
       if (match) setAlternatives(JSON.parse(match[0]));
     } catch (e) {
@@ -2886,16 +2860,13 @@ function CelebrationScreen({ result, newBadges, onDone, profile }) {
         const summary = `${result.focus}. Duration: ${result.duration} min. ` +
           `${doneExercises} exercises, ${doneSets} sets, ${fmtVol(result.totalVolume)} volume.${prText}`;
         const name = profile?.name || 'Champion';
-        const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        const resp = await fetch(`${BACKEND_URL}/ai/chat`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'x-api-key': '',
-            'anthropic-version': '2023-06-01',
-            'anthropic-dangerous-direct-browser-access': 'true'
+            'Authorization': 'Bearer ' + (localStorage.getItem('forge_token') || ''),
           },
           body: JSON.stringify({
-            model: 'claude-sonnet-4-20250514',
             max_tokens: 80,
             system: "You are a world-class personal trainer. Give one punchy, specific, high-energy 1-2 sentence message celebrating this athlete's session. Use their name. Reference a specific number from their workout.",
             messages: [{ role: 'user', content: `${name} just finished: ${summary}` }]
@@ -3068,7 +3039,7 @@ function ProgressScreen({ logs, prs, badges, profile, nutritionLog={}, nutrition
   const fmtVol = v => v >= 1000 ? `${(v/1000).toFixed(1)}t` : `${Math.round(v)}kg`;
 
   const loadInsights = async () => {
-    if (!profile.apiKey) { setInsightError('Add your API key in Profile to unlock AI insights.'); return; }
+    if (!localStorage.getItem('forge_token')) { setInsightError('Please log in to unlock AI insights.'); return; }
     setLoading(true); setInsightError(null);
     try {
       const data = await generateInsights(profile, logs, prs);
@@ -4133,6 +4104,132 @@ function FuelScreen({ nutritionLog, nutritionGoals, weightHistory, onAddFood, on
   );
 }
 
+const BACKEND_URL = 'https://forge-backend-production-aa16.up.railway.app';
+
+async function syncToBackend(key, value) {
+  try {
+    const token = localStorage.getItem('forge_token');
+    if (!token) return;
+    await fetch(`${BACKEND_URL}/data/${key}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ value }),
+    });
+  } catch {}
+}
+
+async function loadFromBackend(key) {
+  try {
+    const token = localStorage.getItem('forge_token');
+    if (!token) return null;
+    const res = await fetch(`${BACKEND_URL}/data/${key}`, {
+      headers: { 'Authorization': 'Bearer ' + token },
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.value !== undefined ? data.value : (data !== null ? data : null);
+  } catch { return null; }
+}
+
+/* ═══════════════════════════════════════════════
+   LOGIN SCREEN
+═══════════════════════════════════════════════ */
+function LoginScreen({ onAuth }) {
+  const [email,    setEmail]    = useState('');
+  const [password, setPassword] = useState('');
+  const [error,    setError]    = useState('');
+  const [loading,  setLoading]  = useState(false);
+
+  const attempt = async (endpoint) => {
+    if (!email.trim() || !password.trim()) { setError('Please enter your email and password.'); return; }
+    setLoading(true); setError('');
+    try {
+      const res = await fetch(`${BACKEND_URL}/auth/${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.message || data.error || 'Something went wrong. Try again.'); return; }
+      const token = data.token || data.access_token || data.jwt;
+      if (!token) { setError('No token received. Please try again.'); return; }
+      localStorage.setItem('forge_token', token);
+      onAuth();
+    } catch(e) {
+      setError('Could not connect to server. Check your connection.');
+    } finally { setLoading(false); }
+  };
+
+  return (
+    <div style={{ position:'fixed', inset:0, background:'#0D0D0F', display:'flex', flexDirection:'column',
+      alignItems:'center', justifyContent:'center', padding:'0 24px', fontFamily:"'DM Sans',sans-serif" }}>
+      <div style={{ marginBottom:44, textAlign:'center' }}>
+        <div style={{ width:64, height:64, borderRadius:'50%', background:'#C8FF00', display:'flex',
+          alignItems:'center', justifyContent:'center', margin:'0 auto 14px' }}>
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="#0D0D0F">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+          </svg>
+        </div>
+        <p style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:52, color:'#F5F5F0',
+          letterSpacing:'0.05em', lineHeight:1, margin:0 }}>FORGE</p>
+        <p style={{ color:'#8A8A8E', fontSize:14, marginTop:6 }}>AI-powered training</p>
+      </div>
+
+      <div style={{ width:'100%', maxWidth:380 }}>
+        <input type="email" value={email} onChange={e=>{setEmail(e.target.value);setError('');}}
+          placeholder="Email"
+          style={{ width:'100%', background:'#1A1A1C', color:'#F5F5F0', border:'1px solid #252527',
+            borderRadius:16, padding:'14px 18px', fontSize:16, fontFamily:"'DM Sans',sans-serif",
+            outline:'none', boxSizing:'border-box', marginBottom:10 }}/>
+        <input type="password" value={password} onChange={e=>{setPassword(e.target.value);setError('');}}
+          onKeyDown={e=>{ if(e.key==='Enter') attempt('login'); }}
+          placeholder="Password"
+          style={{ width:'100%', background:'#1A1A1C', color:'#F5F5F0', border:'1px solid #252527',
+            borderRadius:16, padding:'14px 18px', fontSize:16, fontFamily:"'DM Sans',sans-serif",
+            outline:'none', boxSizing:'border-box', marginBottom: error ? 8 : 18 }}/>
+        {error && (
+          <p style={{ color:'#FF453A', fontSize:13, marginBottom:14, textAlign:'center' }}>{error}</p>
+        )}
+        <button onClick={()=>attempt('login')} disabled={loading}
+          style={{ width:'100%', padding:'16px 0', background: loading ? '#8A8A8E' : '#C8FF00',
+            color:'#0D0D0F', fontFamily:"'Bebas Neue',sans-serif", fontSize:20, letterSpacing:'0.08em',
+            border:'none', borderRadius:16, cursor: loading ? 'not-allowed' : 'pointer', marginBottom:10 }}>
+          {loading ? 'LOADING...' : 'LOGIN'}
+        </button>
+        <button onClick={()=>attempt('register')} disabled={loading}
+          style={{ width:'100%', padding:'16px 0', background:'transparent', color:'#C8FF00',
+            fontFamily:"'Bebas Neue',sans-serif", fontSize:20, letterSpacing:'0.08em',
+            border:'1px solid rgba(200,255,0,0.3)', borderRadius:16,
+            cursor: loading ? 'not-allowed' : 'pointer' }}>
+          CREATE ACCOUNT
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function LoadingScreen() {
+  return (
+    <div style={{ position:'fixed', inset:0, background:'#0D0D0F', display:'flex', flexDirection:'column',
+      alignItems:'center', justifyContent:'center' }}>
+      <div style={{ width:64, height:64, borderRadius:'50%', background:'#C8FF00', display:'flex',
+        alignItems:'center', justifyContent:'center', marginBottom:16 }}>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="#0D0D0F">
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+        </svg>
+      </div>
+      <p style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:40, color:'#F5F5F0',
+        letterSpacing:'0.05em', margin:'0 0 20px' }}>FORGE</p>
+      <div style={{ display:'flex', gap:8 }}>
+        {[0,1,2].map(i => (
+          <div key={i} style={{ width:8, height:8, borderRadius:'50%', background:'#C8FF00',
+            animation:`dotPulse 1.2s ${i*0.2}s ease-in-out infinite`, opacity:0.4 }}/>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /* ═══════════════════════════════════════════════
    APP ROOT
 ═══════════════════════════════════════════════ */
@@ -4140,7 +4237,7 @@ function App() {
   const [profile,  setProfile]  = useLocalStorage('forge_profile', {
     name:'', fitnessLevel:'', goal:'', equipment:[],
     trainingDaysPerWeek:3, trainingDays:[], sessionLength:60,
-    onboardingComplete:false, apiKey:''
+    onboardingComplete:false
   });
   const [plan,    setPlan]    = useLocalStorage('forge_plan',   null);
   const [logs,    setLogs]    = useLocalStorage('forge_logs',   []);
@@ -4154,6 +4251,8 @@ function App() {
   const [coachCheckins,  setCoachCheckins]  = useLocalStorage('forge_coach_checkins', {});
   const [sorenessLog,    setSorenessLog]    = useLocalStorage('forge_soreness_log', {});
 
+  const [authed,         setAuthed]        = useState(!!localStorage.getItem('forge_token'));
+  const [loadingData,    setLoadingData]   = useState(!!localStorage.getItem('forge_token'));
   const [activeTab,      setActiveTab]     = useState('home');
   const [activeWorkout,  setActiveWorkout] = useState(null);
   const [workoutResult,  setWorkoutResult] = useState(null);
@@ -4162,6 +4261,46 @@ function App() {
   const [showNutrGoals,  setShowNutrGoals] = useState(false);
   const [planError,      setPlanError]    = useState(null);
   const [showCoachCheckin, setShowCoachCheckin] = useState(false);
+
+  /* ── Load all data from backend after auth ── */
+  useEffect(() => {
+    if (!authed) return;
+    setLoadingData(true);
+    const KEYED = [
+      ['forge_profile',        setProfile],
+      ['forge_plan',           setPlan],
+      ['forge_logs',           setLogs],
+      ['forge_prs',            setPrs],
+      ['forge_badges',         setBadges],
+      ['forge_streak',         setStreak],
+      ['forge_nutr_log',       setNutritionLog],
+      ['forge_nutr_goals',     setNutritionGoals],
+      ['forge_weight',         setWeightHistory],
+      ['forge_cardio_log',     setCardioLog],
+      ['forge_coach_checkins', setCoachCheckins],
+    ];
+    const LS_ONLY = ['forge_coach_messages', 'forge_plan_changes', 'forge_coach_journal', 'forge_soreness_log'];
+    Promise.all([
+      ...KEYED.map(async ([key, setter]) => {
+        try {
+          const val = await loadFromBackend(key);
+          if (val !== null && val !== undefined) { localStorage.setItem(key, JSON.stringify(val)); setter(val); }
+        } catch {}
+      }),
+      ...LS_ONLY.map(async key => {
+        try {
+          const val = await loadFromBackend(key);
+          if (val !== null && val !== undefined) localStorage.setItem(key, JSON.stringify(val));
+        } catch {}
+      }),
+    ]).finally(() => setLoadingData(false));
+  }, [authed]);
+
+  const handleLogout = () => {
+    localStorage.removeItem('forge_token');
+    setAuthed(false);
+    setLoadingData(false);
+  };
 
   /* ── Nutrition actions ── */
   const handleAddFood = (date, entry) => {
@@ -4215,10 +4354,6 @@ function App() {
   };
 
   const handleGeneratePlan = async (profileData) => {
-    if (!profileData.apiKey?.trim()) {
-      setPlanError('Please add your Anthropic API key. Get one at console.anthropic.com');
-      return;
-    }
     setGenerating(true); setPlanError(null);
     try {
       const generated = await generatePlan(profileData);
@@ -4391,10 +4526,14 @@ function App() {
                                 weightHistory={weightHistory}/>;
       case 'profile':  return <ProfileScreen profile={profile} onSave={setProfile}
                                 onGeneratePlan={handleGeneratePlan} isExisting={true}
-                                onNutritionGoals={()=>setShowNutrGoals(true)}/>;
+                                onNutritionGoals={()=>setShowNutrGoals(true)}
+                                onLogout={handleLogout}/>;
       default: return null;
     }
   };
+
+  if (!authed) return <LoginScreen onAuth={() => { setAuthed(true); setLoadingData(true); }}/>;
+  if (loadingData) return <LoadingScreen/>;
 
   return (
     <>
