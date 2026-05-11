@@ -1606,7 +1606,7 @@ function BodyMap({ profile, plan, onPlanUpdate, planChanges, setPlanChanges }) {
         }).join('\n') || 'No nutrition data.';
       } catch {}
 
-      const systemPrompt = `You are acting as a knowledgeable sports physiotherapist assistant. You have reviewed this athlete's training history and the answers to your assessment questions. Give specific, practical advice. Use short bold headings for each section wrapped in double asterisks. Sections must be exactly: **What This Could Be**, **Likely Trigger Based On Training**, **What To Do Before Your Next Session**, **Exercises And Movements To Avoid**, **Whether To Train Today**, **Coach Note**. Keep each section to 2 sentences maximum. Never diagnose. Never prescribe treatment. Always end with: *Disclaimer: This is not medical advice. Consult a qualified physiotherapist or doctor, especially if symptoms persist or worsen.*`;
+      const systemPrompt = `You are a sports physiotherapist sending a quick clinical note. Keep the entire response under 120 words. Use these bold headings only, one sentence each: **What It Could Be**, **Likely Trigger**, **Before You Train**, **Avoid**, **Train Today?**. End with one short italicised sentence advising to consult a physio or doctor if it persists. Be direct. No waffle.`;
 
       const userMsg = `Athlete: ${profile.name||'Athlete'}, ${profile.fitnessLevel||''}, Goal: ${profile.goal||''}.
 
@@ -1632,7 +1632,7 @@ ${nutrText}`;
           'Authorization':'Bearer '+(localStorage.getItem('forge_token')||''),
         },
         body: JSON.stringify({
-          max_tokens: 600,
+          max_tokens: 250,
           system: systemPrompt,
           messages: [{ role:'user', content: userMsg }],
         }),
@@ -1664,139 +1664,187 @@ ${nutrText}`;
   };
 
 
-  // ── Body Map SVG ───────────────────────────────────────────────────────
-  const BodyMapSVG = () => {
-    const fFill = (id) => {
+  // ── CSS Body Map ──────────────────────────────────────────────────────
+  const BodyMapCSS = () => {
+    const bgFor = id => {
       if (selected[id] === 'severe')   return 'rgba(255,69,58,0.55)';
       if (selected[id] === 'moderate') return 'rgba(255,159,10,0.55)';
-      if (hovered === id)              return 'rgba(200,255,0,0.28)';
-      return '#1E1E20';
+      if (hovered === id)              return 'rgba(200,255,0,0.25)';
+      return '#252527';
     };
-    const fStroke = (id) => {
-      if (selected[id] === 'severe')   return '#FF453A';
-      if (selected[id] === 'moderate') return '#FF9F0A';
-      if (hovered === id)              return '#C8FF00';
-      return '#3A3A3C';
+    const bdrFor = id => {
+      if (selected[id] === 'severe')   return '2px solid #FF453A';
+      if (selected[id] === 'moderate') return '2px solid #FF9F0A';
+      if (hovered === id)              return '2px solid #C8FF00';
+      return '1px solid #3A3A3C';
     };
-    const fSW = (id) => (selected[id] || hovered === id) ? 2 : 1.5;
-    const ev = (id) => ({
-      style:{ cursor:'pointer', transition:'fill 0.15s, stroke 0.15s' },
-      onClick:()=>handleMuscleClick(id),
-      onMouseEnter:()=>setHovered(id),
-      onMouseLeave:()=>setHovered(null),
-    });
-    const Rect = ({id, x, y, w, h, rx=9, k}) => (
-      <rect key={k||id} x={x} y={y} width={w} height={h} rx={rx}
-        fill={fFill(id)} stroke={fStroke(id)} strokeWidth={fSW(id)} {...ev(id)}/>
+    const SEG = (id, style, children, k) => (
+      <div key={k||id}
+        style={{ background:bgFor(id), border:bdrFor(id), boxSizing:'border-box', position:'relative',
+                 cursor:'pointer', flexShrink:0,
+                 transition:'background 0.15s ease, border-color 0.15s ease', ...style }}
+        onClick={()=>handleMuscleClick(id)}
+        onMouseEnter={()=>setHovered(id)}
+        onMouseLeave={()=>setHovered(null)}>
+        {children}
+      </div>
     );
-    const Elps = ({id, cx, cy, rx, ry, k}) => (
-      <ellipse key={k||id} cx={cx} cy={cy} rx={rx} ry={ry}
-        fill={fFill(id)} stroke={fStroke(id)} strokeWidth={fSW(id)} {...ev(id)}/>
+    const VIS = (style) => (
+      <div style={{ background:'#1E1E20', border:'1px solid #2A2A2C', boxSizing:'border-box', flexShrink:0, ...style }}/>
     );
-    // Connector label: line from (lx,ly) to label anchor (tx,ty)
-    const Lbl = ({text, lx, ly, tx, ty, anchor='end'}) => (
-      <g key={`lbl-${text}`} style={{pointerEvents:'none'}}>
-        <line x1={lx} y1={ly} x2={tx} y2={ty} stroke="#353537" strokeWidth="0.8"/>
-        <text x={anchor==='end'?tx-2:tx+2} y={ty} textAnchor={anchor}
-          dominantBaseline="middle" fontSize="7.5" fill="#6A6A6E"
-          fontFamily="'DM Sans',sans-serif">{text}</text>
-      </g>
+    const LBL = (text) => (
+      <div style={{ color:'#6A6A6E', fontSize:8, fontFamily:"'DM Sans',sans-serif",
+        textAlign:'center', letterSpacing:'0.03em', marginTop:2, lineHeight:1.2, userSelect:'none' }}>
+        {text}
+      </div>
     );
+    const col = { display:'flex', flexDirection:'column', alignItems:'center', gap:2 };
 
     return (
-      <svg viewBox="0 0 380 490" width="100%" style={{display:'block'}}>
-        {/* Section titles */}
-        <text x="82" y="14" textAnchor="middle" fontSize="11" fill="#C8FF00"
-          fontFamily="'Bebas Neue',sans-serif" letterSpacing="2">FRONT</text>
-        <text x="298" y="14" textAnchor="middle" fontSize="11" fill="#C8FF00"
-          fontFamily="'Bebas Neue',sans-serif" letterSpacing="2">BACK</text>
-        <line x1="190" y1="2" x2="190" y2="488" stroke="#252527" strokeWidth="0.5" strokeDasharray="4,4"/>
+      <div style={{ display:'flex', justifyContent:'center', gap:20, padding:'4px 8px 12px', overflowX:'auto' }}>
 
-        {/* ── FRONT SILHOUETTE ── */}
-        <g fill="#1A1A1C" stroke="#2A2A2C" strokeWidth="1" style={{pointerEvents:'none'}}>
-          <circle cx="82" cy="42" r="25"/>
-          <rect x="73" y="67" width="18" height="20" rx="6"/>
-          <rect x="44" y="78" width="76" height="134" rx="14"/>
-          <rect x="21" y="82" width="21" height="118" rx="10"/>
-          <rect x="122" y="82" width="21" height="118" rx="10"/>
-          <rect x="44" y="208" width="76" height="26" rx="11"/>
-          <rect x="45" y="228" width="36" height="222" rx="13"/>
-          <rect x="83" y="228" width="36" height="222" rx="13"/>
-        </g>
+        {/* ── FRONT FIGURE ── */}
+        <div style={{...col}}>
+          <div style={{ color:'#C8FF00', fontFamily:"'Bebas Neue',sans-serif", fontSize:13, letterSpacing:'0.1em', marginBottom:4 }}>FRONT</div>
+          {/* Head */}
+          {VIS({ width:50, height:55, borderRadius:'50%' })}
+          {/* Neck */}
+          {SEG('Neck', { width:20, height:18, borderRadius:8 })}
+          {/* Shoulders */}
+          <div style={{ display:'flex', width:172, justifyContent:'space-between' }}>
+            {SEG('Left Shoulder',  { width:38, height:22, borderRadius:12 })}
+            {SEG('Right Shoulder', { width:38, height:22, borderRadius:12 })}
+          </div>
+          {LBL('Shoulders')}
+          {/* Arms + Torso */}
+          <div style={{ display:'flex', gap:2, alignItems:'flex-start' }}>
+            {/* Left arm */}
+            <div style={{...col}}>
+              {SEG('Left Bicep',   { width:24, height:52, borderRadius:12 })}
+              {SEG('Left Forearm', { width:20, height:48, borderRadius:10 })}
+              {VIS({ width:18, height:22, borderRadius:8 })}
+              {LBL('Biceps')}
+            </div>
+            {/* Torso */}
+            <div style={{...col}}>
+              <div style={{ display:'flex', gap:1 }}>
+                {SEG('Left Pec',  { width:52, height:48, borderRadius:12 })}
+                {SEG('Right Pec', { width:52, height:48, borderRadius:12 })}
+              </div>
+              {LBL('Chest')}
+              <div style={{ display:'flex', gap:2 }}>
+                {SEG('Obliques', { width:22, height:52, borderRadius:10 }, null, 'obl-l')}
+                {SEG('Abs', { width:72, height:52, borderRadius:10 },
+                  <div style={{ position:'absolute', left:'50%', top:6, bottom:6, width:1,
+                    background:'rgba(255,255,255,0.07)', transform:'translateX(-50%)', pointerEvents:'none' }}/>
+                )}
+                {SEG('Obliques', { width:22, height:52, borderRadius:10 }, null, 'obl-r')}
+              </div>
+              {LBL('Abs / Obliques')}
+              {VIS({ width:82, height:24, borderRadius:12 })}
+            </div>
+            {/* Right arm */}
+            <div style={{...col}}>
+              {SEG('Right Bicep',   { width:24, height:52, borderRadius:12 })}
+              {SEG('Right Forearm', { width:20, height:48, borderRadius:10 })}
+              {VIS({ width:18, height:22, borderRadius:8 })}
+              {LBL('Biceps')}
+            </div>
+          </div>
+          {/* Legs */}
+          <div style={{...col}}>
+            <div style={{ display:'flex', gap:4 }}>
+              {SEG('Left Quad',  { width:32, height:78, borderRadius:14 })}
+              {SEG('Right Quad', { width:32, height:78, borderRadius:14 })}
+            </div>
+            {LBL('Quads')}
+            <div style={{ display:'flex', gap:4 }}>
+              {SEG('Left Knee',  { width:30, height:24, borderRadius:'50%' })}
+              {SEG('Right Knee', { width:30, height:24, borderRadius:'50%' })}
+            </div>
+            {LBL('Knees')}
+            <div style={{ display:'flex', gap:4 }}>
+              {SEG('Left Shin',  { width:26, height:68, borderRadius:10 })}
+              {SEG('Right Shin', { width:26, height:68, borderRadius:10 })}
+            </div>
+            {LBL('Shins')}
+            <div style={{ display:'flex', gap:4 }}>
+              {VIS({ width:32, height:18, borderRadius:8 })}
+              {VIS({ width:32, height:18, borderRadius:8 })}
+            </div>
+          </div>
+        </div>
 
-        {/* ── BACK SILHOUETTE ── */}
-        <g fill="#1A1A1C" stroke="#2A2A2C" strokeWidth="1" style={{pointerEvents:'none'}}>
-          <circle cx="298" cy="42" r="25"/>
-          <rect x="289" y="67" width="18" height="20" rx="6"/>
-          <rect x="258" y="78" width="80" height="134" rx="14"/>
-          <rect x="234" y="84" width="21" height="118" rx="10"/>
-          <rect x="341" y="84" width="21" height="118" rx="10"/>
-          <rect x="260" y="208" width="76" height="32" rx="11"/>
-          <rect x="259" y="234" width="36" height="222" rx="13"/>
-          <rect x="297" y="234" width="36" height="222" rx="13"/>
-        </g>
+        {/* ── BACK FIGURE ── */}
+        <div style={{...col}}>
+          <div style={{ color:'#C8FF00', fontFamily:"'Bebas Neue',sans-serif", fontSize:13, letterSpacing:'0.1em', marginBottom:4 }}>BACK</div>
+          {/* Head */}
+          {VIS({ width:50, height:55, borderRadius:'50%' })}
+          {/* Traps */}
+          {SEG('Traps', { width:104, height:22, borderRadius:10 })}
+          {LBL('Traps')}
+          {/* Rear Delts */}
+          <div style={{ display:'flex', width:160, justifyContent:'space-between' }}>
+            {SEG('Left Rear Delt',  { width:38, height:22, borderRadius:12 })}
+            {SEG('Right Rear Delt', { width:38, height:22, borderRadius:12 })}
+          </div>
+          {/* Arms + Torso */}
+          <div style={{ display:'flex', gap:2, alignItems:'flex-start' }}>
+            {/* Left arm */}
+            <div style={{...col}}>
+              {SEG('Left Tricep', { width:24, height:52, borderRadius:12 })}
+              {VIS({ width:20, height:48, borderRadius:10 })}
+              {VIS({ width:18, height:22, borderRadius:8 })}
+              {LBL('Triceps')}
+            </div>
+            {/* Torso */}
+            <div style={{...col}}>
+              {SEG('Upper Back', { width:104, height:48, borderRadius:12 })}
+              {LBL('Upper Back')}
+              <div style={{ display:'flex', gap:2 }}>
+                {SEG('Lats', { width:24, height:52, borderRadius:10 }, null, 'lat-l')}
+                {SEG('Lower Back', { width:56, height:52, borderRadius:10 })}
+                {SEG('Lats', { width:24, height:52, borderRadius:10 }, null, 'lat-r')}
+              </div>
+              {LBL('Lats / Lower Back')}
+              {SEG('Glutes', { width:82, height:36, borderRadius:12 })}
+              {LBL('Glutes')}
+            </div>
+            {/* Right arm */}
+            <div style={{...col}}>
+              {SEG('Right Tricep', { width:24, height:52, borderRadius:12 })}
+              {VIS({ width:20, height:48, borderRadius:10 })}
+              {VIS({ width:18, height:22, borderRadius:8 })}
+              {LBL('Triceps')}
+            </div>
+          </div>
+          {/* Legs */}
+          <div style={{...col}}>
+            <div style={{ display:'flex', gap:4 }}>
+              {SEG('Left Hamstring',  { width:32, height:78, borderRadius:14 })}
+              {SEG('Right Hamstring', { width:32, height:78, borderRadius:14 })}
+            </div>
+            {LBL('Hamstrings')}
+            <div style={{ display:'flex', gap:4 }}>
+              {VIS({ width:30, height:24, borderRadius:'50%' })}
+              {VIS({ width:30, height:24, borderRadius:'50%' })}
+            </div>
+            <div style={{ display:'flex', gap:4 }}>
+              {SEG('Left Calf',  { width:26, height:68, borderRadius:10 })}
+              {SEG('Right Calf', { width:26, height:68, borderRadius:10 })}
+            </div>
+            {LBL('Calves')}
+            <div style={{ display:'flex', gap:4 }}>
+              {VIS({ width:32, height:18, borderRadius:8 })}
+              {VIS({ width:32, height:18, borderRadius:8 })}
+            </div>
+          </div>
+        </div>
 
-        {/* ── FRONT REGIONS ── */}
-        <Rect id="Neck"           x={74}  y={68}  w={16} h={18} rx={6}/>
-        <Elps id="Left Shoulder"  cx={50} cy={91} rx={19} ry={12}/>
-        <Elps id="Right Shoulder" cx={114} cy={91} rx={19} ry={12}/>
-        <Rect id="Left Pec"       x={46}  y={80}  w={35} h={62} rx={10}/>
-        <Rect id="Right Pec"      x={83}  y={80}  w={35} h={62} rx={10}/>
-        <Rect id="Left Bicep"     x={23}  y={84}  w={19} h={60} rx={9}/>
-        <Rect id="Right Bicep"    x={122} y={84}  w={19} h={60} rx={9}/>
-        <Rect id="Left Forearm"   x={25}  y={147} w={17} h={48} rx={8}/>
-        <Rect id="Right Forearm"  x={122} y={147} w={17} h={48} rx={8}/>
-        <Rect id="Abs"            x={66}  y={145} w={32} h={56} rx={9}/>
-        <Rect id="Obliques" k="obl-l" x={46} y={148} w={18} h={50} rx={8}/>
-        <Rect id="Obliques" k="obl-r" x={100} y={148} w={18} h={50} rx={8}/>
-        <Rect id="Left Quad"      x={47}  y={228} w={32} h={86} rx={11}/>
-        <Rect id="Right Quad"     x={81}  y={228} w={32} h={86} rx={11}/>
-        <Elps id="Left Knee"      cx={63} cy={321} rx={16} ry={11}/>
-        <Elps id="Right Knee"     cx={97} cy={321} rx={16} ry={11}/>
-        <Rect id="Left Shin"      x={49}  y={334} w={26} h={72} rx={9}/>
-        <Rect id="Right Shin"     x={77}  y={334} w={26} h={72} rx={9}/>
-
-        {/* ── BACK REGIONS ── */}
-        <Rect id="Traps"             x={264} y={68}  w={68} h={32} rx={9}/>
-        <Elps id="Left Rear Delt"    cx={257} cy={95} rx={18} ry={12}/>
-        <Elps id="Right Rear Delt"   cx={339} cy={95} rx={18} ry={12}/>
-        <Rect id="Left Tricep"       x={235} y={86}  w={18} h={60} rx={9}/>
-        <Rect id="Right Tricep"      x={343} y={86}  w={18} h={60} rx={9}/>
-        <Rect id="Upper Back"        x={264} y={102} w={68} h={44} rx={9}/>
-        <Rect id="Lats"    k="lat-l" x={257} y={148} w={28} h={54} rx={9}/>
-        <Rect id="Lats"    k="lat-r" x={311} y={148} w={28} h={54} rx={9}/>
-        <Rect id="Lower Back"        x={270} y={204} w={56} h={30} rx={9}/>
-        <Rect id="Glutes"  k="glt-l" x={264} y={236} w={30} h={38} rx={11}/>
-        <Rect id="Glutes"  k="glt-r" x={296} y={236} w={30} h={38} rx={11}/>
-        <Rect id="Left Hamstring"    x={261} y={276} w={30} h={84} rx={11}/>
-        <Rect id="Right Hamstring"   x={295} y={276} w={30} h={84} rx={11}/>
-        <Rect id="Left Calf"         x={263} y={362} w={26} h={70} rx={9}/>
-        <Rect id="Right Calf"        x={291} y={362} w={26} h={70} rx={9}/>
-
-        {/* ── FRONT LABELS (right-side gap, text right-aligned) ── */}
-        <Lbl text="Neck"      lx={90}  ly={77}  tx={186} ty={77}/>
-        <Lbl text="Shoulders" lx={133} ly={91}  tx={186} ty={93}/>
-        <Lbl text="Chest"     lx={118} ly={111} tx={186} ty={113}/>
-        <Lbl text="Biceps"    lx={141} ly={114} tx={186} ty={133}/>
-        <Lbl text="Forearms"  lx={139} ly={171} tx={186} ty={155}/>
-        <Lbl text="Abs"       lx={98}  ly={173} tx={186} ty={175}/>
-        <Lbl text="Obliques"  lx={118} ly={175} tx={186} ty={193}/>
-        <Lbl text="Quads"     lx={113} ly={271} tx={186} ty={265}/>
-        <Lbl text="Knees"     lx={113} ly={321} tx={186} ty={300}/>
-        <Lbl text="Shins"     lx={103} ly={370} tx={186} ty={335}/>
-
-        {/* ── BACK LABELS (left-side gap, text left-aligned) ── */}
-        <Lbl text="Traps"      lx={264} ly={84}  tx={194} ty={84}  anchor="start"/>
-        <Lbl text="Triceps"    lx={235} ly={116} tx={194} ty={110} anchor="start"/>
-        <Lbl text="Upper Back" lx={264} ly={124} tx={194} ty={132} anchor="start"/>
-        <Lbl text="Lats"       lx={257} ly={175} tx={194} ty={165} anchor="start"/>
-        <Lbl text="Lower Back" lx={270} ly={219} tx={194} ty={200} anchor="start"/>
-        <Lbl text="Glutes"     lx={264} ly={255} tx={194} ty={232} anchor="start"/>
-        <Lbl text="Hamstrings" lx={261} ly={318} tx={194} ty={280} anchor="start"/>
-        <Lbl text="Calves"     lx={263} ly={397} tx={194} ty={348} anchor="start"/>
-      </svg>
+      </div>
     );
   };
+
 
   const selectedCount = Object.keys(selected).length;
 
@@ -1887,7 +1935,7 @@ ${nutrText}`;
     <div>
       {/* SVG Body Map */}
       <div style={{ padding:'0 8px 4px' }}>
-        <BodyMapSVG/>
+        <BodyMapCSS/>
       </div>
 
       {/* Legend */}
