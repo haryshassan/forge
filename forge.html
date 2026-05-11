@@ -409,7 +409,7 @@ Straight sets only. No supersets. No substitutions. You MUST follow this day-by-
 
 async function generatePlan(profile) {
   const splitInstructions = getSplitInstructions(profile);
-  const prompt = `You are an expert personal trainer. Generate a personalised weekly training plan.
+  const prompt = `You are an elite personal trainer and strength and conditioning coach with 20 years of experience working with everyone from beginners to professional athletes. Your job is to design the perfect training program for this specific athlete based on their goal, experience level, available equipment, and schedule. Every exercise you choose must be intentional and evidence based. You will explain briefly why each exercise is selected.
 
 ATHLETE PROFILE:
 - Name: ${profile.name}
@@ -420,68 +420,52 @@ ATHLETE PROFILE:
 - Preferred Training Days: ${(profile.trainingDays||[]).join(', ')}
 - Session Length: ${profile.sessionLength} minutes
 
-IMPORTANT RULES:
-- Every exercise is a STRAIGHT SET only. No supersets, no paired sets, no circuits.
-- Each exercise stands alone with its own sets, reps, rest period.
-- Never pair exercises together or use A1/A2 notation.
-- Never use the word 'superset' or 'paired' in any exercise or notes field.
+GENERAL RULES FOR ALL PLANS:
+Every session must be completable in the athlete's stated session length — never exceed it. A session should have no more than 6 exercises for strength and muscle goals, no more than 7 for athletic performance, and no more than 5 for fat loss circuits. Quality over quantity always. Straight sets only — no supersets unless the goal is fat loss and the user has selected circuit style. Never program supersets for strength or muscle goals.
+For each exercise include: exercise name, sets, reps or duration, rest period in seconds, and a one sentence reason explaining exactly why this exercise is in the program for this person's specific goal.
 
-GOAL-SPECIFIC PROGRAMMING RULES:
+GOAL-SPECIFIC PROGRAMMING:
 
-If goal = 'Build Muscle':
-- Hypertrophy rep ranges: 8-12 reps, 3-4 sets, 60-90s rest
-- Focus on time under tension, compound movements first, isolation finishers
-- Progressive overload is the priority
+If goal is Build Muscle: prioritise compound movements first in each session — squat pattern, hip hinge, horizontal push, horizontal pull, vertical push, vertical pull. Follow with one or two isolation exercises targeting the session's focus muscle. Rep ranges 8 to 12. Rest 60 to 90 seconds. Choose exercises that maximise mechanical tension and muscle damage for hypertrophy. Avoid exercises with poor muscle activation for the target group. For example choose Romanian deadlift over straight leg deadlift for hamstring development because of superior stretch under load.
 
-If goal = 'Get Stronger':
-- Strength rep ranges: 3-6 reps, 4-5 sets, 2-3 min rest
-- Prioritise barbell compounds: squat, deadlift, bench, overhead press, row
-- Linear progression model
+If goal is Get Stronger: prioritise barbell compound lifts. Deadlift, squat, bench press, overhead press, barbell row are the backbone. Rep ranges 3 to 6. Rest 2 to 4 minutes between heavy sets. Include one accessory block of 2 to 3 exercises at higher reps to build supporting muscle. Periodise across the week — do not repeat the same primary lift twice in the same week unless the split specifically calls for it.
 
-If goal = 'Lose Fat':
-- Higher rep ranges: 12-15 reps, 3 sets, 45-60s rest
-- Include 1-2 conditioning exercises per session (e.g. kettlebell swings, battle ropes if equipment available)
+If goal is Lose Fat: design sessions that maximise calorie burn and preserve muscle. Use compound movements performed at a moderate tempo with shorter rest periods of 30 to 45 seconds. Include a conditioning finisher at the end of every session — 8 to 10 minutes of circuit work, kettlebell swings, sled pushes, or bodyweight intervals depending on equipment. Rep ranges 12 to 15. Keep sessions fast paced and efficient.
 
-If goal = 'Athletic Performance':
-- Mix of power (3-5 reps explosive), strength (5-8 reps), and conditioning
-- Include plyometrics: box jumps, broad jumps, explosive step-ups, medicine ball throws
-- Include athletic movements: single-leg RDL, lateral bounds, rotational work, sprint drills
-- Include agility/conditioning finishers: shuttle runs, jump rope, sled pushes if available
-- Power exercises first (when CNS is fresh), strength second, conditioning last
+If goal is Athletic Performance: this is the most technical plan. Structure every session with this order — movement prep and activation 5 minutes, power and plyometric block first while the nervous system is fresh, strength block second, accessory and stability work last. Power block must include at least one explosive movement per session — box jumps, broad jumps, medicine ball throws, power cleans, hang cleans, sprint variations depending on equipment. Strength block uses 5 to 8 rep ranges for main lifts. Include unilateral work every session — single leg squats, single leg RDLs, split squats — because athletic performance demands single leg strength and stability. Include one rotational or anti-rotation core exercise every session. Rest periods vary — 2 to 3 minutes after power work, 60 to 90 seconds after strength, 30 to 45 seconds in accessory block.
 
-If goal = 'General Fitness':
-- Balanced rep ranges: 10-15 reps, 3 sets, 60s rest
-- Mix of compound and functional movements
-- Include mobility and stability work
+If goal is No Equipment or Calisthenics: build the program entirely from bodyweight progressions. Use progressive difficulty variations — for example if the user is a beginner program push ups, intermediate program archer push ups or decline push ups, advanced program pike push ups or pseudo planche push ups. Apply the same progressions to squat patterns, hip hinge patterns, pulling patterns using a bar or rings if available, and core patterns. Include plyometric variations where appropriate based on level. Rep ranges 8 to 15 or to near failure.
 
-If equipment includes 'No Equipment' OR bodyweight only:
-- Replace all barbell/dumbbell exercises with bodyweight progressions:
-  Push: push-ups → archer push-ups → pike push-ups → handstand push-up progressions
-  Pull: rows using a table/bar → pull-up negatives → pull-ups → archer pull-ups
-  Legs: squats → Bulgarian split squats → pistol squat progressions
-  Core: planks → hollow body → L-sits → dragon flags
-  Power: jumping jacks → jump squats → explosive push-ups → clapping push-ups
+EQUIPMENT AWARENESS:
+Always check the athlete's listed equipment before programming any exercise. Never program a barbell exercise for someone without a barbell. Never program a cable exercise for someone without cables. Substitute intelligently — if no cables use dumbbells or bands, if no barbell use dumbbells or trap bar if available, if no equipment use bodyweight progressions.
 
-Always tailor exercise selection, rep ranges, rest periods, and session structure specifically to the stated goal.
+EXPERIENCE LEVEL ADJUSTMENTS:
+Beginner — simpler movement patterns, machines over free weights where available, higher reps, longer rest, 3 to 4 exercises per session maximum, focus on learning movement patterns.
+Intermediate — free weights, moderate complexity, full session length used, balanced volume.
+Advanced — higher volume, more complex movements, can include Olympic lift variations if athletic performance goal, periodised intensity across the week.
+
+SESSION LENGTH TARGETS:
+30 minutes — 3 to 4 exercises, minimal rest.
+45 minutes — 4 to 5 exercises, standard rest.
+60 minutes — 5 to 6 exercises, full rest periods.
+75 minutes plus — 6 to 7 exercises, full rest plus warm up block included in plan.
 
 ${splitInstructions}
 
-Create a structured plan ONLY for the preferred training days. Each session should have 4–7 exercises appropriate for the session length and equipment. Lead with compound movements.
-
-Return ONLY a valid JSON object (no markdown, no explanation) matching this EXACT schema:
+Return ONLY a valid JSON object (no markdown, no explanation) matching this EXACT schema. The notes field must contain one specific sentence explaining exactly why this exercise was chosen for this person's goal — not generic, directly tied to their stated goal and experience level:
 {
   "planName": "string",
   "weeklySchedule": [
     {
       "day": "Monday",
-      "focus": "Push – Chest & Shoulders",
+      "focus": "string",
       "workouts": [
         {
           "exercise": "string",
           "sets": 4,
-          "reps": "8-10",
+          "reps": "8-12",
           "rest": "90s",
-          "notes": "string",
+          "notes": "one sentence: why this specific exercise for this specific person's goal",
           "muscleGroup": "string"
         }
       ]
