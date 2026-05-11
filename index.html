@@ -1518,7 +1518,6 @@ function buildQuestions(selectedMuscles) {
 function BodyMap({ profile, plan, onPlanUpdate, planChanges, setPlanChanges }) {
   const [selected, setSelected]   = useState({}); // { 'Left Shoulder': 'moderate'|'severe' }
   const [hovered,  setHovered]    = useState(null);
-  const [tapCard,  setTapCard]    = useState(null); // muscle name showing the severity card
   const [phase,    setPhase]      = useState('map'); // map | questions | response | redflag
   const [qList,    setQList]      = useState([]);
   const [qIdx,     setQIdx]       = useState(0);
@@ -1531,17 +1530,13 @@ function BodyMap({ profile, plan, onPlanUpdate, planChanges, setPlanChanges }) {
   const sorenessLogRef = React.useRef(null);
 
   const handleMuscleClick = (id) => {
-    setTapCard(prev => prev === id ? null : id);
+    setSelected(prev => {
+      if (!prev[id]) return { ...prev, [id]: 'moderate' };
+      if (prev[id] === 'moderate') return { ...prev, [id]: 'severe' };
+      const n = { ...prev }; delete n[id]; return n;
+    });
   };
-
-  const setSeverity = (muscle, sev) => {
-    setSelected(prev => ({ ...prev, [muscle]: sev }));
-    setTapCard(null);
-  };
-  const clearMuscle = (muscle) => {
-    setSelected(prev => { const n={...prev}; delete n[muscle]; return n; });
-    setTapCard(null);
-  };
+  const clearMuscle = (id) => setSelected(prev => { const n={...prev}; delete n[id]; return n; });
 
   // ── Start assessment ─────────────────────────
   const startAssessment = () => {
@@ -1658,192 +1653,85 @@ ${nutrText}`;
   };
 
   const resetAll = () => {
-    setSelected({}); setHovered(null); setTapCard(null); setPhase('map');
+    setSelected({}); setHovered(null); setPhase('map');
     setQList([]); setQIdx(0); setAnswers([]); setAdvice(null);
     setRedFlag(null); setBmPlanChange(null); setBmCardDismissed(false);
   };
 
 
-  // ── CSS Body Map ──────────────────────────────────────────────────────
-  const BodyMapCSS = () => {
-    const bgFor = id => {
-      if (selected[id] === 'severe')   return 'rgba(255,69,58,0.55)';
-      if (selected[id] === 'moderate') return 'rgba(255,159,10,0.55)';
-      if (hovered === id)              return 'rgba(200,255,0,0.25)';
-      return '#252527';
-    };
-    const bdrFor = id => {
-      if (selected[id] === 'severe')   return '2px solid #FF453A';
-      if (selected[id] === 'moderate') return '2px solid #FF9F0A';
-      if (hovered === id)              return '2px solid #C8FF00';
-      return '1px solid #3A3A3C';
-    };
-    const SEG = (id, style, children, k) => (
-      <div key={k||id}
-        style={{ background:bgFor(id), border:bdrFor(id), boxSizing:'border-box', position:'relative',
-                 cursor:'pointer', flexShrink:0,
-                 transition:'background 0.15s ease, border-color 0.15s ease', ...style }}
-        onClick={()=>handleMuscleClick(id)}
-        onMouseEnter={()=>setHovered(id)}
-        onMouseLeave={()=>setHovered(null)}>
-        {children}
-      </div>
-    );
-    const VIS = (style) => (
-      <div style={{ background:'#1E1E20', border:'1px solid #2A2A2C', boxSizing:'border-box', flexShrink:0, ...style }}/>
-    );
-    const LBL = (text) => (
-      <div style={{ color:'#6A6A6E', fontSize:8, fontFamily:"'DM Sans',sans-serif",
-        textAlign:'center', letterSpacing:'0.03em', marginTop:2, lineHeight:1.2, userSelect:'none' }}>
-        {text}
-      </div>
-    );
-    const col = { display:'flex', flexDirection:'column', alignItems:'center', gap:2 };
-
-    return (
-      <div style={{ display:'flex', justifyContent:'center', gap:20, padding:'4px 8px 12px', overflowX:'auto' }}>
-
-        {/* ── FRONT FIGURE ── */}
-        <div style={{...col}}>
-          <div style={{ color:'#C8FF00', fontFamily:"'Bebas Neue',sans-serif", fontSize:13, letterSpacing:'0.1em', marginBottom:4 }}>FRONT</div>
-          {/* Head */}
-          {VIS({ width:50, height:55, borderRadius:'50%' })}
-          {/* Neck */}
-          {SEG('Neck', { width:20, height:18, borderRadius:8 })}
-          {/* Shoulders */}
-          <div style={{ display:'flex', width:172, justifyContent:'space-between' }}>
-            {SEG('Left Shoulder',  { width:38, height:22, borderRadius:12 })}
-            {SEG('Right Shoulder', { width:38, height:22, borderRadius:12 })}
-          </div>
-          {LBL('Shoulders')}
-          {/* Arms + Torso */}
-          <div style={{ display:'flex', gap:2, alignItems:'flex-start' }}>
-            {/* Left arm */}
-            <div style={{...col}}>
-              {SEG('Left Bicep',   { width:24, height:52, borderRadius:12 })}
-              {SEG('Left Forearm', { width:20, height:48, borderRadius:10 })}
-              {VIS({ width:18, height:22, borderRadius:8 })}
-              {LBL('Biceps')}
-            </div>
-            {/* Torso */}
-            <div style={{...col}}>
-              <div style={{ display:'flex', gap:1 }}>
-                {SEG('Left Pec',  { width:52, height:48, borderRadius:12 })}
-                {SEG('Right Pec', { width:52, height:48, borderRadius:12 })}
-              </div>
-              {LBL('Chest')}
-              <div style={{ display:'flex', gap:2 }}>
-                {SEG('Obliques', { width:22, height:52, borderRadius:10 }, null, 'obl-l')}
-                {SEG('Abs', { width:72, height:52, borderRadius:10 },
-                  <div style={{ position:'absolute', left:'50%', top:6, bottom:6, width:1,
-                    background:'rgba(255,255,255,0.07)', transform:'translateX(-50%)', pointerEvents:'none' }}/>
-                )}
-                {SEG('Obliques', { width:22, height:52, borderRadius:10 }, null, 'obl-r')}
-              </div>
-              {LBL('Abs / Obliques')}
-              {VIS({ width:82, height:24, borderRadius:12 })}
-            </div>
-            {/* Right arm */}
-            <div style={{...col}}>
-              {SEG('Right Bicep',   { width:24, height:52, borderRadius:12 })}
-              {SEG('Right Forearm', { width:20, height:48, borderRadius:10 })}
-              {VIS({ width:18, height:22, borderRadius:8 })}
-              {LBL('Biceps')}
-            </div>
-          </div>
-          {/* Legs */}
-          <div style={{...col}}>
-            <div style={{ display:'flex', gap:4 }}>
-              {SEG('Left Quad',  { width:32, height:78, borderRadius:14 })}
-              {SEG('Right Quad', { width:32, height:78, borderRadius:14 })}
-            </div>
-            {LBL('Quads')}
-            <div style={{ display:'flex', gap:4 }}>
-              {SEG('Left Knee',  { width:30, height:24, borderRadius:'50%' })}
-              {SEG('Right Knee', { width:30, height:24, borderRadius:'50%' })}
-            </div>
-            {LBL('Knees')}
-            <div style={{ display:'flex', gap:4 }}>
-              {SEG('Left Shin',  { width:26, height:68, borderRadius:10 })}
-              {SEG('Right Shin', { width:26, height:68, borderRadius:10 })}
-            </div>
-            {LBL('Shins')}
-            <div style={{ display:'flex', gap:4 }}>
-              {VIS({ width:32, height:18, borderRadius:8 })}
-              {VIS({ width:32, height:18, borderRadius:8 })}
-            </div>
-          </div>
-        </div>
-
-        {/* ── BACK FIGURE ── */}
-        <div style={{...col}}>
-          <div style={{ color:'#C8FF00', fontFamily:"'Bebas Neue',sans-serif", fontSize:13, letterSpacing:'0.1em', marginBottom:4 }}>BACK</div>
-          {/* Head */}
-          {VIS({ width:50, height:55, borderRadius:'50%' })}
-          {/* Traps */}
-          {SEG('Traps', { width:104, height:22, borderRadius:10 })}
-          {LBL('Traps')}
-          {/* Rear Delts */}
-          <div style={{ display:'flex', width:160, justifyContent:'space-between' }}>
-            {SEG('Left Rear Delt',  { width:38, height:22, borderRadius:12 })}
-            {SEG('Right Rear Delt', { width:38, height:22, borderRadius:12 })}
-          </div>
-          {/* Arms + Torso */}
-          <div style={{ display:'flex', gap:2, alignItems:'flex-start' }}>
-            {/* Left arm */}
-            <div style={{...col}}>
-              {SEG('Left Tricep', { width:24, height:52, borderRadius:12 })}
-              {VIS({ width:20, height:48, borderRadius:10 })}
-              {VIS({ width:18, height:22, borderRadius:8 })}
-              {LBL('Triceps')}
-            </div>
-            {/* Torso */}
-            <div style={{...col}}>
-              {SEG('Upper Back', { width:104, height:48, borderRadius:12 })}
-              {LBL('Upper Back')}
-              <div style={{ display:'flex', gap:2 }}>
-                {SEG('Lats', { width:24, height:52, borderRadius:10 }, null, 'lat-l')}
-                {SEG('Lower Back', { width:56, height:52, borderRadius:10 })}
-                {SEG('Lats', { width:24, height:52, borderRadius:10 }, null, 'lat-r')}
-              </div>
-              {LBL('Lats / Lower Back')}
-              {SEG('Glutes', { width:82, height:36, borderRadius:12 })}
-              {LBL('Glutes')}
-            </div>
-            {/* Right arm */}
-            <div style={{...col}}>
-              {SEG('Right Tricep', { width:24, height:52, borderRadius:12 })}
-              {VIS({ width:20, height:48, borderRadius:10 })}
-              {VIS({ width:18, height:22, borderRadius:8 })}
-              {LBL('Triceps')}
-            </div>
-          </div>
-          {/* Legs */}
-          <div style={{...col}}>
-            <div style={{ display:'flex', gap:4 }}>
-              {SEG('Left Hamstring',  { width:32, height:78, borderRadius:14 })}
-              {SEG('Right Hamstring', { width:32, height:78, borderRadius:14 })}
-            </div>
-            {LBL('Hamstrings')}
-            <div style={{ display:'flex', gap:4 }}>
-              {VIS({ width:30, height:24, borderRadius:'50%' })}
-              {VIS({ width:30, height:24, borderRadius:'50%' })}
-            </div>
-            <div style={{ display:'flex', gap:4 }}>
-              {SEG('Left Calf',  { width:26, height:68, borderRadius:10 })}
-              {SEG('Right Calf', { width:26, height:68, borderRadius:10 })}
-            </div>
-            {LBL('Calves')}
-            <div style={{ display:'flex', gap:4 }}>
-              {VIS({ width:32, height:18, borderRadius:8 })}
-              {VIS({ width:32, height:18, borderRadius:8 })}
-            </div>
-          </div>
-        </div>
-
-      </div>
-    );
+  // ── Body Map SVG ─────────────────────────────────────────────────────────
+  const BODY_PATH = "M 88,50 Q 108,52 124,62 Q 138,66 140,78 Q 144,86 140,96 L 137,134 Q 139,142 134,148 L 130,184 Q 122,196 116,202 L 116,218 L 114,290 Q 112,300 106,308 L 104,352 Q 104,362 110,368 L 108,372 Q 95,376 82,372 L 82,368 Q 82,360 82,352 L 82,308 Q 82,298 82,290 L 82,218 L 78,218 L 78,290 Q 78,298 78,308 L 78,352 Q 78,360 78,368 L 76,372 Q 63,376 48,368 L 46,366 Q 44,360 44,352 L 44,308 Q 44,298 44,290 L 44,218 Q 44,202 38,196 L 30,184 Q 26,148 22,134 L 20,96 Q 16,86 20,78 Q 22,66 36,62 Q 52,52 72,50 Z";
+  const FRONT_REGIONS = [
+    { n:1,  id:'Head',           t:'c', cx:80,  cy:28,  r:18,             tx:80,   ty:28  },
+    { n:2,  id:'Neck',           t:'r', x:72,   y:51,   w:16,  h:14, rx:5, tx:80,  ty:58  },
+    { n:3,  id:'Left Shoulder',  t:'e', cx:44,  cy:76,  rx:17, ry:11,    tx:44,   ty:76  },
+    { n:4,  id:'Right Shoulder', t:'e', cx:116, cy:76,  rx:17, ry:11,    tx:116,  ty:76  },
+    { n:5,  id:'Left Pec',       t:'r', x:48,   y:66,   w:30,  h:52, rx:8, tx:63,  ty:92  },
+    { n:6,  id:'Right Pec',      t:'r', x:82,   y:66,   w:30,  h:52, rx:8, tx:97,  ty:92  },
+    { n:7,  id:'Left Bicep',     t:'r', x:23,   y:70,   w:17,  h:56, rx:7, tx:31.5,ty:98  },
+    { n:8,  id:'Right Bicep',    t:'r', x:120,  y:70,   w:17,  h:56, rx:7, tx:128.5,ty:98 },
+    { n:9,  id:'Left Forearm',   t:'r', x:24,   y:129,  w:15,  h:48, rx:6, tx:31.5,ty:153 },
+    { n:10, id:'Right Forearm',  t:'r', x:121,  y:129,  w:15,  h:48, rx:6, tx:128.5,ty:153},
+    { n:11, id:'Abs',            t:'r', x:62,   y:121,  w:36,  h:52, rx:7, tx:80,  ty:147 },
+    { n:12, id:'Obliques', k:'obl-l', t:'r', x:47, y:124, w:13, h:46, rx:6, tx:53.5,ty:147},
+    { n:13, id:'Obliques', k:'obl-r', t:'r', x:100,y:124, w:13, h:46, rx:6, tx:106.5,ty:147},
+    { n:14, id:'Left Quad',      t:'r', x:46,   y:198,  w:28,  h:84, rx:9, tx:60,  ty:240 },
+    { n:15, id:'Right Quad',     t:'r', x:86,   y:198,  w:28,  h:84, rx:9, tx:100, ty:240 },
+    { n:16, id:'Left Knee',      t:'e', cx:60,  cy:289, rx:14, ry:9,     tx:60,   ty:289 },
+    { n:17, id:'Right Knee',     t:'e', cx:100, cy:289, rx:14, ry:9,     tx:100,  ty:289 },
+    { n:18, id:'Left Shin',      t:'r', x:47,   y:300,  w:23,  h:52, rx:7, tx:58.5,ty:326 },
+    { n:19, id:'Right Shin',     t:'r', x:90,   y:300,  w:23,  h:52, rx:7, tx:101.5,ty:326},
+    { n:20, id:'Left Foot',      t:'r', x:46,   y:354,  w:24,  h:12, rx:5, tx:58,  ty:360 },
+    { n:21, id:'Right Foot',     t:'r', x:90,   y:354,  w:24,  h:12, rx:5, tx:102, ty:360 },
+  ];
+  const BACK_REGIONS = [
+    { n:22, id:'Traps',            t:'r', x:52,  y:60,   w:56, h:26, rx:7, tx:80,   ty:73  },
+    { n:23, id:'Upper Back',       t:'r', x:52,  y:90,   w:56, h:42, rx:7, tx:80,   ty:111 },
+    { n:24, id:'Left Rear Delt',   t:'e', cx:44, cy:76,  rx:17,ry:11,     tx:44,   ty:76  },
+    { n:25, id:'Right Rear Delt',  t:'e', cx:116,cy:76,  rx:17,ry:11,     tx:116,  ty:76  },
+    { n:26, id:'Left Tricep',      t:'r', x:23,  y:94,   w:17, h:56, rx:7, tx:31.5, ty:122 },
+    { n:27, id:'Right Tricep',     t:'r', x:120, y:94,   w:17, h:56, rx:7, tx:128.5,ty:122 },
+    { n:28, id:'Lats', k:'lat-l',  t:'r', x:48,  y:135,  w:20, h:52, rx:7, tx:58,   ty:161 },
+    { n:29, id:'Lats', k:'lat-r',  t:'r', x:92,  y:135,  w:20, h:52, rx:7, tx:102,  ty:161 },
+    { n:30, id:'Lower Back',       t:'r', x:70,  y:135,  w:20, h:52, rx:7, tx:80,   ty:161 },
+    { n:31, id:'Glutes', k:'glt-l',t:'r', x:46,  y:196,  w:30, h:36, rx:9, tx:61,   ty:214 },
+    { n:32, id:'Glutes', k:'glt-r',t:'r', x:84,  y:196,  w:30, h:36, rx:9, tx:99,   ty:214 },
+    { n:33, id:'Left Hamstring',   t:'r', x:46,  y:234,  w:28, h:78, rx:9, tx:60,   ty:273 },
+    { n:34, id:'Right Hamstring',  t:'r', x:86,  y:234,  w:28, h:78, rx:9, tx:100,  ty:273 },
+    { n:35, id:'Left Calf',        t:'r', x:47,  y:316,  w:23, h:52, rx:7, tx:58.5, ty:342 },
+    { n:36, id:'Right Calf',       t:'r', x:90,  y:316,  w:23, h:52, rx:7, tx:101.5,ty:342 },
+  ];
+  const bmFill = id => {
+    if (selected[id]==='severe')   return 'rgba(255,69,58,0.5)';
+    if (selected[id]==='moderate') return 'rgba(255,159,10,0.5)';
+    if (hovered===id)              return 'rgba(200,255,0,0.15)';
+    return '#252527';
   };
+  const bmStroke = id => {
+    if (selected[id]==='severe')   return '#FF453A';
+    if (selected[id]==='moderate') return '#FF9F0A';
+    if (hovered===id)              return '#C8FF00';
+    return '#3A3A3C';
+  };
+  const renderRegion = (r) => {
+    const f = bmFill(r.id), s = bmStroke(r.id);
+    const ev = { onClick:()=>handleMuscleClick(r.id), onMouseEnter:()=>setHovered(r.id), onMouseLeave:()=>setHovered(null), style:{cursor:'pointer'} };
+    const shape = r.t==='c' ? <circle key={r.k||r.n} cx={r.cx} cy={r.cy} r={r.r} fill={f} stroke={s} strokeWidth="1" {...ev}/>
+      : r.t==='e' ? <ellipse key={r.k||r.n} cx={r.cx} cy={r.cy} rx={r.rx} ry={r.ry} fill={f} stroke={s} strokeWidth="1" {...ev}/>
+      : <rect key={r.k||r.n} x={r.x} y={r.y} width={r.w} height={r.h} rx={r.rx||0} fill={f} stroke={s} strokeWidth="1" {...ev}/>;
+    const lbl = <text key={`n${r.n}`} x={r.tx} y={r.ty} textAnchor="middle" dominantBaseline="middle" fontSize="7" fill="#8A8A8E" style={{pointerEvents:'none',fontFamily:"'DM Sans',sans-serif"}}>{r.n}</text>;
+    return [shape, lbl];
+  };
+  const BodyMapSVG = ({regions, label}) => (
+    <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
+      <div style={{color:'#C8FF00',fontFamily:"'Bebas Neue',sans-serif",fontSize:13,letterSpacing:'0.1em'}}>{label}</div>
+      <svg viewBox="0 0 160 380" width="160" height="380" style={{display:'block'}}>
+        <circle cx="80" cy="28" r="22" fill="none" stroke="#3A3A3C" strokeWidth="1.5"/>
+        <path d={BODY_PATH} fill="none" stroke="#3A3A3C" strokeWidth="1.5"/>
+        {regions.map(r => renderRegion(r))}
+      </svg>
+    </div>
+  );
 
 
   const selectedCount = Object.keys(selected).length;
@@ -1933,70 +1821,52 @@ ${nutrText}`;
   // ── Map phase ────────────────────────────────
   return (
     <div>
-      {/* SVG Body Map */}
-      <div style={{ padding:'0 8px 4px' }}>
-        <BodyMapCSS/>
+      {/* Body Maps */}
+      <div style={{ display:'flex', justifyContent:'center', gap:16, padding:'8px 8px 4px', overflowX:'auto' }}>
+        <BodyMapSVG regions={FRONT_REGIONS} label="FRONT"/>
+        <BodyMapSVG regions={BACK_REGIONS}  label="BACK"/>
       </div>
 
       {/* Legend */}
-      <div style={{ display:'flex', gap:12, justifyContent:'center', padding:'0 16px 10px', flexWrap:'wrap' }}>
-        {[['#252527','#3A3A3C','Unselected'],['rgba(255,159,10,0.6)','#FF9F0A','Moderate'],['rgba(255,69,58,0.6)','#FF453A','Severe']].map(([bg,bdr,lbl])=>(
-          <div key={lbl} style={{ display:'flex', alignItems:'center', gap:5 }}>
-            <div style={{ width:12, height:12, borderRadius:3, background:bg, border:`1px solid ${bdr}` }}/>
-            <span style={{ color:'#8A8A8E', fontSize:11, fontFamily:"'DM Sans',sans-serif" }}>{lbl}</span>
-          </div>
-        ))}
+      <div style={{ display:'flex', gap:20, justifyContent:'center', padding:'4px 16px 8px' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+          <div style={{ width:8, height:8, borderRadius:'50%', background:'#FF9F0A' }}/>
+          <span style={{ color:'#8A8A8E', fontSize:10, fontFamily:"'DM Sans',sans-serif" }}>Moderate — tap once</span>
+        </div>
+        <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+          <div style={{ width:8, height:8, borderRadius:'50%', background:'#FF453A' }}/>
+          <span style={{ color:'#8A8A8E', fontSize:10, fontFamily:"'DM Sans',sans-serif" }}>Severe — tap twice</span>
+        </div>
       </div>
 
-      {/* Severity tap card */}
-      {tapCard && (
-        <div style={{ margin:'0 16px 12px', background:'#1A1A1C', border:'1px solid #252527', borderRadius:18, padding:'14px 16px' }}>
-          <p style={{ fontFamily:"'Bebas Neue',sans-serif", color:'#C8FF00', fontSize:15, letterSpacing:'0.06em', marginBottom:12 }}>{tapCard}</p>
-          <div style={{ display:'flex', gap:8 }}>
-            <button onClick={()=>setSeverity(tapCard,'moderate')}
-              style={{ flex:1, padding:'12px 0', background: selected[tapCard]==='moderate'?'#FF9F0A':'rgba(255,159,10,0.12)', color:'#FF9F0A', fontFamily:"'Bebas Neue',sans-serif", fontSize:15, letterSpacing:'0.06em', border:`1px solid ${selected[tapCard]==='moderate'?'#FF9F0A':'rgba(255,159,10,0.3)'}`, borderRadius:12, cursor:'pointer' }}>
-              MODERATE
-            </button>
-            <button onClick={()=>setSeverity(tapCard,'severe')}
-              style={{ flex:1, padding:'12px 0', background: selected[tapCard]==='severe'?'#FF453A':'rgba(255,69,58,0.12)', color:'#FF453A', fontFamily:"'Bebas Neue',sans-serif", fontSize:15, letterSpacing:'0.06em', border:`1px solid ${selected[tapCard]==='severe'?'#FF453A':'rgba(255,69,58,0.3)'}`, borderRadius:12, cursor:'pointer' }}>
-              SEVERE
-            </button>
-            <button onClick={()=>clearMuscle(tapCard)}
-              style={{ padding:'12px 14px', background:'#252527', color:'#8A8A8E', fontFamily:"'Bebas Neue',sans-serif", fontSize:15, letterSpacing:'0.06em', border:'1px solid #3A3A3C', borderRadius:12, cursor:'pointer' }}>
-              CLEAR
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Selected summary */}
+      {/* Selected pills */}
       {selectedCount > 0 && (
         <div style={{ margin:'0 16px 10px', display:'flex', flexWrap:'wrap', gap:6 }}>
           {Object.entries(selected).map(([m,s])=>(
-            <span key={m} onClick={()=>setTapCard(m)} style={{ fontSize:11, padding:'4px 10px', borderRadius:20,
+            <span key={m} style={{ display:'inline-flex', alignItems:'center', gap:5, fontSize:11, padding:'4px 8px 4px 10px', borderRadius:20,
               background: s==='severe'?'rgba(255,69,58,0.15)':'rgba(255,159,10,0.15)',
               color: s==='severe'?'#FF453A':'#FF9F0A',
               border: `1px solid ${s==='severe'?'rgba(255,69,58,0.4)':'rgba(255,159,10,0.4)'}`,
-              fontFamily:"'DM Sans',sans-serif", fontWeight:600, cursor:'pointer' }}>
+              fontFamily:"'DM Sans',sans-serif", fontWeight:600 }}>
               {m} · {s}
+              <button onClick={()=>clearMuscle(m)} style={{ background:'none', border:'none', cursor:'pointer',
+                color: s==='severe'?'#FF453A':'#FF9F0A', fontSize:13, lineHeight:1, padding:0, opacity:0.7 }}>×</button>
             </span>
           ))}
         </div>
       )}
 
       {/* Get advice button */}
-      <div style={{ padding:'0 16px 16px' }}>
-        <button onClick={startAssessment} disabled={selectedCount===0}
-          style={{ width:'100%', padding:'15px 0',
-            background: selectedCount>0 ? '#C8FF00' : '#252527',
-            color: selectedCount>0 ? '#0D0D0F' : '#8A8A8E',
-            fontFamily:"'Bebas Neue',sans-serif", fontSize:18, letterSpacing:'0.08em',
-            border: selectedCount>0?'none':'1px solid #3A3A3C',
-            borderRadius:16, cursor: selectedCount>0?'pointer':'not-allowed',
-            transition:'background 0.2s, color 0.2s' }}>
-          {selectedCount>0 ? `GET COACH ADVICE (${selectedCount} area${selectedCount>1?'s':''})` : 'SELECT A MUSCLE REGION'}
-        </button>
-      </div>
+      {selectedCount > 0 && (
+        <div style={{ padding:'0 16px 16px' }}>
+          <button onClick={startAssessment}
+            style={{ width:'100%', padding:'15px 0', background:'#C8FF00', color:'#0D0D0F',
+              fontFamily:"'Bebas Neue',sans-serif", fontSize:18, letterSpacing:'0.08em',
+              border:'none', borderRadius:16, cursor:'pointer', transition:'opacity 0.15s' }}>
+            GET COACH ADVICE ({selectedCount} area{selectedCount>1?'s':''})
+          </button>
+        </div>
+      )}
     </div>
   );
 }
