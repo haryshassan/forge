@@ -385,26 +385,16 @@ async function callClaude(messages, maxTokens = 4000, system = '') {
 }
 
 function getSplitInstructions(profile) {
-  const split = profile.trainingSplit;
+  const preferred = (profile.preferredSplit || '').trim();
   const days = profile.trainingDays || [];
-  if (split === 'arnold_ul' && days.length >= 5) {
-    return `MANDATORY SPLIT STRUCTURE — Arnold Split + Upper/Lower (DO NOT deviate):
-- ${days[0]}: Chest + Back — Chest Press 3 sets 6-10 reps, Pec Fly 2 sets 6-10 reps, Pull-Ups 3 sets 6-10 reps, Lat Pulldown 2 sets 6-10 reps, T-Bar Row 3 sets 6-10 reps
-- ${days[1]}: Arms + Shoulders — Military Press 3 sets 6-10 reps, Lateral Raises 2 sets 6-10 reps, Rear Delt Fly 2 sets 6-10 reps, Cable Curl 3 sets 6-10 reps, Hammer Curl 2 sets 6-10 reps, Tricep Pushdown 3 sets 6-10 reps, Overhead Tricep Extension 2 sets 6-10 reps
-- ${days[2]}: Legs Quad Focus — Hack Squat 3 sets 6-10 reps, Leg Press 2 sets 6-10 reps, Leg Extension 2 sets 6-10 reps, Calf Raises 3 sets 6-10 reps
-- ${days[3]}: Upper — Incline Chest Press 3 sets 6-10 reps, Pec Fly 2 sets 6-10 reps, Seated Row 3 sets 6-10 reps, Lat Pulldown 2 sets 6-10 reps, Lateral Raises 2 sets 6-10 reps, Cable Curl 2 sets 6-10 reps, Tricep Pushdown 2 sets 6-10 reps
-- ${days[4]}: Lower Posterior Deadlift Focus — Deadlift 3 sets 5-8 reps, Back Extension 3 sets 6-10 reps, Seated Hamstring Curl 2 sets 6-10 reps, Calf Raises 3 sets 6-10 reps
-Straight sets only. No supersets. No substitutions. You MUST follow this day-by-day structure exactly with these exact exercises, sets, and reps. Do not merge days, swap exercises, or deviate from this list.`;
-  }
-  if (split === 'pplul' && days.length >= 5) {
-    return `MANDATORY SPLIT: PPL + Upper/Lower over 5 days:
-- ${days[0]}: Push (chest, shoulders, triceps)
-- ${days[1]}: Pull (back, biceps, rear delts)
-- ${days[2]}: Legs (quads, hamstrings, glutes, calves)
-- ${days[3]}: Upper Body (push + pull balance)
-- ${days[4]}: Lower Body (quad + hamstring + glute)`;
-  }
-  return `Training Split: ${split || 'auto-select based on days'}\nCreate a plan following the specified training split structure.`;
+  const daysCount = profile.trainingDaysPerWeek || days.length || 3;
+  return `TRAINING SPLIT INSTRUCTION:
+The athlete has told you their preferred split or training style in their own words: "${preferred || 'no preference stated'}".
+- If they named a specific split (e.g. Push Pull Legs, Upper Lower, Bro Split, Arnold Split, conjugate, DUP, etc.) use it exactly as described.
+- If they described a style or preference, interpret it and use the closest matching structure.
+- If they said they have no preference, or left it blank, choose the optimal split for their goal (${profile.goal}), experience level (${profile.fitnessLevel}), and number of training days (${daysCount}), and explain the choice in the motivationalMessage field.
+Never limit yourself to a predefined list. If the athlete wants a Weider split, daily undulating periodisation, a classic bro split, a conjugate method, or any other legitimate structure — build it. You are an elite coach and can programme any training structure.
+Distribute the sessions across these specific days: ${days.join(', ') || 'choose appropriate days'}.`;
 }
 
 async function generatePlan(profile) {
@@ -1052,7 +1042,7 @@ function CoachScreen({ coachCheckins, profile, plan, logs, prs, streak,
 
 Keep every response under 120 words total. Use short sentences. Use line breaks between every separate point or idea. Use a short bold heading before each new topic if covering more than one thing — for example **Recovery** or **Nutrition** or **Today's Focus**. Never write more than 2 sentences under any single heading. Never write a wall of text. If the user asks a simple question give a simple short answer. If the user asks something complex cover the top 2 or 3 points only and keep each one brief. Always sound like a coach sending a quick message not writing a report. Never cut off a response mid sentence. Always finish your thought completely. If you are running low on space wrap up the response early rather than stopping halfway through a sentence or paragraph. Keep responses concise but always complete.
 
-ATHLETE: ${name} | Level: ${profile.fitnessLevel||'unknown'} | Goal: ${profile.goal||'unknown'} | Equipment: ${(profile.equipment||[]).join(', ')||'unknown'} | Split: ${profile.trainingSplit||'unknown'} | Days: ${(profile.trainingDays||[]).join(', ')||'unknown'} | Session: ${profile.sessionLength||60}min
+ATHLETE: ${name} | Level: ${profile.fitnessLevel||'unknown'} | Goal: ${profile.goal||'unknown'} | Equipment: ${(profile.equipment||[]).join(', ')||'unknown'} | Split: ${profile.preferredSplit||'coach-selected'} | Days: ${(profile.trainingDays||[]).join(', ')||'unknown'} | Session: ${profile.sessionLength||60}min
 
 CURRENT PLAN:
 ${planText}
@@ -1092,9 +1082,7 @@ ${planChangesText}`;
   useEffect(() => {
     if (messages.length === 0) {
       const name = profile.name || 'there';
-      const splitLabel = profile.trainingSplit
-        ? profile.trainingSplit.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())
-        : 'your training program';
+      const splitLabel = profile.preferredSplit || 'your training program';
       const streakLine = (streak?.current||0) > 0
         ? `You're on a ${streak.current}-day streak`
         : "You haven't logged a workout yet — let's change that";
@@ -1968,6 +1956,7 @@ function ConversationalOnboarding({ onComplete }) {
     { id:'obstacle',          text:"What’s the biggest thing that’s stopped you from reaching your goal before?",       type:'text',       placeholder:'Be honest…' },
     { id:'equipment',         text:"What equipment do you have access to?",                                               type:'multichips', options:['Full Gym','Dumbbells Only','Barbell and Rack','Cables','Resistance Bands','Pull Up Bar','No Equipment'] },
     { id:'trainingDaysCount', text:"How many days per week can you train?",                                               type:'chips',      options:['2','3','4','5','6'] },
+    { id:'preferredSplit',    text:"Do you have a preferred training style or split? For example Push Pull Legs, Upper Lower, Full Body, Bro Split, Arnold Split — or just tell me in your own words how you like to train. If you have no preference just say that and I'll choose the best one for you.", type:'text', placeholder:'e.g. Push Pull Legs, or no preference…' },
     { id:'sessionLength',     text:"How long can you train per session?",                                                 type:'chips',      options:['30 minutes','45 minutes','60 minutes','75+ minutes'] },
     { id:'limitations',       text:"Do you have any injuries, pain, or physical limitations I should know about?",        type:'text',       placeholder:'e.g. Lower back pain, bad knees…', skippable:true },
     { id:'lifestyle',         text:"How’s your sleep and stress generally?",                                             type:'chips',      options:['Pretty good','Could be better','Pretty poor'] },
@@ -1996,13 +1985,6 @@ function ConversationalOnboarding({ onComplete }) {
     6:['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],
   };
   const SESSION_MAP = { '30 minutes':30,'45 minutes':45,'60 minutes':60,'75+ minutes':75 };
-
-  const autoSplit = (goal, days) => {
-    if (days <= 2) return 'Full Body';
-    if (days === 3) return goal === 'Get Stronger' ? 'Push / Pull / Legs' : 'Full Body';
-    if (days === 4) return 'Upper / Lower';
-    return 'Push / Pull / Legs';
-  };
 
   const [messages,       setMessages]       = useState([]);
   const [phase,          setPhase]          = useState('chat');
@@ -2120,7 +2102,7 @@ function ConversationalOnboarding({ onComplete }) {
 **Addressing Your Obstacle** — advice based on what held them back
 **Recovery Note** — based on their sleep/stress
 
-Profile: Name: ${finalAnswers.name}. Goal: ${finalAnswers.goal}. Experience: ${finalAnswers.experience}. Current routine: ${finalAnswers.currentRoutine}. Obstacle: ${finalAnswers.obstacle}. Equipment: ${eqStr}. Training days: ${finalAnswers.trainingDaysCount}/week. Session: ${finalAnswers.sessionLength}. Limitations: ${finalAnswers.limitations || 'None'}. Sleep/stress: ${finalAnswers.lifestyle}.
+Profile: Name: ${finalAnswers.name}. Goal: ${finalAnswers.goal}. Experience: ${finalAnswers.experience}. Current routine: ${finalAnswers.currentRoutine}. Obstacle: ${finalAnswers.obstacle}. Equipment: ${eqStr}. Training days: ${finalAnswers.trainingDaysCount}/week. Session: ${finalAnswers.sessionLength}. Preferred split: ${finalAnswers.preferredSplit || 'no preference'}. Limitations: ${finalAnswers.limitations || 'None'}. Sleep/stress: ${finalAnswers.lifestyle}.
 
 Be direct and specific. Max 220 words total.`;
       const rec = await callClaude([{ role:'user', content:recPrompt }], 600);
@@ -2164,7 +2146,7 @@ Prioritise sleep — it’s when you actually get stronger.`);
       sessionLength:       SESSION_MAP[answers.sessionLength] || 60,
       limitations:         answers.limitations || '',
       lifestyle:           answers.lifestyle || '',
-      trainingSplit:       autoSplit(answers.goal, daysCount),
+      preferredSplit:      answers.preferredSplit || '',
       onboardingComplete:  true,
     };
     onComplete(profile);
