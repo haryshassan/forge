@@ -2112,7 +2112,7 @@ function ConversationalOnboarding({ onComplete }) {
     setPhase('loading');
     try {
       const eqStr = Array.isArray(finalAnswers.equipment) ? finalAnswers.equipment.join(', ') : (finalAnswers.equipment || 'Not specified');
-      const recPrompt = 'You are an elite personal trainer. Based on this athlete profile, write a personalised program recommendation with EXACTLY these 5 bold headings, one short paragraph each:
+      const recPrompt = `You are an elite personal trainer. Based on this athlete profile, write a personalised program recommendation with EXACTLY these 5 bold headings, one short paragraph each:
 
 **Your Program** — recommended split and why it suits them
 **Your Week** — day-by-day structure
@@ -2120,14 +2120,14 @@ function ConversationalOnboarding({ onComplete }) {
 **Addressing Your Obstacle** — advice based on what held them back
 **Recovery Note** — based on their sleep/stress
 
-Profile: Name: ' + finalAnswers.name + '. Goal: ' + finalAnswers.goal + '. Experience: ' + finalAnswers.experience + '. Current routine: ' + finalAnswers.currentRoutine + '. Obstacle: ' + finalAnswers.obstacle + '. Equipment: ' + eqStr + '. Training days: ' + finalAnswers.trainingDaysCount + '/week. Session: ' + finalAnswers.sessionLength + '. Limitations: ' + (finalAnswers.limitations || 'None') + '. Sleep/stress: ' + finalAnswers.lifestyle + '.
+Profile: Name: ${finalAnswers.name}. Goal: ${finalAnswers.goal}. Experience: ${finalAnswers.experience}. Current routine: ${finalAnswers.currentRoutine}. Obstacle: ${finalAnswers.obstacle}. Equipment: ${eqStr}. Training days: ${finalAnswers.trainingDaysCount}/week. Session: ${finalAnswers.sessionLength}. Limitations: ${finalAnswers.limitations || 'None'}. Sleep/stress: ${finalAnswers.lifestyle}.
 
-Be direct and specific. Max 220 words total.';
+Be direct and specific. Max 220 words total.`;
       const rec = await callClaude([{ role:'user', content:recPrompt }], 600);
       setRecommendation(rec.trim());
       setPhase('recommendation');
     } catch {
-      setRecommendation('**Your Program**
+      setRecommendation(`**Your Program**
 
 Program analysis complete based on your profile.
 
@@ -2145,7 +2145,7 @@ We’ll tackle this together with the right structure.
 
 **Recovery Note**
 
-Prioritise sleep — it’s when you actually get stronger.');
+Prioritise sleep — it’s when you actually get stronger.`);
       setPhase('recommendation');
     }
   };
