@@ -1530,14 +1530,6 @@ function BodyMap({ profile, plan, onPlanUpdate, planChanges, setPlanChanges }) {
   const [bmCardDismissed, setBmCardDismissed] = useState(false);
   const sorenessLogRef = React.useRef(null);
 
-  // ── SVG helpers ──────────────────────────────
-  const fillFor = (id) => {
-    if (selected[id]) return selected[id] === 'severe' ? 'rgba(255,69,58,0.6)' : 'rgba(255,159,10,0.6)';
-    if (hovered === id) return 'rgba(200,255,0,0.3)';
-    return '#252527';
-  };
-  const strokeFor = (id) => selected[id] ? (selected[id]==='severe'?'#FF453A':'#FF9F0A') : hovered===id ? '#C8FF00' : '#3A3A3C';
-
   const handleMuscleClick = (id) => {
     setTapCard(prev => prev === id ? null : id);
   };
@@ -1671,92 +1663,140 @@ ${nutrText}`;
     setRedFlag(null); setBmPlanChange(null); setBmCardDismissed(false);
   };
 
-  // ── SVG muscle region data ───────────────────
-  // Each region: { id, front/back, shape props }
-  const FRONT_MUSCLES = [
-    { id:'Neck',           shape:'rect',    x:66, y:46, width:16, height:13, rx:5 },
-    { id:'Left Shoulder',  shape:'ellipse', cx:45, cy:67, rx:13, ry:10 },
-    { id:'Right Shoulder', shape:'ellipse', cx:97, cy:67, rx:13, ry:10 },
-    { id:'Left Pec',       shape:'ellipse', cx:59, cy:84, rx:11, ry:13 },
-    { id:'Right Pec',      shape:'ellipse', cx:83, cy:84, rx:11, ry:13 },
-    { id:'Left Bicep',     shape:'rect',    x:30, y:75, width:13, height:33, rx:6 },
-    { id:'Right Bicep',    shape:'rect',    x:99, y:75, width:13, height:33, rx:6 },
-    { id:'Left Forearm',   shape:'rect',    x:24, y:111, width:11, height:42, rx:5 },
-    { id:'Right Forearm',  shape:'rect',    x:107, y:111, width:11, height:42, rx:5 },
-    { id:'Abs',            shape:'rect',    x:63, y:97, width:16, height:46, rx:5 },
-    { id:'Obliques',       shape:'path',    d:'M 52,100 Q 48,108 48,128 Q 52,138 56,140 L 56,100 Z M 86,100 L 86,140 Q 90,138 94,128 Q 94,108 90,100 Z' },
-    { id:'Left Quad',      shape:'rect',    x:51, y:165, width:19, height:60, rx:8 },
-    { id:'Right Quad',     shape:'rect',    x:72, y:165, width:19, height:60, rx:8 },
-    { id:'Left Knee',      shape:'rect',    x:52, y:227, width:17, height:18, rx:6 },
-    { id:'Right Knee',     shape:'rect',    x:73, y:227, width:17, height:18, rx:6 },
-    { id:'Left Shin',      shape:'rect',    x:53, y:248, width:15, height:55, rx:6 },
-    { id:'Right Shin',     shape:'rect',    x:74, y:248, width:15, height:55, rx:6 },
-  ];
 
-  const BACK_MUSCLES = [
-    { id:'Traps',             shape:'path',    d:'M 196,56 Q 196,48 210,46 L 230,46 Q 244,48 244,56 L 244,70 Q 236,72 220,72 Q 204,72 196,70 Z' },
-    { id:'Left Rear Delt',   shape:'ellipse', cx:191, cy:67, rx:12, ry:9 },
-    { id:'Right Rear Delt',  shape:'ellipse', cx:249, cy:67, rx:12, ry:9 },
-    { id:'Left Tricep',      shape:'rect',    x:176, y:75, width:13, height:33, rx:6 },
-    { id:'Right Tricep',     shape:'rect',    x:251, y:75, width:13, height:33, rx:6 },
-    { id:'Upper Back',       shape:'rect',    x:203, y:70, width:34, height:28, rx:5 },
-    { id:'Lats',             shape:'path',    d:'M 196,72 Q 192,82 193,108 Q 196,118 204,118 L 204,72 Z M 236,72 L 236,118 Q 244,118 247,108 Q 248,82 244,72 Z' },
-    { id:'Lower Back',       shape:'rect',    x:205, y:118, width:30, height:24, rx:5 },
-    { id:'Glutes',           shape:'path',    d:'M 203,148 Q 199,152 199,165 Q 200,176 210,178 L 220,178 L 220,148 Z M 220,148 L 220,178 L 230,178 Q 240,176 241,165 Q 241,152 237,148 Z' },
-    { id:'Left Hamstring',   shape:'rect',    x:201, y:165, width:18, height:60, rx:8 },
-    { id:'Right Hamstring',  shape:'rect',    x:221, y:165, width:18, height:60, rx:8 },
-    { id:'Left Calf',        shape:'rect',    x:203, y:248, width:14, height:55, rx:6 },
-    { id:'Right Calf',       shape:'rect',    x:223, y:248, width:14, height:55, rx:6 },
-  ];
-
-  const renderShape = (m, offset=0) => {
-    const fill  = fillFor(m.id);
-    const stroke= strokeFor(m.id);
-    const common = {
-      fill, stroke, strokeWidth:1,
-      style:{ cursor:'pointer', transition:'fill 0.15s' },
-      onClick:() => handleMuscleClick(m.id),
-      onMouseEnter:() => setHovered(m.id),
-      onMouseLeave:() => setHovered(null),
+  // ── Body Map SVG ───────────────────────────────────────────────────────
+  const BodyMapSVG = () => {
+    const fFill = (id) => {
+      if (selected[id] === 'severe')   return 'rgba(255,69,58,0.55)';
+      if (selected[id] === 'moderate') return 'rgba(255,159,10,0.55)';
+      if (hovered === id)              return 'rgba(200,255,0,0.28)';
+      return '#1E1E20';
     };
-    if (m.shape==='ellipse') return <ellipse key={m.id} cx={m.cx+offset} cy={m.cy} rx={m.rx} ry={m.ry} {...common}/>;
-    if (m.shape==='rect')    return <rect key={m.id} x={m.x+offset} y={m.y} width={m.width} height={m.height} rx={m.rx||0} {...common}/>;
-    if (m.shape==='path')    return <path key={m.id} d={offset ? m.d.replace(/(\d+\.?\d*),(\d+)/g, (_, x, y) => `${parseFloat(x)+offset},${y}`) : m.d} {...common}/>;
-    return null;
-  };
+    const fStroke = (id) => {
+      if (selected[id] === 'severe')   return '#FF453A';
+      if (selected[id] === 'moderate') return '#FF9F0A';
+      if (hovered === id)              return '#C8FF00';
+      return '#3A3A3C';
+    };
+    const fSW = (id) => (selected[id] || hovered === id) ? 2 : 1.5;
+    const ev = (id) => ({
+      style:{ cursor:'pointer', transition:'fill 0.15s, stroke 0.15s' },
+      onClick:()=>handleMuscleClick(id),
+      onMouseEnter:()=>setHovered(id),
+      onMouseLeave:()=>setHovered(null),
+    });
+    const Rect = ({id, x, y, w, h, rx=9, k}) => (
+      <rect key={k||id} x={x} y={y} width={w} height={h} rx={rx}
+        fill={fFill(id)} stroke={fStroke(id)} strokeWidth={fSW(id)} {...ev(id)}/>
+    );
+    const Elps = ({id, cx, cy, rx, ry, k}) => (
+      <ellipse key={k||id} cx={cx} cy={cy} rx={rx} ry={ry}
+        fill={fFill(id)} stroke={fStroke(id)} strokeWidth={fSW(id)} {...ev(id)}/>
+    );
+    // Connector label: line from (lx,ly) to label anchor (tx,ty)
+    const Lbl = ({text, lx, ly, tx, ty, anchor='end'}) => (
+      <g key={`lbl-${text}`} style={{pointerEvents:'none'}}>
+        <line x1={lx} y1={ly} x2={tx} y2={ty} stroke="#353537" strokeWidth="0.8"/>
+        <text x={anchor==='end'?tx-2:tx+2} y={ty} textAnchor={anchor}
+          dominantBaseline="middle" fontSize="7.5" fill="#6A6A6E"
+          fontFamily="'DM Sans',sans-serif">{text}</text>
+      </g>
+    );
 
-  const labelFor = (m, offset=0) => {
-    if (hovered !== m.id && !selected[m.id]) return null;
-    let lx, ly;
-    if (m.shape==='ellipse') { lx=m.cx+offset; ly=m.cy; }
-    else if (m.shape==='rect') { lx=m.x+offset+m.width/2; ly=m.y+m.height/2; }
-    else { lx=(m.cx||220)+offset; ly=(m.cy||100); }
     return (
-      <text key={`lbl-${m.id}`} x={lx} y={ly} textAnchor="middle" dominantBaseline="middle"
-        fontSize="5.5" fill={selected[m.id]?'#0D0D0F':'#F5F5F0'} style={{ pointerEvents:'none', fontWeight:600 }}>
-        {m.id.replace(/Left |Right /,'').length > 8 ? m.id.replace(/Left |Right /,'').substring(0,8) : m.id.replace(/Left |Right /,'')}
-      </text>
+      <svg viewBox="0 0 380 490" width="100%" style={{display:'block'}}>
+        {/* Section titles */}
+        <text x="82" y="14" textAnchor="middle" fontSize="11" fill="#C8FF00"
+          fontFamily="'Bebas Neue',sans-serif" letterSpacing="2">FRONT</text>
+        <text x="298" y="14" textAnchor="middle" fontSize="11" fill="#C8FF00"
+          fontFamily="'Bebas Neue',sans-serif" letterSpacing="2">BACK</text>
+        <line x1="190" y1="2" x2="190" y2="488" stroke="#252527" strokeWidth="0.5" strokeDasharray="4,4"/>
+
+        {/* ── FRONT SILHOUETTE ── */}
+        <g fill="#1A1A1C" stroke="#2A2A2C" strokeWidth="1" style={{pointerEvents:'none'}}>
+          <circle cx="82" cy="42" r="25"/>
+          <rect x="73" y="67" width="18" height="20" rx="6"/>
+          <rect x="44" y="78" width="76" height="134" rx="14"/>
+          <rect x="21" y="82" width="21" height="118" rx="10"/>
+          <rect x="122" y="82" width="21" height="118" rx="10"/>
+          <rect x="44" y="208" width="76" height="26" rx="11"/>
+          <rect x="45" y="228" width="36" height="222" rx="13"/>
+          <rect x="83" y="228" width="36" height="222" rx="13"/>
+        </g>
+
+        {/* ── BACK SILHOUETTE ── */}
+        <g fill="#1A1A1C" stroke="#2A2A2C" strokeWidth="1" style={{pointerEvents:'none'}}>
+          <circle cx="298" cy="42" r="25"/>
+          <rect x="289" y="67" width="18" height="20" rx="6"/>
+          <rect x="258" y="78" width="80" height="134" rx="14"/>
+          <rect x="234" y="84" width="21" height="118" rx="10"/>
+          <rect x="341" y="84" width="21" height="118" rx="10"/>
+          <rect x="260" y="208" width="76" height="32" rx="11"/>
+          <rect x="259" y="234" width="36" height="222" rx="13"/>
+          <rect x="297" y="234" width="36" height="222" rx="13"/>
+        </g>
+
+        {/* ── FRONT REGIONS ── */}
+        <Rect id="Neck"           x={74}  y={68}  w={16} h={18} rx={6}/>
+        <Elps id="Left Shoulder"  cx={50} cy={91} rx={19} ry={12}/>
+        <Elps id="Right Shoulder" cx={114} cy={91} rx={19} ry={12}/>
+        <Rect id="Left Pec"       x={46}  y={80}  w={35} h={62} rx={10}/>
+        <Rect id="Right Pec"      x={83}  y={80}  w={35} h={62} rx={10}/>
+        <Rect id="Left Bicep"     x={23}  y={84}  w={19} h={60} rx={9}/>
+        <Rect id="Right Bicep"    x={122} y={84}  w={19} h={60} rx={9}/>
+        <Rect id="Left Forearm"   x={25}  y={147} w={17} h={48} rx={8}/>
+        <Rect id="Right Forearm"  x={122} y={147} w={17} h={48} rx={8}/>
+        <Rect id="Abs"            x={66}  y={145} w={32} h={56} rx={9}/>
+        <Rect id="Obliques" k="obl-l" x={46} y={148} w={18} h={50} rx={8}/>
+        <Rect id="Obliques" k="obl-r" x={100} y={148} w={18} h={50} rx={8}/>
+        <Rect id="Left Quad"      x={47}  y={228} w={32} h={86} rx={11}/>
+        <Rect id="Right Quad"     x={81}  y={228} w={32} h={86} rx={11}/>
+        <Elps id="Left Knee"      cx={63} cy={321} rx={16} ry={11}/>
+        <Elps id="Right Knee"     cx={97} cy={321} rx={16} ry={11}/>
+        <Rect id="Left Shin"      x={49}  y={334} w={26} h={72} rx={9}/>
+        <Rect id="Right Shin"     x={77}  y={334} w={26} h={72} rx={9}/>
+
+        {/* ── BACK REGIONS ── */}
+        <Rect id="Traps"             x={264} y={68}  w={68} h={32} rx={9}/>
+        <Elps id="Left Rear Delt"    cx={257} cy={95} rx={18} ry={12}/>
+        <Elps id="Right Rear Delt"   cx={339} cy={95} rx={18} ry={12}/>
+        <Rect id="Left Tricep"       x={235} y={86}  w={18} h={60} rx={9}/>
+        <Rect id="Right Tricep"      x={343} y={86}  w={18} h={60} rx={9}/>
+        <Rect id="Upper Back"        x={264} y={102} w={68} h={44} rx={9}/>
+        <Rect id="Lats"    k="lat-l" x={257} y={148} w={28} h={54} rx={9}/>
+        <Rect id="Lats"    k="lat-r" x={311} y={148} w={28} h={54} rx={9}/>
+        <Rect id="Lower Back"        x={270} y={204} w={56} h={30} rx={9}/>
+        <Rect id="Glutes"  k="glt-l" x={264} y={236} w={30} h={38} rx={11}/>
+        <Rect id="Glutes"  k="glt-r" x={296} y={236} w={30} h={38} rx={11}/>
+        <Rect id="Left Hamstring"    x={261} y={276} w={30} h={84} rx={11}/>
+        <Rect id="Right Hamstring"   x={295} y={276} w={30} h={84} rx={11}/>
+        <Rect id="Left Calf"         x={263} y={362} w={26} h={70} rx={9}/>
+        <Rect id="Right Calf"        x={291} y={362} w={26} h={70} rx={9}/>
+
+        {/* ── FRONT LABELS (right-side gap, text right-aligned) ── */}
+        <Lbl text="Neck"      lx={90}  ly={77}  tx={186} ty={77}/>
+        <Lbl text="Shoulders" lx={133} ly={91}  tx={186} ty={93}/>
+        <Lbl text="Chest"     lx={118} ly={111} tx={186} ty={113}/>
+        <Lbl text="Biceps"    lx={141} ly={114} tx={186} ty={133}/>
+        <Lbl text="Forearms"  lx={139} ly={171} tx={186} ty={155}/>
+        <Lbl text="Abs"       lx={98}  ly={173} tx={186} ty={175}/>
+        <Lbl text="Obliques"  lx={118} ly={175} tx={186} ty={193}/>
+        <Lbl text="Quads"     lx={113} ly={271} tx={186} ty={265}/>
+        <Lbl text="Knees"     lx={113} ly={321} tx={186} ty={300}/>
+        <Lbl text="Shins"     lx={103} ly={370} tx={186} ty={335}/>
+
+        {/* ── BACK LABELS (left-side gap, text left-aligned) ── */}
+        <Lbl text="Traps"      lx={264} ly={84}  tx={194} ty={84}  anchor="start"/>
+        <Lbl text="Triceps"    lx={235} ly={116} tx={194} ty={110} anchor="start"/>
+        <Lbl text="Upper Back" lx={264} ly={124} tx={194} ty={132} anchor="start"/>
+        <Lbl text="Lats"       lx={257} ly={175} tx={194} ty={165} anchor="start"/>
+        <Lbl text="Lower Back" lx={270} ly={219} tx={194} ty={200} anchor="start"/>
+        <Lbl text="Glutes"     lx={264} ly={255} tx={194} ty={232} anchor="start"/>
+        <Lbl text="Hamstrings" lx={261} ly={318} tx={194} ty={280} anchor="start"/>
+        <Lbl text="Calves"     lx={263} ly={397} tx={194} ty={348} anchor="start"/>
+      </svg>
     );
   };
-
-  // ── Body silhouette paths ────────────────────
-  const FrontSilhouette = () => (
-    <g fill="#1A1A1C" stroke="#2A2A2C" strokeWidth="0.5">
-      <circle cx="71" cy="28" r="20"/>
-      <path d="M 52,48 Q 44,52 38,60 L 28,78 L 23,118 L 21,160 L 33,163 L 36,118 L 40,78 L 47,68 L 95,68 L 101,78 L 106,118 L 109,163 L 121,160 L 119,118 L 114,78 L 104,60 Q 98,52 90,48 Z"/>
-      <path d="M 48,153 L 48,180 L 54,260 L 52,310 L 70,310 L 72,260 L 74,180 L 74,153 Z"/>
-      <path d="M 94,153 L 94,180 L 72,180 L 70,260 L 92,260 L 90,310 L 68,310 L 70,180 L 68,153 Z" transform="translate(6,0)"/>
-    </g>
-  );
-
-  const BackSilhouette = () => (
-    <g fill="#1A1A1C" stroke="#2A2A2C" strokeWidth="0.5">
-      <circle cx="220" cy="28" r="20"/>
-      <path d="M 201,48 Q 193,52 187,60 L 177,78 L 172,118 L 170,160 L 182,163 L 185,118 L 189,78 L 196,68 L 244,68 L 251,78 L 255,118 L 258,163 L 270,160 L 268,118 L 263,78 L 253,60 Q 247,52 239,48 Z"/>
-      <path d="M 197,153 L 197,180 L 203,260 L 201,310 L 219,310 L 221,260 L 223,180 L 223,153 Z"/>
-      <path d="M 243,153 L 243,180 L 221,180 L 219,260 L 241,260 L 239,310 L 217,310 L 219,180 L 217,153 Z" transform="translate(6,0)"/>
-    </g>
-  );
 
   const selectedCount = Object.keys(selected).length;
 
@@ -1847,21 +1887,7 @@ ${nutrText}`;
     <div>
       {/* SVG Body Map */}
       <div style={{ padding:'0 8px 4px' }}>
-        <svg viewBox="0 0 300 330" width="100%" style={{ display:'block', maxHeight:300 }}>
-          {/* Labels */}
-          <text x="71" y="8" textAnchor="middle" fontSize="8" fill="#C8FF00" fontFamily="'Bebas Neue',sans-serif" letterSpacing="1">FRONT</text>
-          <text x="220" y="8" textAnchor="middle" fontSize="8" fill="#C8FF00" fontFamily="'Bebas Neue',sans-serif" letterSpacing="1">BACK</text>
-          {/* Divider */}
-          <line x1="150" y1="10" x2="150" y2="325" stroke="#2A2A2C" strokeWidth="0.5" strokeDasharray="3,3"/>
-
-          <FrontSilhouette/>
-          <BackSilhouette/>
-
-          {FRONT_MUSCLES.map(m => renderShape(m))}
-          {BACK_MUSCLES.map(m => renderShape(m))}
-          {FRONT_MUSCLES.map(m => labelFor(m))}
-          {BACK_MUSCLES.map(m => labelFor(m))}
-        </svg>
+        <BodyMapSVG/>
       </div>
 
       {/* Legend */}
