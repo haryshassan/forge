@@ -1949,17 +1949,17 @@ function LoadingPlan({ error }) {
 ═══════════════════════════════════════════════ */
 function ConversationalOnboarding({ onComplete }) {
   const QUESTIONS = [
-    { id:’name’,           text:"What should I call you?",                                                                                                                                                                                                                                                                      type:’text’,       placeholder:’Your name…’ },
-    { id:’goal’,           text:"What’s your main goal right now?",                                                                                                                                                                                                                                                                  type:’chips’,      options:[‘Build Muscle’,’Get Stronger’,’Lose Fat’,’Athletic Performance’,’General Fitness’] },
-    { id:’experience’,     text:"How long have you been training seriously?",                                                                                                                                                                                                                                                         type:’chips’,      options:[‘Less than 6 months’,’6 months to 2 years’,’2 to 5 years’,’5+ years’] },
-    { id:’trainingDays’,   text:"How many days per week can you commit to training? Be honest — consistency beats frequency every time.",                                                                                                                                                                                              type:’textchips’,  options:[‘2 days’,’3 days’,’4 days’,’5 days’,’6 days’], placeholder:’e.g. 3 days, or 4 days…’ },
-    { id:’preferredSplit’, text:"Do you have a preferred way to structure your training? For example Push Pull Legs, Upper Lower, Full Body, Arnold Split, Bro Split — or describe it in your own words. If you have no preference just say so and I will pick the best structure for your goal.",                                   type:’text’,       placeholder:’e.g. Push Pull Legs, or no preference…’ },
-    { id:’currentRoutine’, text:"Tell me about your current training. What does your week look like right now?",                                                                                                                                                                                                                      type:’text’,       placeholder:’e.g. I go to the gym 3x a week…’ },
-    { id:’obstacle’,       text:"What’s the biggest thing that’s stopped you from reaching your goal before?",                                                                                                                                                                                                                       type:’text’,       placeholder:’Be honest…’ },
-    { id:’equipment’,      text:"What equipment do you have access to?",                                                                                                                                                                                                                                                              type:’multichips’, options:[‘Full Gym’,’Dumbbells Only’,’Barbell and Rack’,’Cables’,’Resistance Bands’,’Pull Up Bar’,’No Equipment’] },
-    { id:’sessionLength’,  text:"How long can you train per session?",                                                                                                                                                                                                                                                               type:’chips’,      options:[‘30 minutes’,’45 minutes’,’60 minutes’,’75+ minutes’] },
-    { id:’limitations’,    text:"Do you have any injuries, pain, or physical limitations I should know about?",                                                                                                                                                                                                                       type:’text’,       placeholder:’e.g. Lower back pain, bad knees…’, skippable:true },
-    { id:’lifestyle’,      text:"How’s your sleep and stress generally?",                                                                                                                                                                                                                                                            type:’chips’,      options:[‘Pretty good’,’Could be better’,’Pretty poor’] },
+    { id:'name',           text:"What should I call you?",                                                                                                                                                                                                                                                                      type:'text',       placeholder:'Your name…' },
+    { id:'goal',           text:"What's your main goal right now?",                                                                                                                                                                                                                                                                  type:'chips',      options:['Build Muscle','Get Stronger','Lose Fat','Athletic Performance','General Fitness'] },
+    { id:'experience',     text:"How long have you been training seriously?",                                                                                                                                                                                                                                                         type:'chips',      options:['Less than 6 months','6 months to 2 years','2 to 5 years','5+ years'] },
+    { id:'trainingDays',   text:"How many days per week can you commit to training? Be honest — consistency beats frequency every time.",                                                                                                                                                                                              type:'textchips',  options:['2 days','3 days','4 days','5 days','6 days'], placeholder:'e.g. 3 days, or 4 days…' },
+    { id:'preferredSplit', text:"Do you have a preferred way to structure your training? For example Push Pull Legs, Upper Lower, Full Body, Arnold Split, Bro Split — or describe it in your own words. If you have no preference just say so and I will pick the best structure for your goal.",                                   type:'text',       placeholder:'e.g. Push Pull Legs, or no preference…' },
+    { id:'currentRoutine', text:"Tell me about your current training. What does your week look like right now?",                                                                                                                                                                                                                      type:'text',       placeholder:'e.g. I go to the gym 3x a week…' },
+    { id:'obstacle',       text:"What's the biggest thing that's stopped you from reaching your goal before?",                                                                                                                                                                                                                       type:'text',       placeholder:'Be honest…' },
+    { id:'equipment',      text:"What equipment do you have access to?",                                                                                                                                                                                                                                                              type:'multichips', options:['Full Gym','Dumbbells Only','Barbell and Rack','Cables','Resistance Bands','Pull Up Bar','No Equipment'] },
+    { id:'sessionLength',  text:"How long can you train per session?",                                                                                                                                                                                                                                                               type:'chips',      options:['30 minutes','45 minutes','60 minutes','75+ minutes'] },
+    { id:'limitations',    text:"Do you have any injuries, pain, or physical limitations I should know about?",                                                                                                                                                                                                                       type:'text',       placeholder:'e.g. Lower back pain, bad knees…', skippable:true },
+    { id:'lifestyle',      text:"How's your sleep and stress generally?",                                                                                                                                                                                                                                                            type:'chips',      options:['Pretty good','Could be better','Pretty poor'] },
   ];
 
   const LOADING_PHRASES = [
@@ -2010,7 +2010,7 @@ function ConversationalOnboarding({ onComplete }) {
 
   React.useEffect(() => {
     const t1 = setTimeout(() => {
-      setMessages([{ role:'coach', text:"Hey, I’m your FORGE Coach. Before I build your program, I want to get to know you properly. This will only take a couple of minutes — and everything I ask will shape exactly how I train you. Let’s go." }]);
+      setMessages([{ role:'coach', text:"Hey, I'm your FORGE Coach. Before I build your program, I want to get to know you properly. This will only take a couple of minutes — and everything I ask will shape exactly how I train you. Let's go." }]);
       const t2 = setTimeout(() => {
         setCurrentQ(0);
         setMessages(prev => [...prev, { role:'coach', text:QUESTIONS[0].text }]);
@@ -2125,11 +2125,11 @@ Focus on form and building the habit.
 
 **Addressing Your Obstacle**
 
-We’ll tackle this together with the right structure.
+We'll tackle this together with the right structure.
 
 **Recovery Note**
 
-Prioritise sleep — it’s when you actually get stronger.`);
+Prioritise sleep — it's when you actually get stronger.`);
       setPhase('recommendation');
     }
   };
@@ -2162,8 +2162,8 @@ Prioritise sleep — it’s when you actually get stronger.`);
     const backIdx = 7;
     setCurrentQ(backIdx);
     setMessages(prev => [...prev,
-      { role:’coach’, text:"No problem — let’s refine a few things." },
-      { role:’coach’, text:QUESTIONS[backIdx].text },
+      { role:'coach', text:"No problem — let's refine a few things." },
+      { role:'coach', text:QUESTIONS[backIdx].text },
     ]);
   };
 
@@ -2203,7 +2203,7 @@ Prioritise sleep — it’s when you actually get stronger.`);
           <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:34, color:'#C8FF00', letterSpacing:'0.08em' }}>FORGE</div>
           <div style={{ flex:1 }}>
             <p style={{ color:'#F5F5F0', fontWeight:700, fontSize:16, margin:'0 0 2px' }}>Your Program is Ready</p>
-            <p style={{ color:'#8A8A8E', fontSize:13, margin:0 }}>Here’s what I’ve built for you, {answers.name}</p>
+            <p style={{ color:'#8A8A8E', fontSize:13, margin:0 }}>Here's what I've built for you, {answers.name}</p>
           </div>
         </div>
 
@@ -2223,7 +2223,7 @@ Prioritise sleep — it’s when you actually get stronger.`);
         <div style={{ flexShrink:0, padding:'12px 20px', paddingBottom:'max(20px, env(safe-area-inset-bottom))', display:'flex', flexDirection:'column', gap:10 }}>
           <button onClick={handleConfirm}
             style={{ background:'#C8FF00', color:'#0D0D0F', border:'none', borderRadius:16, padding:'18px 0', fontFamily:"'Bebas Neue',sans-serif", fontSize:20, letterSpacing:'0.08em', cursor:'pointer', width:'100%', fontWeight:700 }}>
-            LOOKS GOOD — LET’S GO
+            LOOKS GOOD — LET'S GO
           </button>
           <button onClick={handleAdjust}
             style={{ background:'#1A1A1C', color:'#F5F5F0', border:'1.5px solid #3A3A3C', borderRadius:16, padding:'15px 0', fontFamily:"'Bebas Neue',sans-serif", fontSize:18, letterSpacing:'0.08em', cursor:'pointer', width:'100%' }}>
