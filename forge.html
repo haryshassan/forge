@@ -433,6 +433,8 @@ ATHLETE PROFILE:
 - Training Days Per Week: ${profile.trainingDaysPerWeek || profile.trainingDays?.length || 3}
 - Preferred Training Days: ${(profile.trainingDays||[]).join(', ')}
 - Session Length: ${profile.sessionLength} minutes
+- Current Injuries: ${profile.currentInjuries || 'None'}
+- Physio Prescribed Exercises: ${profile.physioExercises || 'None'}
 
 GENERAL RULES FOR ALL PLANS:
 Every session must be completable in the athlete's stated session length — never exceed it. A session should have no more than 6 exercises for strength and muscle goals, no more than 7 for athletic performance, and no more than 5 for fat loss circuits. Quality over quantity always. Straight sets only for muscle and strength goals. No supersets except for fat loss circuits. Never program supersets for strength or muscle goals.
@@ -487,6 +489,11 @@ EXPERIENCE LEVEL ADJUSTMENTS:
 Beginner — simpler movement patterns, machines over free weights where available, higher reps, longer rest, 3 to 4 exercises per session maximum, focus on learning movement patterns.
 Intermediate — free weights, moderate complexity, full session length used, balanced volume.
 Advanced — higher volume, more complex movements, can include Olympic lift variations if athletic performance goal, periodised intensity across the week.
+
+PHYSIO AND INJURY MANAGEMENT:
+If the athlete has listed physio prescribed exercises, include them at the START of every session as a dedicated block. List each physio exercise first in the workouts array with the exercise name exactly as specified, sets:2, reps:"12-15", rest:"30s", and notes:"Physiotherapist prescribed — perform before every session." These exercises are mandatory and non-negotiable.
+
+If the athlete has listed current injuries, never programme any exercise that directly loads the injured structure. Substitute every conflicting exercise with a safe alternative. If shoulder injury: avoid overhead pressing, upright rows, behind-neck movements — substitute with cable flyes, push-ups, neutral grip pressing. If knee pain: avoid full depth squats and heavy lunges — substitute with box squats, step-ups, or leg press with limited range. If lower back pain: avoid conventional deadlifts, bent-over barbell rows, good mornings — substitute with trap bar deadlift, light RDL, seated cable row, or chest supported row. Always note the injury accommodation in the exercise notes field.
 
 SESSION LENGTH TARGETS:
 30 minutes — 3 to 4 exercises, minimal rest.
@@ -934,15 +941,24 @@ function formatCoachMessage(text) {
 
 /* ── Plan-change helpers ── */
 function parsePlanChange(text) {
+  let workingText = text;
+  let profileUpdate = null;
+  const puMarker = 'PROFILE_UPDATE:';
+  const puIdx = workingText.indexOf(puMarker);
+  if (puIdx !== -1) {
+    const beforePU = workingText.slice(0, puIdx).trim();
+    try { profileUpdate = JSON.parse(workingText.slice(puIdx + puMarker.length).trim()); } catch {}
+    workingText = beforePU;
+  }
   const marker = 'PLAN_CHANGE_SUGGESTED:';
-  const idx = text.indexOf(marker);
-  if (idx === -1) return { displayText: text, planChange: null };
-  const displayText = text.slice(0, idx).trim();
+  const idx = workingText.indexOf(marker);
+  if (idx === -1) return { displayText: workingText, planChange: null, profileUpdate };
+  const displayText = workingText.slice(0, idx).trim();
   try {
-    const planChange = JSON.parse(text.slice(idx + marker.length).trim());
-    return { displayText, planChange };
+    const planChange = JSON.parse(workingText.slice(idx + marker.length).trim());
+    return { displayText, planChange, profileUpdate };
   } catch {
-    return { displayText, planChange: null };
+    return { displayText: workingText, planChange: null, profileUpdate };
   }
 }
 
@@ -994,11 +1010,40 @@ function PlanChangeCard({ planChange, onApply, onKeep }) {
   );
 }
 
+function CoachProfileUpdateCard({ profileUpdate, onApply, onDismiss }) {
+  const fields = Object.entries(profileUpdate).filter(([k]) => k !== 'reason').filter(([,v]) => v);
+  return (
+    <div style={{ borderLeft:'3px solid #0A84FF', background:'#1A1A1C', borderRadius:16, padding:'14px 16px', margin:'8px 0 4px 0' }}>
+      <p style={{ fontFamily:"'Bebas Neue',sans-serif", color:'#0A84FF', fontSize:13, letterSpacing:'0.08em', marginBottom:6 }}>
+        PROFILE UPDATE SUGGESTED
+      </p>
+      {profileUpdate.reason && (
+        <p style={{ color:'#8A8A8E', fontSize:12, marginBottom:8, fontFamily:"'DM Sans',sans-serif" }}>{profileUpdate.reason}</p>
+      )}
+      {fields.map(([k,v]) => (
+        <p key={k} style={{ color:'#F5F5F0', fontSize:13, lineHeight:1.5, fontFamily:"'DM Sans',sans-serif", marginBottom:4 }}>
+          <span style={{ color:'#8A8A8E' }}>{k === 'currentInjuries' ? 'Current injuries' : k === 'physioExercises' ? 'Physio exercises' : k}: </span>{String(v)}
+        </p>
+      ))}
+      <div style={{ display:'flex', gap:8, marginTop:10 }}>
+        <button onClick={onApply}
+          style={{ flex:1, padding:'10px 0', borderRadius:12, background:'#0A84FF', color:'#fff', fontFamily:"'Bebas Neue',sans-serif", fontSize:14, letterSpacing:'0.05em', border:'none', cursor:'pointer' }}>
+          UPDATE PROFILE
+        </button>
+        <button onClick={onDismiss}
+          style={{ flex:1, padding:'10px 0', borderRadius:12, background:'#252527', color:'#8A8A8E', fontFamily:"'Bebas Neue',sans-serif", fontSize:14, letterSpacing:'0.05em', border:'1px solid #3A3A3C', cursor:'pointer' }}>
+          DISMISS
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /* ═══════════════════════════════════════════════
    COACH SCREEN
 ═══════════════════════════════════════════════ */
 function CoachScreen({ coachCheckins, profile, plan, logs, prs, streak,
-  nutritionLog, nutritionGoals, weightHistory, cardioLog, badges, onPlanUpdate }) {
+  nutritionLog, nutritionGoals, weightHistory, cardioLog, badges, onPlanUpdate, onProfileUpdate=()=>{} }) {
 
   const [section,  setSection]  = useState('CHAT');
   const [messages, setMessages] = useLocalStorage('forge_coach_messages', []);
@@ -1006,6 +1051,7 @@ function CoachScreen({ coachCheckins, profile, plan, logs, prs, streak,
   const [typing,   setTyping]   = useState(false);
   const [planChanges, setPlanChanges] = useLocalStorage('forge_plan_changes', []);
   const [pendingPlanChanges, setPendingPlanChanges] = useState({});
+  const [pendingProfileUpdates, setPendingProfileUpdates] = useState({});
   const [dismissedCheckinCard, setDismissedCheckinCard] = useState(false);
   const messagesEndRef = useRef(null);
   const inputRef       = useRef(null);
@@ -1128,9 +1174,11 @@ Apply all of this knowledge when giving advice. Always reference specific princi
 
 When the athlete reports pain, fatigue, soreness, injury, or asks to modify their plan, you may suggest specific changes. To do so, end your message with PLAN_CHANGE_SUGGESTED: followed immediately by a valid JSON object (no extra text after the JSON) with fields: reason (string), changes (array of objects each with day, exercise_to_replace, replacement_exercise, new_sets, new_reps). Only suggest a plan change when clearly warranted — not every message.
 
+If the athlete mentions a new injury they have not previously reported, respond normally then end your message with PROFILE_UPDATE: followed immediately by a valid JSON object with fields: reason (string), currentInjuries (string, full updated description of all known injuries). If they also mention physio prescribed exercises, include physioExercises (string) in the JSON. Only emit PROFILE_UPDATE when genuinely new injury information is disclosed — not for every mention of soreness. Never emit both PLAN_CHANGE_SUGGESTED and PROFILE_UPDATE in the same message — choose the most appropriate one.
+
 Keep every response under 120 words total. Use short sentences. Use line breaks between every separate point or idea. Use a short bold heading before each new topic if covering more than one thing — for example **Recovery** or **Nutrition** or **Today's Focus**. Never write more than 2 sentences under any single heading. Never write a wall of text. If the user asks a simple question give a simple short answer. If the user asks something complex cover the top 2 or 3 points only and keep each one brief. Always sound like a coach sending a quick message not writing a report. Never cut off a response mid sentence. Always finish your thought completely. If you are running low on space wrap up the response early rather than stopping halfway through a sentence or paragraph. Keep responses concise but always complete.
 
-ATHLETE: ${name} | Level: ${profile.fitnessLevel||'unknown'} | Goal: ${profile.goal||'unknown'} | Equipment: ${(profile.equipment||[]).join(', ')||'unknown'} | Split: ${profile.preferredSplit||'coach-selected'} | Days: ${(profile.trainingDays||[]).join(', ')||'unknown'} | Session: ${profile.sessionLength||60}min
+ATHLETE: ${name} | Level: ${profile.fitnessLevel||'unknown'} | Goal: ${profile.goal||'unknown'} | Equipment: ${(profile.equipment||[]).join(', ')||'unknown'} | Split: ${profile.preferredSplit||'coach-selected'} | Days: ${(profile.trainingDays||[]).join(', ')||'unknown'} | Session: ${profile.sessionLength||60}min | Injuries: ${profile.currentInjuries||'None'} | Physio: ${profile.physioExercises||'None'}
 
 CURRENT PLAN:
 ${planText}
@@ -1201,6 +1249,20 @@ ${planChangesText}`;
     setPendingPlanChanges(prev => { const n = {...prev}; delete n[cardKey]; return n; });
   };
 
+  const handleApplyProfileUpdate = (profileUpdate, cardKey) => {
+    const updated = { ...profile };
+    if (profileUpdate.currentInjuries !== undefined) updated.currentInjuries = profileUpdate.currentInjuries;
+    if (profileUpdate.physioExercises !== undefined) updated.physioExercises = profileUpdate.physioExercises;
+    if (profileUpdate.limitations !== undefined) updated.limitations = profileUpdate.limitations;
+    onProfileUpdate(updated);
+    setMessages(m => [...m, { role:'assistant', content:'Profile updated. I have noted your injury and will factor it into all future advice.' }].slice(-50));
+    setPendingProfileUpdates(prev => { const n = {...prev}; delete n[cardKey]; return n; });
+  };
+
+  const handleDismissProfileUpdate = (cardKey) => {
+    setPendingProfileUpdates(prev => { const n = {...prev}; delete n[cardKey]; return n; });
+  };
+
   /* ── Send message ── */
   const sendMessage = async (overrideText) => {
     const text = (overrideText !== undefined ? overrideText : input).trim();
@@ -1251,10 +1313,11 @@ ${planChangesText}`;
         throw new Error(data?.error?.message || `API ${res.status}`);
       }
       const rawReply = data?.content?.[0]?.text || "I couldn't generate a response right now. Try again.";
-      const { displayText, planChange } = parsePlanChange(rawReply);
+      const { displayText, planChange, profileUpdate } = parsePlanChange(rawReply);
       const msgId = `msg_${Date.now()}`;
       setMessages(m => [...m, { role:'assistant', content:displayText, id:msgId }].slice(-50));
       if (planChange) setPendingPlanChanges(prev => ({ ...prev, [msgId]: planChange }));
+      if (profileUpdate) setPendingProfileUpdates(prev => ({ ...prev, [msgId]: profileUpdate }));
     } catch(err) {
       console.error('[FORGE Coach] fetch error:', err);
       setMessages(m => [...m, {
@@ -1332,6 +1395,15 @@ ${planChangesText}`;
                       planChange={pendingPlanChanges[msg.id]}
                       onApply={() => handleApplyPlanChange(pendingPlanChanges[msg.id], msg.id)}
                       onKeep={() => handleKeepPlanChange(msg.id)}
+                    />
+                  </div>
+                )}
+                {msg.role==='assistant' && msg.id && pendingProfileUpdates[msg.id] && (
+                  <div className="ml-9 mb-3">
+                    <CoachProfileUpdateCard
+                      profileUpdate={pendingProfileUpdates[msg.id]}
+                      onApply={() => handleApplyProfileUpdate(pendingProfileUpdates[msg.id], msg.id)}
+                      onDismiss={() => handleDismissProfileUpdate(msg.id)}
                     />
                   </div>
                 )}
@@ -1661,9 +1733,12 @@ function BodyMap({ profile, plan, onPlanUpdate, planChanges, setPlanChanges }) {
         }).join('\n') || 'No nutrition data.';
       } catch {}
 
-      const systemPrompt = `You are a sports physiotherapist sending a quick clinical note. Keep the entire response under 120 words. Use these bold headings only, one sentence each: **What It Could Be**, **Likely Trigger**, **Before You Train**, **Avoid**, **Train Today?**. End with one short italicised sentence advising to consult a physio or doctor if it persists. Be direct. No waffle.`;
+      const systemPrompt = `You are a sports physiotherapist sending a quick clinical note. You have full context on the athlete's injury history and physio prescription — cross-reference these when interpreting the reported area. Keep the entire response under 120 words. Use these bold headings only, one sentence each: **What It Could Be**, **Likely Trigger**, **Before You Train**, **Avoid**, **Train Today?**. End with one short italicised sentence advising to consult a physio or doctor if it persists. Be direct. No waffle.`;
 
       const userMsg = `Athlete: ${profile.name||'Athlete'}, ${profile.fitnessLevel||''}, Goal: ${profile.goal||''}.
+
+KNOWN INJURIES: ${profile.currentInjuries || 'None reported'}
+PHYSIO PRESCRIBED EXERCISES: ${profile.physioExercises || 'None'}
 
 AFFECTED AREAS AND SEVERITY:
 ${muscleList}
@@ -2047,6 +2122,8 @@ function ConversationalOnboarding({ onComplete }) {
     { id:'equipment',      text:"What equipment do you have access to?",                                                                                                                                                                                                                                                              type:'multichips', options:['Full Gym','Dumbbells Only','Barbell and Rack','Cables','Resistance Bands','Pull Up Bar','No Equipment'] },
     { id:'sessionLength',  text:"How long can you train per session?",                                                                                                                                                                                                                                                               type:'chips',      options:['30 minutes','45 minutes','60 minutes','75+ minutes'] },
     { id:'limitations',    text:"Do you have any injuries, pain, or physical limitations I should know about?",                                                                                                                                                                                                                       type:'text',       placeholder:'e.g. Lower back pain, bad knees…', skippable:true },
+    { id:'currentInjuries', text:"Do you have any current injuries I need to know about? Even minor ones affect how I programme your training.",                                                                                                                                                                         type:'text',       placeholder:'e.g. Left shoulder impingement, right knee pain…', skippable:true },
+    { id:'physioExercises', text:"Has a physiotherapist, doctor, or specialist given you any specific exercises to do? I will include them in your programme.",                                                                                                                                                                           type:'text',       placeholder:'e.g. Clamshells, banded monster walks, dead bugs…', skippable:true },
     { id:'lifestyle',      text:"How's your sleep and stress generally?",                                                                                                                                                                                                                                                            type:'chips',      options:['Pretty good','Could be better','Pretty poor'] },
   ];
 
@@ -2189,11 +2266,17 @@ function ConversationalOnboarding({ onComplete }) {
   };
 
   const handleSkip = () => {
-    const newAnswers = { ...answers, limitations:'' };
+    const qId = QUESTIONS[currentQ].id;
+    const skipLabel = qId === 'limitations' ? 'No limitations' : qId === 'currentInjuries' ? 'No current injuries' : 'None specified';
+    const newAnswers = { ...answers, [qId]: '' };
     setAnswers(newAnswers);
-    setMessages(prev => [...prev, { role:'user', text:'No limitations' }]);
+    setMessages(prev => [...prev, { role:'user', text:skipLabel }]);
     setInputText('');
     const nextIdx = currentQ + 1;
+    if (nextIdx >= QUESTIONS.length) {
+      buildRecommendation(newAnswers);
+      return;
+    }
     setCurrentQ(nextIdx);
     setTimeout(() => setMessages(prev => [...prev, { role:'coach', text:QUESTIONS[nextIdx].text }]), 300);
   };
@@ -2256,7 +2339,7 @@ function ConversationalOnboarding({ onComplete }) {
 **Addressing Your Obstacle** — advice based on what held them back
 **Recovery Note** — based on their sleep/stress
 
-Profile: Name: ${finalAnswers.name}. Goal: ${finalAnswers.goal}. Experience: ${finalAnswers.experience}. Training days: ${finalAnswers.trainingDays}. Preferred split: ${finalAnswers.preferredSplit || 'no preference'}. Current routine: ${finalAnswers.currentRoutine}. Obstacle: ${finalAnswers.obstacle}. Equipment: ${eqStr}. Session: ${finalAnswers.sessionLength}. Limitations: ${finalAnswers.limitations || 'None'}. Sleep/stress: ${finalAnswers.lifestyle}.
+Profile: Name: ${finalAnswers.name}. Goal: ${finalAnswers.goal}. Experience: ${finalAnswers.experience}. Training days: ${finalAnswers.trainingDays}. Preferred split: ${finalAnswers.preferredSplit || 'no preference'}. Current routine: ${finalAnswers.currentRoutine}. Obstacle: ${finalAnswers.obstacle}. Equipment: ${eqStr}. Session: ${finalAnswers.sessionLength}. Limitations: ${finalAnswers.limitations || 'None'}. Current injuries: ${finalAnswers.currentInjuries || 'None'}. Physio exercises: ${finalAnswers.physioExercises || 'None'}. Sleep/stress: ${finalAnswers.lifestyle}.
 
 Be direct and specific. Max 220 words total.`;
       const rec = await callClaude([{ role:'user', content:recPrompt }], 600);
@@ -2299,6 +2382,8 @@ Prioritise sleep — it's when you actually get stronger.`);
       trainingDaysPerWeek: daysCount,
       sessionLength:       SESSION_MAP[answers.sessionLength] || 60,
       limitations:         answers.limitations || '',
+      currentInjuries:     answers.currentInjuries || '',
+      physioExercises:     answers.physioExercises || '',
       lifestyle:           answers.lifestyle || '',
       preferredSplit:      answers.preferredSplit || '',
       onboardingComplete:  true,
@@ -2554,6 +2639,14 @@ Prioritise sleep — it's when you actually get stronger.`);
    PROFILE SCREEN (ME TAB — existing users)
 ═══════════════════════════════════════════════ */
 function ProfileScreen({ profile, onSave, onGeneratePlan, isExisting, onNutritionGoals=()=>{}, onLogout=()=>{}, onReset=()=>{} }) {
+  const [injuryText, setInjuryText] = React.useState(profile.currentInjuries || '');
+  const [physioText, setPhysioText] = React.useState(profile.physioExercises || '');
+  const [injuryPhysioSaved, setInjuryPhysioSaved] = React.useState(false);
+  const saveInjuryPhysio = () => {
+    onSave({ ...profile, currentInjuries: injuryText, physioExercises: physioText });
+    setInjuryPhysioSaved(true);
+    setTimeout(() => setInjuryPhysioSaved(false), 2000);
+  };
   /* ── Existing profile view ── */
   if (isExisting) {
     return (
@@ -2596,6 +2689,34 @@ function ProfileScreen({ profile, onSave, onGeneratePlan, isExisting, onNutritio
               ))}
             </div>
             <p className="text-[#8A8A8E] text-xs">{profile.sessionLength} min sessions</p>
+          </div>
+
+          {/* My Injuries & Physio */}
+          <div className="bg-[#1A1A1C] rounded-2xl p-5 border border-[#252527]">
+            <p className="text-[#8A8A8E] text-xs uppercase tracking-widest mb-3">My Injuries & Physio</p>
+            <p className="text-[#8A8A8E] text-xs mb-1">Current injuries</p>
+            <textarea
+              value={injuryText}
+              onChange={e => setInjuryText(e.target.value)}
+              placeholder="e.g. Left shoulder impingement, right knee pain…"
+              rows={2}
+              className="w-full bg-[#252527] text-[#F5F5F0] text-sm rounded-xl px-3 py-2 border border-[#3A3A3C] resize-none outline-none placeholder-[#5A5A5E]"
+              style={{ fontFamily:"'DM Sans',sans-serif" }}
+            />
+            <p className="text-[#8A8A8E] text-xs mb-1 mt-3">Physio prescribed exercises</p>
+            <textarea
+              value={physioText}
+              onChange={e => setPhysioText(e.target.value)}
+              placeholder="e.g. Clamshells, banded monster walks, dead bugs…"
+              rows={2}
+              className="w-full bg-[#252527] text-[#F5F5F0] text-sm rounded-xl px-3 py-2 border border-[#3A3A3C] resize-none outline-none placeholder-[#5A5A5E]"
+              style={{ fontFamily:"'DM Sans',sans-serif" }}
+            />
+            <button onClick={saveInjuryPhysio}
+              className="w-full mt-3 py-3 rounded-xl active:scale-95 transition-all"
+              style={{ background: injuryPhysioSaved ? '#30D158' : '#C8FF00', color:'#0D0D0F', fontFamily:"'Bebas Neue',sans-serif", fontSize:15, letterSpacing:'0.06em', border:'none', cursor:'pointer' }}>
+              {injuryPhysioSaved ? 'SAVED' : 'SAVE INJURY & PHYSIO'}
+            </button>
           </div>
 
           <button onClick={() => onGeneratePlan(profile)}
@@ -5034,7 +5155,7 @@ function App() {
                                 plan={plan} logs={logs} prs={prs} streak={streak}
                                 nutritionLog={nutritionLog} nutritionGoals={nutritionGoals}
                                 weightHistory={weightHistory} cardioLog={cardioLog} badges={badges}
-                                onPlanUpdate={setPlan}/>;
+                                onPlanUpdate={setPlan} onProfileUpdate={setProfile}/>;
       case 'log':      return <LogTab/>;
       case 'fuel':     return <FuelScreen
                                 nutritionLog={nutritionLog}
