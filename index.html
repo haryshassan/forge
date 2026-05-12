@@ -1953,7 +1953,7 @@ function ConversationalOnboarding({ onComplete }) {
     { id:'goal',           text:"What's your main goal right now?",                                                                                                                                                                                                                                                                  type:'chips',      options:['Build Muscle','Get Stronger','Lose Fat','Athletic Performance','General Fitness'] },
     { id:'experience',     text:"How long have you been training seriously?",                                                                                                                                                                                                                                                         type:'chips',      options:['Less than 6 months','6 months to 2 years','2 to 5 years','5+ years'] },
     { id:'trainingDays',   text:"How many days per week can you commit to training? Be honest — consistency beats frequency every time.",                                                                                                                                                                                              type:'textchips',  options:['2 days','3 days','4 days','5 days','6 days'], placeholder:'e.g. 3 days, or 4 days…' },
-    { id:'preferredSplit', text:"Do you have a preferred way to structure your training? For example Push Pull Legs, Upper Lower, Full Body, Arnold Split, Bro Split — or describe it in your own words. If you have no preference just say so and I will pick the best structure for your goal.",                                   type:'text',       placeholder:'e.g. Push Pull Legs, or no preference…' },
+    { id:'preferredSplit', text:"splitpicker", type:'splitpicker' },
     { id:'currentRoutine', text:"Tell me about your current training. What does your week look like right now?",                                                                                                                                                                                                                      type:'text',       placeholder:'e.g. I go to the gym 3x a week…' },
     { id:'obstacle',       text:"What's the biggest thing that's stopped you from reaching your goal before?",                                                                                                                                                                                                                       type:'text',       placeholder:'Be honest…' },
     { id:'equipment',      text:"What equipment do you have access to?",                                                                                                                                                                                                                                                              type:'multichips', options:['Full Gym','Dumbbells Only','Barbell and Rack','Cables','Resistance Bands','Pull Up Bar','No Equipment'] },
@@ -1986,15 +1986,52 @@ function ConversationalOnboarding({ onComplete }) {
   };
   const SESSION_MAP = { '30 minutes':30,'45 minutes':45,'60 minutes':60,'75+ minutes':75 };
 
-  const [messages,       setMessages]       = useState([]);
-  const [phase,          setPhase]          = useState('chat');
-  const [currentQ,       setCurrentQ]       = useState(-1);
-  const [answers,        setAnswers]        = useState({});
-  const [inputText,      setInputText]      = useState('');
-  const [selectedChips,  setSelectedChips]  = useState([]);
-  const [typing,         setTyping]         = useState(false);
-  const [recommendation, setRecommendation] = useState('');
-  const [loadingPhrase,  setLoadingPhrase]  = useState(0);
+  const SPLITS = [
+    { id:'Full Body',                     desc:'Train every muscle group each session' },
+    { id:'Upper Lower',                   desc:'Alternate upper and lower body sessions' },
+    { id:'Push Pull Legs',                desc:'Push muscles, pull muscles, legs — 3-day cycle' },
+    { id:'PPL x2',                        desc:'Push Pull Legs run twice per week — 6 days' },
+    { id:'Arnold Split',                  desc:'Chest & back, shoulders & arms, legs — 3-day cycle' },
+    { id:'Arnold + Upper Lower',          desc:'Arnold split paired with upper/lower days — 5 days' },
+    { id:'Bro Split',                     desc:'One muscle group per session — classic bodybuilder style' },
+    { id:'PHUL',                          desc:'Power Hypertrophy Upper Lower — 4 days' },
+    { id:'PHAT',                          desc:'Power Hypertrophy Adaptive Training — 5 days' },
+    { id:'Daily Undulating Periodisation',desc:'Vary intensity and volume each day for strength and size' },
+    { id:'5 Day Upper Lower PPL Hybrid',  desc:'Upper, lower, push, pull, legs over 5 days' },
+  ];
+
+  const getSplitBadges = (splitId, goal, daysCount) => {
+    const byDays = {
+      2:['Full Body','Upper Lower'],
+      3:['Full Body','Upper Lower'],
+      4:['Upper Lower','PHUL'],
+      5:['Push Pull Legs','Arnold + Upper Lower'],
+      6:['PPL x2','Arnold Split'],
+    };
+    const byGoal = {
+      'Build Muscle':        ['Push Pull Legs','Arnold Split','PHUL','PHAT'],
+      'Get Stronger':        ['PHUL','PHAT','Daily Undulating Periodisation'],
+      'Lose Fat':            ['Full Body','Push Pull Legs'],
+      'Athletic Performance':['Full Body','Upper Lower','Daily Undulating Periodisation'],
+      'General Fitness':     ['Full Body','Upper Lower'],
+    };
+    const badges = [];
+    if ((byDays[daysCount] || []).includes(splitId)) badges.push('Best for your days');
+    if ((byGoal[goal]      || []).includes(splitId)) badges.push('Best for your goal');
+    return badges;
+  };
+
+  const [messages,        setMessages]        = useState([]);
+  const [phase,           setPhase]           = useState('chat');
+  const [currentQ,        setCurrentQ]        = useState(-1);
+  const [answers,         setAnswers]         = useState({});
+  const [inputText,       setInputText]       = useState('');
+  const [selectedChips,   setSelectedChips]   = useState([]);
+  const [typing,          setTyping]          = useState(false);
+  const [recommendation,  setRecommendation]  = useState('');
+  const [loadingPhrase,   setLoadingPhrase]   = useState(0);
+  const [showSplitPicker, setShowSplitPicker] = useState(false);
+  const [selectedSplit,   setSelectedSplit]   = useState('');
   const chatEndRef = React.useRef(null);
   const inputRef   = React.useRef(null);
 
@@ -2059,7 +2096,7 @@ function ConversationalOnboarding({ onComplete }) {
     if (currentQ === QUESTIONS.length - 1) {
       await buildRecommendation(newAnswers);
     } else {
-      await getAcknowledgement(q.text, answer, currentQ + 1);
+      await getAcknowledgement(q.text, answer, currentQ + 1, newAnswers);
     }
   };
 
@@ -2073,7 +2110,19 @@ function ConversationalOnboarding({ onComplete }) {
     setTimeout(() => setMessages(prev => [...prev, { role:'coach', text:QUESTIONS[nextIdx].text }]), 300);
   };
 
-  const getAcknowledgement = async (qText, answer, nextIdx) => {
+  const handleSplitConfirm = async (splitName) => {
+    setShowSplitPicker(false);
+    setSelectedSplit('');
+    const splitQIdx = QUESTIONS.findIndex(q => q.id === 'preferredSplit');
+    const nextIdx = splitQIdx + 1;
+    const newAnswers = { ...answers, preferredSplit: splitName };
+    setAnswers(newAnswers);
+    setMessages(prev => [...prev, { role:'user', text: splitName }]);
+    await getAcknowledgement('preferred split', splitName, nextIdx, newAnswers);
+  };
+
+  const getAcknowledgement = async (qText, answer, nextIdx, allAnswers) => {
+    const _ans = allAnswers || answers;
     setTyping(true);
     try {
       const displayText = Array.isArray(answer) ? answer.join(', ') : answer;
@@ -2081,14 +2130,29 @@ function ConversationalOnboarding({ onComplete }) {
       const ack = await callClaude([{ role:'user', content:ackPrompt }], 80);
       setTyping(false);
       setMessages(prev => [...prev, { role:'coach', text:ack.trim() }]);
-      setTimeout(() => {
-        setCurrentQ(nextIdx);
-        setMessages(prev => [...prev, { role:'coach', text:QUESTIONS[nextIdx].text }]);
-      }, 500);
+      if (QUESTIONS[nextIdx] && QUESTIONS[nextIdx].type === 'splitpicker') {
+        const daysStr = _ans.trainingDays || '3 days';
+        const goalStr = _ans.goal || 'your goal';
+        setTimeout(() => {
+          setMessages(prev => [...prev, { role:'coach', text:'Based on your goal and ' + daysStr + ' a week, here are the splits I would recommend for you — but the choice is yours.' }]);
+          setTimeout(() => setShowSplitPicker(true), 400);
+        }, 500);
+      } else {
+        setTimeout(() => {
+          setCurrentQ(nextIdx);
+          setMessages(prev => [...prev, { role:'coach', text:QUESTIONS[nextIdx].text }]);
+        }, 500);
+      }
     } catch {
       setTyping(false);
-      setCurrentQ(nextIdx);
-      setMessages(prev => [...prev, { role:'coach', text:QUESTIONS[nextIdx].text }]);
+      if (QUESTIONS[nextIdx] && QUESTIONS[nextIdx].type === 'splitpicker') {
+        const daysStr = _ans.trainingDays || '3 days';
+        setMessages(prev => [...prev, { role:'coach', text:'Based on your goal and ' + daysStr + ' a week, here are the splits I would recommend for you — but the choice is yours.' }]);
+        setTimeout(() => setShowSplitPicker(true), 400);
+      } else {
+        setCurrentQ(nextIdx);
+        setMessages(prev => [...prev, { role:'coach', text:QUESTIONS[nextIdx].text }]);
+      }
     }
   };
 
@@ -2228,6 +2292,57 @@ Prioritise sleep — it's when you actually get stronger.`);
           <button onClick={handleAdjust}
             style={{ background:'#1A1A1C', color:'#F5F5F0', border:'1.5px solid #3A3A3C', borderRadius:16, padding:'15px 0', fontFamily:"'Bebas Neue',sans-serif", fontSize:18, letterSpacing:'0.08em', cursor:'pointer', width:'100%' }}>
             ADJUST THIS
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  /* ─── SPLIT PICKER ─── */
+  if (showSplitPicker) {
+    const daysCount = parseInt(answers.trainingDays) || 3;
+    const goal = answers.goal || '';
+    return (
+      <div style={{ background:'#0D0D0F', height:'100%', display:'flex', flexDirection:'column' }}>
+        {/* Header */}
+        <div style={{ flexShrink:0, padding:'52px 20px 12px', display:'flex', alignItems:'center', gap:10 }}>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:32, color:'#C8FF00', letterSpacing:'0.08em' }}>FORGE</div>
+          <div style={{ flex:1, marginLeft:8 }}>
+            <p style={{ color:'#F5F5F0', fontWeight:700, fontSize:15, margin:0 }}>Choose Your Split</p>
+            <p style={{ color:'#8A8A8E', fontSize:13, margin:0 }}>Tap a card to select</p>
+          </div>
+        </div>
+
+        {/* Cards */}
+        <div style={{ flex:1, overflowY:'auto', padding:'4px 16px 12px', display:'flex', flexDirection:'column', gap:10 }}>
+          {SPLITS.map(split => {
+            const badges = getSplitBadges(split.id, goal, daysCount);
+            const active = selectedSplit === split.id;
+            return (
+              <button key={split.id} onClick={() => setSelectedSplit(split.id)}
+                style={{ background: active ? 'rgba(200,255,0,0.07)' : '#1A1A1C', border: active ? '2px solid #C8FF00' : '1.5px solid #252527', borderRadius:16, padding:'14px 16px', textAlign:'left', cursor:'pointer', transition:'all 0.12s', position:'relative' }}>
+                <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:8 }}>
+                  <p style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:20, color: active ? '#C8FF00' : '#F5F5F0', margin:0, letterSpacing:'0.04em', lineHeight:1.1 }}>{split.id}</p>
+                  {badges.length > 0 && (
+                    <div style={{ display:'flex', flexDirection:'column', gap:4, flexShrink:0 }}>
+                      {badges.map(b => (
+                        <span key={b} style={{ fontSize:10, fontWeight:700, color:'#0D0D0F', background:'#C8FF00', borderRadius:99, padding:'3px 8px', whiteSpace:'nowrap' }}>{b}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <p style={{ color:'#8A8A8E', fontSize:13, margin:'5px 0 0', lineHeight:1.4 }}>{split.desc}</p>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Confirm button */}
+        <div style={{ flexShrink:0, padding:'12px 16px', paddingBottom:'max(20px, env(safe-area-inset-bottom))', borderTop:'1px solid #1A1A1C' }}>
+          <button onClick={() => selectedSplit && handleSplitConfirm(selectedSplit)}
+            disabled={!selectedSplit}
+            style={{ width:'100%', padding:'18px 0', borderRadius:16, border:'none', background: selectedSplit ? '#C8FF00' : '#252527', color: selectedSplit ? '#0D0D0F' : '#8A8A8E', fontFamily:"'Bebas Neue',sans-serif", fontSize:20, letterSpacing:'0.08em', cursor: selectedSplit ? 'pointer' : 'not-allowed', transition:'background 0.12s, color 0.12s' }}>
+            CONFIRM SPLIT
           </button>
         </div>
       </div>
